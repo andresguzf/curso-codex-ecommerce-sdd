@@ -47,3 +47,42 @@ El sistema SHALL permitir que `ADMIN` y `BILLING` listen, busquen, filtren y con
 - **WHEN** un usuario `BILLING` filtra facturas por `PENDING_PAYMENT`
 - **THEN** el sistema devuelve las facturas autorizadas que coinciden con el filtro y sus datos de paginación
 
+### Requirement: Perfil de la empresa emisora
+El sistema SHALL mantener un único perfil vigente de la tienda con al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo, SHALL permitir que solo `ADMIN` lo modifique y SHALL permitir que `ADMIN` y `BILLING` lo consulten para facturación.
+
+#### Scenario: Administrador actualiza la empresa
+- **WHEN** un administrador guarda datos empresariales válidos
+- **THEN** el sistema actualiza el perfil vigente, registra la operación y lo usa como emisor para nuevas órdenes y facturas
+
+#### Scenario: Billing intenta modificar la empresa
+- **WHEN** un usuario `BILLING` intenta editar el perfil de la tienda
+- **THEN** el sistema deniega la modificación sin impedir su consulta autorizada
+
+### Requirement: Snapshot empresarial de la factura
+El sistema SHALL copiar en cada factura los datos vigentes del perfil de la empresa al crearla o emitirla y MUST mantener ese snapshot independiente de cambios posteriores del perfil.
+
+#### Scenario: Factura después de cambiar la empresa
+- **WHEN** se modifica el perfil de la tienda después de crear o emitir una factura
+- **THEN** la factura existente conserva los datos empresariales históricos con los que fue generada
+
+### Requirement: Autocomplete remoto para factura manual
+La creación manual de facturas SHALL permitir buscar y seleccionar clientes y productos mediante autocomplete remoto autorizado, SHALL limitar los resultados devueltos y SHALL aceptar únicamente identificadores válidos confirmados por el backend.
+
+#### Scenario: Buscar cliente
+- **WHEN** un usuario autorizado escribe un término suficiente en el selector de cliente
+- **THEN** el sistema devuelve una lista limitada de clientes coincidentes que el usuario puede consultar y seleccionar
+
+#### Scenario: Buscar producto
+- **WHEN** un usuario autorizado escribe un término suficiente en el selector de producto
+- **THEN** el sistema devuelve productos coincidentes con sus datos comerciales vigentes sin descargar el catálogo completo
+
+#### Scenario: Selección manipulada
+- **WHEN** se envía un identificador de cliente o producto inexistente o no autorizado
+- **THEN** el backend rechaza la factura sin confiar en el texto mostrado por el autocomplete
+
+### Requirement: Consulta paginada de facturas en backoffice
+El sistema SHALL paginar facturas desde el backend con `items`, `page`, `pageSize`, `totalItems` y `totalPages`, y la interfaz SHALL ubicar la búsqueda sobre la lista y los filtros en un panel colapsable por cliente, fecha, estado y origen.
+
+#### Scenario: Buscar y filtrar facturas
+- **WHEN** un usuario autorizado combina búsqueda, filtros y ordenamiento
+- **THEN** el sistema devuelve la primera página coincidente y la interfaz conserva los criterios en la URL

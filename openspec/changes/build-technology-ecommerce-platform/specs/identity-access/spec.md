@@ -55,3 +55,31 @@ El sistema MUST limitar a cada `CUSTOMER` a sus propios datos, carrito, órdenes
 - **WHEN** un cliente solicita una orden perteneciente a otro cliente
 - **THEN** el sistema deniega el acceso sin revelar los datos de la orden
 
+### Requirement: Consulta administrativa paginada de usuarios
+El sistema SHALL permitir que `ADMIN` busque, filtre y ordene usuarios mediante una lista paginada por el backend que incluya `items`, `page`, `pageSize`, `totalItems` y `totalPages`.
+
+#### Scenario: Administrador busca clientes activos
+- **WHEN** un administrador busca usuarios con rol `CUSTOMER` y estado activo
+- **THEN** el sistema devuelve únicamente los usuarios coincidentes junto con metadatos de paginación calculados sobre el resultado filtrado
+
+#### Scenario: Cambio de criterios de usuarios
+- **WHEN** el administrador cambia la búsqueda, filtros, orden o tamaño de página
+- **THEN** la lista vuelve a la primera página y conserva los criterios vigentes en la URL
+
+### Requirement: Retroalimentación de autenticación
+La interfaz SHALL mostrar un mensaje flash accesible después de un login o logout exitoso y SHALL mostrar un mensaje seguro cuando el login falle, sin revelar si una cuenta concreta existe.
+
+#### Scenario: Login exitoso
+- **WHEN** un usuario inicia sesión con credenciales válidas
+- **THEN** la interfaz confirma el acceso mediante un mensaje flash y presenta la navegación correspondiente a su rol
+
+#### Scenario: Logout exitoso
+- **WHEN** un usuario cierra su sesión
+- **THEN** la interfaz confirma el cierre mediante un mensaje flash y presenta las opciones para visitantes
+
+### Requirement: Confirmación de acciones destructivas sobre usuarios
+La interfaz administrativa MUST solicitar confirmación explícita mediante un diálogo modal accesible antes de desactivar o eliminar lógicamente un usuario.
+
+#### Scenario: Administrador cancela la confirmación
+- **WHEN** un administrador inicia la desactivación de un usuario y cancela el diálogo
+- **THEN** la interfaz cierra el diálogo sin enviar la operación ni cambiar el usuario

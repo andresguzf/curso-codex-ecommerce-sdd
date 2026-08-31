@@ -39,3 +39,20 @@ El sistema SHALL registrar el motivo y autor de una cancelación y SHALL coordin
 - **WHEN** un administrador cancela una orden elegible que consumió inventario
 - **THEN** el sistema cambia la orden a `CANCELLED` y registra los movimientos compensatorios sin duplicarlos en reintentos
 
+### Requirement: Consulta de órdenes con herramientas de backoffice
+El sistema SHALL paginar desde el backend las listas de órdenes con `items`, `page`, `pageSize`, `totalItems` y `totalPages`, y la interfaz administrativa SHALL ofrecer búsqueda sobre la lista y filtros colapsables por cliente, fecha, estado y facturación.
+
+#### Scenario: Billing filtra órdenes pendientes de facturar
+- **WHEN** un usuario `BILLING` combina una búsqueda con filtros de estado y solicita una página
+- **THEN** el sistema devuelve únicamente las órdenes autorizadas de esa página y los metadatos del conjunto filtrado
+
+#### Scenario: Cambio de filtros de órdenes
+- **WHEN** un usuario autorizado cambia la búsqueda, filtros, orden o tamaño de página
+- **THEN** la interfaz vuelve a la primera página y conserva los criterios en la URL
+
+### Requirement: Snapshot del emisor en la orden
+El sistema SHALL copiar en cada orden confirmada los datos vigentes de la empresa emisora necesarios para su representación comercial y MUST conservar ese snapshot aunque el perfil de la tienda cambie posteriormente.
+
+#### Scenario: Cambio posterior de empresa
+- **WHEN** un administrador modifica los datos de la empresa después de confirmar una orden
+- **THEN** la orden existente mantiene la razón social, identificador fiscal, dirección y demás datos del emisor capturados al confirmarse

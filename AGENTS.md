@@ -6,7 +6,7 @@ Estado actual al redactar estas instrucciones:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 67 tareas verificables.
+- Existen propuesta, diseño, siete especificaciones y 117 tareas verificables.
 - Todavía no existe una implementación funcional de las aplicaciones.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
@@ -28,14 +28,20 @@ Cuando una solicitud cambie requisitos, arquitectura o alcance, no modifiques si
 La solución ofrecerá:
 
 - Storefront público con landing page, hero y catálogo tecnológico.
+- Identidad visual comercial propia de un e-commerce tecnológico.
+- Shell reutilizable con header, navbar superior, logo SVG, footer y badge del carrito.
 - Registro, login, sesión y autorización por roles.
-- Búsqueda, filtros, ordenamiento, paginación y detalle de productos.
+- Búsqueda, filtros colapsables, ordenamiento, paginación backend y detalle por slug.
+- Categorías administrables, etiquetas y wishlist persistente por cliente.
 - Carrito persistente y checkout con pagos y envíos simulados.
 - Historial de compras y gestión administrativa de órdenes.
 - Control de inventario transaccional y auditable.
-- Facturación manual o derivada de órdenes.
+- Facturación manual o derivada de órdenes con autocomplete remoto.
+- Perfil empresarial administrable y snapshots históricos del emisor.
 - Exportación PDF de órdenes y facturas.
-- Back office separado para usuarios, catálogo, inventario, órdenes y facturación.
+- Back office con navegación lateral, búsquedas superiores y filtros colapsables para usuarios, catálogo, inventario, órdenes y facturación.
+- Dashboard empresarial por rol y un sistema visual completamente distinto del storefront.
+- Temas claro y oscuro independientes y persistentes para cada aplicación.
 
 # Architecture
 
@@ -65,8 +71,8 @@ Frontend y backend comparten repositorio, pero no ejecución ni acceso a datos.
 
 ```text
 apps/
-  storefront/       Next.js: catálogo, carrito, checkout y cuenta
-  backoffice/       Next.js: usuarios, productos, stock, órdenes y facturas
+  storefront/       Next.js: catálogo, wishlist, carrito, checkout y cuenta
+  backoffice/       Next.js: usuarios, catálogo, empresa, stock, órdenes y facturas
   api/              NestJS: API REST y lógica de negocio
 
 packages/
@@ -101,6 +107,36 @@ frontend    -x-> entidades internas del backend
 - Checkout coordina catálogo, carrito, pago simulado, órdenes e inventario mediante operaciones de módulo.
 - Mantén el backend como monolito modular; no introduzcas microservicios sin un cambio OpenSpec explícito.
 
+## Planned UI shells
+
+```text
+StorefrontShell
+  Header/Navbar: logo SVG, tienda, inicio, cuenta, login/logout, badge del carrito
+  Hero: fondo tecnológico semitransparente y búsqueda
+  Main: catálogo con sidebar izquierdo de filtros
+  Footer
+
+BackofficeShell
+  Sidebar izquierdo: navegación por rol
+  Header contextual
+  Main: búsqueda superior, tabla o lista paginada
+  Sidebar derecho: filtros
+```
+
+- Comparte primitivas visuales mediante `packages/ui`, pero conserva shells independientes por aplicación.
+- En pantallas pequeñas, transforma los sidebars en drawers accesibles.
+- Mantén búsqueda, filtros, orden y página en la URL; cambiar criterios reinicia `page=1`.
+- Usa estado local o Zustand únicamente para apertura visual compartida de paneles, nunca para duplicar resultados del API.
+- Los mensajes flash usan una región `aria-live` y se disparan desde handlers o callbacks de mutación.
+- Toda eliminación lógica, desactivación o retirada de línea del carrito requiere un modal Tailwind accesible antes de enviar la operación.
+- Comparte primitivas accesibles, no una apariencia completa: storefront y backoffice deben usar tokens, paletas, densidades y jerarquías diferentes.
+- El storefront prioriza imágenes, productos, promociones, precio, stock y acciones de compra con patrones familiares de tienda online.
+- El backoffice usa una estética minimalista y empresarial, paleta slate/navy/azul, tablas compactas, colores semánticos y tarjetas KPI.
+- Mantén cuatro combinaciones verificables: storefront claro/oscuro y backoffice claro/oscuro.
+- En la primera visita respeta `prefers-color-scheme`; después conserva una preferencia local independiente por aplicación.
+- Aplica el tema antes de la primera presentación visible para evitar parpadeo durante la hidratación.
+- Exige contraste WCAG AA, foco visible y significado no dependiente solo del color en todos los componentes y estados.
+
 # Technology conventions
 
 ## Monorepo
@@ -119,9 +155,15 @@ frontend    -x-> entidades internas del backend
 - Zustand con `create()` solo para estado global del cliente que no duplique datos del servidor.
 - Zod para entradas y respuestas HTTP no confiables.
 - React Hook Form integrado con Zod mediante `zodResolver`.
+- Shells separados para storefront y backoffice compuestos desde primitivas compartidas.
+- Sidebars, drawers, mensajes flash y modales accesibles con foco visible y navegación por teclado.
+- Autocomplete remoto mediante un custom hook con término mínimo, espera breve, cancelación de solicitudes obsoletas y caché.
+- Variables CSS semánticas y `data-theme="light|dark"` para los cuatro sistemas visuales.
+- Zustand únicamente para exponer el estado visual y la acción de alternar tema; no persistas esta preferencia en PostgreSQL ni mediante Server Actions.
 - Componentes pequeños, puros y con una sola responsabilidad.
 - Estado inmutable y hooks llamados únicamente en el nivel superior.
 - `useEffect` solo para sincronizar con sistemas externos; no para lógica derivada ni eventos de usuario.
+- Dispara feedback de mutaciones desde event handlers o callbacks de TanStack Query, no observando estado mediante `useEffect`.
 - Los Server Components pueden hacer lecturas REST para SSR o SEO.
 - No uses Server Actions ni Route Handlers de Next.js para lógica de negocio o acceso a datos.
 - No crees un backend paralelo dentro de las aplicaciones Next.js.
@@ -143,28 +185,31 @@ frontend    -x-> entidades internas del backend
 - Usa importes decimales de precisión fija y código de moneda; nunca `float` para dinero.
 - Usa fechas con zona horaria.
 - Conserva snapshots históricos en líneas de orden y factura.
+- Conserva snapshots del perfil empresarial en órdenes, facturas y PDFs.
 - Productos y usuarios con referencias históricas se desactivan o eliminan lógicamente.
+- Categorías y etiquetas referenciadas también se desactivan o eliminan lógicamente.
+- Los slugs son únicos y no se regeneran automáticamente cuando cambia un nombre publicado.
 - Las imágenes viven fuera de PostgreSQL; guarda solo clave, URL y metadatos.
 - Cada variación de inventario debe producir un movimiento auditable.
 
 # Domain modules
 
 - `identity-access`: usuarios, sesiones, roles, propiedad y autorización.
-- `product-catalog`: productos, imágenes, búsqueda, filtros, detalle y paginación.
-- `shopping-cart-checkout`: carrito, totales, pago/envío simulado e idempotencia.
+- `product-catalog`: productos, imágenes, categorías, etiquetas, slugs, wishlist, búsqueda, filtros, detalle y paginación.
+- `shopping-cart-checkout`: carrito, badge de unidades, totales, pago/envío simulado e idempotencia.
 - `order-management`: órdenes, snapshots, historial y transiciones.
 - `inventory-control`: balances, movimientos, ajustes y concurrencia.
-- `billing-invoicing`: facturas manuales o desde orden, numeración y estados.
-- `document-export`: PDF de órdenes y facturas.
+- `billing-invoicing`: perfil empresarial, autocompletes, facturas manuales o desde orden, numeración y estados.
+- `document-export`: PDF de órdenes y facturas con identidad empresarial histórica.
 - `audit-observability`: auditoría, correlation IDs, logs y métricas.
 
 # Roles and authorization
 
 El sistema reconoce exactamente:
 
-- `CUSTOMER`: navega, compra, administra su carrito y consulta únicamente sus compras, facturas y documentos.
-- `ADMIN`: administra usuarios, productos, inventario, órdenes y facturas.
-- `BILLING`: consulta clientes y órdenes, crea facturas manuales o desde órdenes y gestiona estados de facturación; no administra usuarios, catálogo ni inventario.
+- `CUSTOMER`: navega, administra wishlist y carrito, compra y consulta únicamente sus compras, facturas y documentos.
+- `ADMIN`: administra usuarios, productos, categorías, etiquetas, perfil empresarial, inventario, órdenes y facturas.
+- `BILLING`: consulta clientes, productos autorizados, perfil empresarial y órdenes, crea facturas manuales o desde órdenes y gestiona estados de facturación; no administra usuarios, catálogo, perfil empresarial ni inventario.
 
 Reglas obligatorias:
 
@@ -191,6 +236,16 @@ Reglas obligatorias:
 12. Una orden no puede producir dos facturas activas.
 13. Factura y cambio de la orden a `INVOICED` deben confirmarse atómicamente.
 14. Cambios posteriores de productos, clientes o direcciones no alteran órdenes, facturas ni PDFs históricos.
+15. Toda colección potencialmente grande se busca, filtra, ordena y pagina en el backend.
+16. La wishlist no reserva ni descuenta stock y cada cliente accede solo a la propia.
+17. Una combinación cliente-producto no puede duplicarse dentro de la wishlist.
+18. Los productos usan un slug único, una categoría principal y cero o más etiquetas.
+19. Categorías, etiquetas y productos referenciados históricamente no se destruyen físicamente.
+20. Solo `ADMIN` modifica el perfil empresarial; `BILLING` puede consultarlo para facturación.
+21. Cada orden y factura conserva un snapshot empresarial, y los PDFs nunca mezclan ese snapshot con el perfil vigente.
+22. Storefront y backoffice deben ser visualmente distinguibles aunque compartan primitivas accesibles.
+23. Cada aplicación conserva de manera independiente la selección explícita entre tema claro y oscuro.
+24. El dashboard devuelve únicamente indicadores autorizados para `ADMIN` o `BILLING`; `CUSTOMER` no accede al resumen.
 
 ## State machines
 
@@ -224,7 +279,7 @@ Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI
 
 ## User administration
 
-- `GET /api/v1/users`: listado administrativo paginado.
+- `GET /api/v1/users`: listado administrativo paginado; también alimenta autocomplete autorizado de clientes con `search` y `pageSize` limitado.
 - `POST /api/v1/users`: creación por `ADMIN`.
 - `GET /api/v1/users/:userId`: detalle autorizado.
 - `PATCH /api/v1/users/:userId`: datos, rol o estado según permisos.
@@ -232,7 +287,7 @@ Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI
 
 ## Products and catalog
 
-- `GET /api/v1/products`: catálogo o listado administrativo con `page`, `pageSize`, `search`, filtros y orden.
+- `GET /api/v1/products`: catálogo, listado administrativo o autocomplete autorizado con `page`, `pageSize`, `search`, categoría, etiquetas, disponibilidad, precio, filtros y orden.
 - `POST /api/v1/products`: creación por `ADMIN`.
 - `GET /api/v1/products/:productId`: detalle autorizado.
 - `PATCH /api/v1/products/:productId`: edición por `ADMIN`.
@@ -240,7 +295,28 @@ Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI
 - `PATCH /api/v1/products/:productId/status`: activar o desactivar.
 - `POST /api/v1/products/:productId/image`: cargar o reemplazar imagen mediante el adaptador de almacenamiento.
 
-Las listas paginadas responden con `items` y metadatos `page`, `pageSize`, `totalItems` y `totalPages`. La UI muestra primera, anterior, hasta cuatro páginas a cada lado de la actual, siguiente, última y elipsis sin duplicar extremos.
+El detalle público deberá resolverse también mediante slug conforme al contrato OpenAPI definitivo; no inventes una ruta paralela antes de definirla en OpenAPI y specs.
+
+## Categories and tags
+
+- `GET /api/v1/categories`: listado paginado, búsqueda y filtros.
+- `POST /api/v1/categories`: creación por `ADMIN`.
+- `GET /api/v1/categories/:categoryId`: detalle autorizado.
+- `PATCH /api/v1/categories/:categoryId`: edición o cambio de estado por `ADMIN`.
+- `DELETE /api/v1/categories/:categoryId`: eliminación lógica por `ADMIN`.
+- `GET /api/v1/tags`: listado paginado, búsqueda y filtros.
+- `POST /api/v1/tags`: creación por `ADMIN`.
+- `GET /api/v1/tags/:tagId`: detalle autorizado.
+- `PATCH /api/v1/tags/:tagId`: edición o cambio de estado por `ADMIN`.
+- `DELETE /api/v1/tags/:tagId`: eliminación lógica por `ADMIN`.
+
+## Wishlist
+
+- `GET /api/v1/wishlist`: wishlist paginada del cliente autenticado.
+- `POST /api/v1/wishlist/items`: agregar un producto sin duplicarlo.
+- `DELETE /api/v1/wishlist/items/:productId`: retirar un producto propio.
+
+La wishlist no reserva stock. Agregar uno de sus productos al carrito usa el endpoint normal del carrito, revalida disponibilidad y no elimina automáticamente el deseo.
 
 ## Inventory
 
@@ -276,19 +352,48 @@ No expongas una actualización genérica de `stock` dentro del `PATCH` de produc
 - `PATCH /api/v1/invoices/:invoiceId/status`: transición de estado autorizada.
 - `GET /api/v1/invoices/:invoiceId/pdf`: descargar PDF autorizado.
 
+## Store profile
+
+- `GET /api/v1/store-profile`: consulta autorizada para `ADMIN` y `BILLING`.
+- `PATCH /api/v1/store-profile`: modificación exclusiva de `ADMIN` con auditoría.
+
+El perfil contiene al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo. La identidad visual pública del storefront debe obtenerse mediante una proyección pública o configuración que se defina explícitamente en OpenAPI; no expongas por defecto todos los datos fiscales. Las facturas manuales reutilizan `GET /users` y `GET /products` para autocomplete remoto paginado; el backend vuelve a validar todos los identificadores seleccionados.
+
+## Dashboard
+
+- `GET /api/v1/dashboard/summary`: resumen agregado autorizado por rol.
+
+Para `ADMIN`, devuelve clientes totales, productos activos, stock bajo o agotado, órdenes `PROCESSING` y facturas `PENDING_PAYMENT`. Para `BILLING`, devuelve órdenes elegibles o pendientes de facturar y facturas `PENDING_PAYMENT` o `PAID` según el período resumido. Incluye período o fecha de actualización, rechaza `CUSTOMER` y nunca devuelve campos de módulos no autorizados.
+
+El controlador del dashboard no accede directamente a repositorios ajenos; compone operaciones públicas de lectura de identidad, catálogo, inventario, órdenes y facturación. Los indicadores son informativos y deben enlazar a listas filtradas autoritativas.
+
+## Pagination contract
+
+Todas las colecciones no acotadas responden con `items`, `page`, `pageSize`, `totalItems` y `totalPages` después de aplicar búsqueda, filtros autorizados y ordenamiento. Esto incluye usuarios, productos, categorías, etiquetas, wishlist, balances, movimientos, órdenes y facturas.
+
+La UI muestra primera, anterior, hasta cuatro páginas a cada lado de la actual, siguiente, última y elipsis sin duplicar extremos. Nunca descargues todos los resultados para paginar o filtrar en memoria.
+
 Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. Si una ruta difiere de OpenAPI o de las specs, actualiza el artefacto correcto en vez de crear contratos paralelos.
 
 # Catalog and pagination behavior
 
-Cada producto incluye al menos ID, SKU, nombre, descripción, precio, moneda, imagen, fechas, estado y disponibilidad proyectada.
+Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, moneda, imagen, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada.
 
 - El storefront solo muestra productos activos.
 - Un producto agotado puede mostrarse, pero no agregarse al carrito.
 - La búsqueda cubre nombre, descripción y SKU.
+- El detalle público usa un slug único y estable; cambiar el nombre no regenera el slug automáticamente.
+- Las categorías son administrables y los productos pueden asociar cero o más etiquetas.
 - Los filtros y campos ordenables están permitidos explícitamente por el API.
 - Búsqueda, filtros, orden y página viven en la URL.
 - Cambiar cualquier criterio reinicia la página a 1.
 - La paginación se calcula en el backend; no descargues todos los resultados para paginar en memoria.
+- El catálogo usa filtros en sidebar izquierdo colapsable; el backoffice usa navegación izquierda y filtros derechos colapsables.
+- Las búsquedas del backoffice aparecen sobre cada lista.
+- Las mutaciones muestran mensajes flash y toda acción destructiva requiere confirmación modal accesible.
+- La landing y el catálogo mantienen un look and feel comercial sin patrones visuales propios de administración.
+- El backoffice abre en un dashboard minimalista con indicadores y accesos permitidos por rol.
+- Todos los componentes, incluidos gráficos y estados interactivos, soportan las cuatro combinaciones visuales.
 
 # Transactional flows
 
@@ -300,9 +405,10 @@ Dentro de una transacción corta:
 2. Bloquear balances en un orden estable.
 3. Revalidar productos activos, precios y cantidades.
 4. Crear orden, líneas y pago aprobado.
-5. Descontar inventario y crear movimientos vinculados a la orden.
-6. Cerrar el carrito.
-7. Guardar el resultado idempotente.
+5. Copiar el snapshot vigente del perfil empresarial en la orden.
+6. Descontar inventario y crear movimientos vinculados a la orden.
+7. Cerrar el carrito.
+8. Guardar el resultado idempotente.
 
 Si cualquier paso falla, revierte todo. No mantengas una transacción abierta esperando interacción del usuario o un proveedor externo.
 
@@ -313,13 +419,16 @@ En una sola transacción:
 1. Verificar rol `ADMIN` o `BILLING`.
 2. Verificar que la orden sea elegible y no tenga otra factura activa.
 3. Crear la factura desde snapshots de la orden.
-4. Establecer el estado de factura según el pago registrado.
-5. Cambiar la orden a `INVOICED`.
-6. No invocar ninguna operación de inventario.
+4. Reutilizar el snapshot empresarial histórico de la orden.
+5. Establecer el estado de factura según el pago registrado.
+6. Cambiar la orden a `INVOICED`.
+7. No invocar ninguna operación de inventario.
 
 ## Manual invoice
 
 - Selecciona un cliente y define líneas válidas.
+- Usa autocomplete remoto paginado para clientes y productos y revalida los IDs en el API.
+- Captura el perfil empresarial vigente como snapshot del emisor.
 - Usa origen `MANUAL` y no referencia orden.
 - No reserva, descuenta ni repone stock.
 - Si se necesita vender físicamente desde back office, crea una orden administrativa mediante una capacidad explícita; no uses la factura para evadir inventario.
@@ -335,13 +444,17 @@ Todo cambio debe verificarse en proporción a su alcance:
 - Pruebas de idempotencia de checkout y cancelación.
 - Pruebas de contrato entre OpenAPI, API y cliente generado.
 - Pruebas de componentes para formularios, catálogo, carrito y paginación.
-- Pruebas end-to-end para registro, compra, administración y facturación.
+- Pruebas de componentes y accesibilidad para shells, navbar, sidebars, drawers, mensajes, modales y autocomplete.
+- Pruebas de contraste WCAG AA, teclado, foco, preferencia del sistema, persistencia, hidratación y regresión visual para las cuatro combinaciones.
+- Pruebas de contrato y autorización para el dashboard, incluyendo ausencia de campos prohibidos y rechazo de `CUSTOMER`.
+- Pruebas end-to-end para registro, compra, wishlist, administración, perfil empresarial, autocomplete y facturación.
 - Pruebas negativas para elevación de rol y acceso a recursos ajenos.
 - Builds de producción independientes.
 
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
+- El plan contiene 117 tareas distribuidas en 19 grupos; las tareas 12 a 19 incorporan las revisiones de layouts, catálogo ampliado, temas y dashboard.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.

@@ -40,3 +40,9 @@ El sistema MUST producir documentos con los datos históricos guardados, aun cua
 - **WHEN** se vuelve a generar un PDF después de modificar datos maestros relacionados
 - **THEN** el contenido comercial del documento coincide con el snapshot de la orden o factura original
 
+### Requirement: Identidad empresarial en documentos
+Los PDF de órdenes y facturas SHALL incluir el nombre comercial, razón social, identificador fiscal, dirección y logo disponibles en el snapshot empresarial del documento correspondiente.
+
+#### Scenario: Documento histórico tras actualizar la empresa
+- **WHEN** un usuario autorizado regenera el PDF de una orden o factura creada antes de actualizar el perfil de la tienda
+- **THEN** el PDF conserva la identidad empresarial histórica del snapshot y no mezcla datos del perfil vigente

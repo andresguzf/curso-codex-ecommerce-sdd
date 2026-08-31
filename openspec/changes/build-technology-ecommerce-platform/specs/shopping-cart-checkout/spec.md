@@ -47,3 +47,38 @@ El sistema MUST aceptar una clave de idempotencia por intento de checkout y MUST
 - **WHEN** el cliente repite un checkout con la misma clave de idempotencia
 - **THEN** el sistema devuelve el resultado original sin crear otra orden ni otro movimiento de stock
 
+### Requirement: Indicador global del carrito
+El storefront SHALL mostrar en la navegación la cantidad total de unidades del carrito activo y SHALL actualizarla después de agregar, cambiar o eliminar una línea.
+
+#### Scenario: Cantidad actualizada
+- **WHEN** una operación válida cambia las cantidades del carrito
+- **THEN** el indicador de navegación muestra la suma vigente de unidades de todas las líneas
+
+### Requirement: Retroalimentación de operaciones del carrito
+La interfaz SHALL mostrar un mensaje flash accesible después de agregar un producto, cambiar una cantidad o eliminar una línea, y SHALL presentar de forma clara los errores de disponibilidad o validación.
+
+#### Scenario: Producto agregado
+- **WHEN** un cliente agrega correctamente un producto disponible
+- **THEN** la interfaz confirma la operación mediante un mensaje flash y actualiza totales e indicador del carrito
+
+#### Scenario: Cantidad rechazada
+- **WHEN** el backend rechaza una cantidad superior al stock disponible
+- **THEN** la interfaz conserva la última cantidad válida e informa la disponibilidad aceptable sin confirmar éxito
+
+### Requirement: Confirmación antes de eliminar una línea
+La interfaz MUST solicitar confirmación explícita mediante un diálogo modal accesible antes de eliminar un producto del carrito.
+
+#### Scenario: Cliente confirma eliminación
+- **WHEN** un cliente confirma la eliminación de una línea del carrito
+- **THEN** la interfaz envía la operación, recalcula totales e indicador y muestra el mensaje flash correspondiente
+
+#### Scenario: Cliente cancela eliminación
+- **WHEN** un cliente cancela el diálogo de eliminación
+- **THEN** la interfaz no envía la operación y mantiene intacto el carrito
+
+### Requirement: Agregar al carrito desde deseos
+El storefront SHALL permitir agregar al carrito un producto de la lista de deseos sujeto a las mismas validaciones de producto activo, cantidad y stock, sin eliminarlo automáticamente de deseos.
+
+#### Scenario: Producto deseado disponible
+- **WHEN** un cliente agrega desde deseos una cantidad válida de un producto activo con stock
+- **THEN** el sistema actualiza el carrito, mantiene el producto en deseos y devuelve los totales e indicador vigentes

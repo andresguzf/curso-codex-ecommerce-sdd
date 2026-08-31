@@ -15,6 +15,18 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Permitir que `ADMIN` y `BILLING` generen facturas desde órdenes o manualmente; las facturas manuales no alterarán inventario.
 - Permitir la consulta y exportación PDF de órdenes y facturas con controles de acceso según propiedad y rol.
 - Añadir auditoría para operaciones sensibles sobre usuarios, roles, productos, inventario, órdenes y facturas.
+- Incorporar shells y plantillas reutilizables para storefront y back office, con header, navegación, footer, logo SVG y layouts responsive.
+- Incorporar en el storefront una navegación superior con enlaces de sesión y badge de cantidad del carrito, además de un hero tecnológico con imagen de fondo semitransparente y buscador.
+- Incorporar filtros colapsables en un sidebar izquierdo del catálogo público y, en el back office, navegación colapsable a la izquierda, búsqueda sobre cada listado y filtros colapsables a la derecha.
+- Estandarizar todas las colecciones potencialmente grandes con búsqueda, filtros, ordenamiento y paginación ejecutados por el backend usando la navegación numérica ya definida.
+- Incorporar mensajes flash reutilizables para autenticación, operaciones de catálogo y mutaciones del carrito, además de confirmación modal para toda acción destructiva.
+- Incorporar una lista de deseos persistente para cada cliente, con acciones para agregar o retirar productos y mover productos disponibles al carrito.
+- Ampliar el catálogo con slugs únicos, categorías administrables y etiquetas asociables a productos.
+- Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal, dirección física y logo, administrable desde el back office y preservado como snapshot en órdenes y facturas.
+- Incorporar autocompletado remoto y paginado de clientes y productos al crear facturas manuales.
+- Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
+- Incorporar un dashboard inicial del back office con indicadores y accesos operativos adaptados a los permisos de `ADMIN` y `BILLING`.
+- Permitir seleccionar entre temas claro y oscuro en storefront y back office, con preferencias independientes, persistentes y accesibles.
 
 ## Capabilities
 
@@ -28,6 +40,17 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - `billing-invoicing`: Facturación manual o desde órdenes, estados de factura y pago, numeración y separación explícita respecto de órdenes e inventario.
 - `document-export`: Generación y descarga autorizada de órdenes y facturas en PDF.
 
+Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin introducir nuevos paths de especificación:
+
+- `identity-access`: búsqueda y paginación administrativa de usuarios, feedback de autenticación y confirmación de operaciones destructivas.
+- `product-catalog`: layouts del storefront y back office, filtros colapsables, categorías, etiquetas, slugs y lista de deseos.
+- `product-catalog`: identidades visuales diferenciadas, dashboard administrativo por rol y selección persistente de tema claro u oscuro.
+- `shopping-cart-checkout`: indicador de cantidad del carrito, mensajes flash y confirmación al retirar líneas.
+- `order-management`: búsqueda y paginación administrativa y snapshots del perfil de empresa.
+- `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
+- `billing-invoicing`: perfil de empresa, autocompletado remoto y experiencia administrativa paginada.
+- `document-export`: datos de empresa preservados en PDFs históricos.
+
 ### Modified Capabilities
 
 - Ninguna; el proyecto todavía no contiene especificaciones funcionales existentes.
@@ -39,3 +62,6 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Nuevo esquema PostgreSQL, migraciones, restricciones transaccionales, auditoría y almacenamiento de referencias a imágenes y documentos.
 - Nuevas dependencias de frontend para React/Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y TanStack Query; y dependencias de backend para REST, persistencia, autenticación, OpenAPI y generación PDF.
 - Nuevas suites de pruebas unitarias, integración, contrato y flujos end-to-end para seguridad, catálogo, checkout, concurrencia de inventario y facturación.
+- Nuevas entidades y contratos REST para categorías, etiquetas, lista de deseos y perfil de empresa, además de búsquedas remotas para autocompletado.
+- Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
+- Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.

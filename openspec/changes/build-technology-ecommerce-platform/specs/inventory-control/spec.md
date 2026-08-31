@@ -43,3 +43,13 @@ El sistema SHALL exponer la disponibilidad vigente al catálogo y SHALL impedir 
 - **WHEN** una compra reduce la disponibilidad a cero
 - **THEN** las consultas posteriores muestran el producto agotado y rechazan nuevas cantidades
 
+### Requirement: Consulta administrativa paginada de inventario
+El sistema SHALL permitir que `ADMIN` busque, filtre y ordene balances y movimientos de inventario mediante listas paginadas por el backend con `items`, `page`, `pageSize`, `totalItems` y `totalPages`.
+
+#### Scenario: Buscar balance de producto
+- **WHEN** un administrador busca un producto y aplica un filtro de disponibilidad
+- **THEN** el sistema devuelve únicamente los balances coincidentes de la página solicitada junto con sus metadatos
+
+#### Scenario: Consultar movimientos paginados
+- **WHEN** un administrador consulta los movimientos de un producto con filtros permitidos
+- **THEN** el sistema aplica los criterios antes de paginar y devuelve los movimientos auditables de esa página

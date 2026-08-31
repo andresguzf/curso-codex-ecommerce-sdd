@@ -162,6 +162,138 @@ La estrategia de pruebas incluirá:
 - Componentes para formularios, catálogo, carrito y paginación.
 - End-to-end para registro, compra, administración, facturación y autorización negativa.
 
+### 12. Shells reutilizables y navegación responsive
+
+`packages/ui` expondrá primitivas presentacionales reutilizables y cada aplicación compondrá un shell propio para no mezclar permisos ni navegación:
+
+- `StorefrontShell`: header con navbar superior, logo SVG, nombre de la tienda, inicio, cuenta, login/logout según sesión y carrito con badge de unidades; área principal y footer.
+- `BackofficeShell`: navegación lateral izquierda colapsable según rol, header contextual, área principal y slots para búsqueda y filtros.
+- `CatalogFilterSidebar`: panel izquierdo colapsable en escritorio y drawer accesible en pantallas pequeñas.
+- `BackofficeFilterSidebar`: panel derecho colapsable para evitar competir con la navegación administrativa izquierda; se convertirá en drawer en pantallas pequeñas.
+
+El estado persistible de búsqueda, filtros, orden y página residirá en la URL. El estado puramente visual de apertura de paneles podrá vivir localmente o en un store Zustand pequeño cuando deba compartirse entre componentes. Los shells mantendrán regiones semánticas, foco visible, navegación por teclado y nombres accesibles.
+
+Alternativa considerada: un único shell compartido entre storefront y backoffice. Se descarta porque las jerarquías, permisos y comportamiento responsive son distintos; se comparten primitivas, no la estructura completa.
+
+### 13. Mensajes flash y confirmación destructiva centralizados
+
+Las aplicaciones usarán un sistema compartido de mensajes flash o toast con variantes de éxito, error, advertencia e información, región `aria-live` y contenido breve. Las mutaciones de TanStack Query emitirán feedback desde sus callbacks o desde los event handlers que originan la acción; no se observarán cambios de estado mediante `useEffect` para inferir mensajes.
+
+Toda eliminación lógica, desactivación o eliminación de una línea del carrito abrirá primero un diálogo modal reutilizable construido con Tailwind y primitivas accesibles. El diálogo administrará foco inicial y retorno, cierre con teclado, bloqueo de interacción de fondo y estado pendiente para evitar envíos duplicados.
+
+Alternativa considerada: incorporar SweetAlert2. Se pospone para evitar una dependencia y un lenguaje visual adicionales; podrá evaluarse si el diálogo propio no satisface accesibilidad o mantenimiento.
+
+### 14. Catálogo extendido, slugs y lista de deseos
+
+El modelo relacional añadirá:
+
+```text
+Category(id, name, slug, description, status, createdAt, updatedAt, deletedAt)
+Tag(id, name, slug, status, createdAt, updatedAt, deletedAt)
+Product.categoryId
+Product.slug
+ProductTag(productId, tagId)
+Wishlist(id, customerId, createdAt, updatedAt)
+WishlistItem(wishlistId, productId, createdAt)
+```
+
+Cada producto tendrá una categoría principal opcional durante una migración inicial y obligatoria antes de activar nuevos productos; podrá tener múltiples etiquetas. Los slugs serán únicos mediante restricciones de base de datos, se normalizarán en el API y tendrán resolución determinista de colisiones. Cambiar un nombre no cambiará automáticamente un slug publicado; cualquier edición explícita deberá verificar unicidad.
+
+Categorías y etiquetas con referencias se desactivarán o eliminarán lógicamente. La relación de wishlist tendrá unicidad por cliente y producto, no reservará stock y conservará productos que pasen a inactivos o agotados para mostrarlos como no disponibles.
+
+Alternativa considerada: guardar categorías y etiquetas como texto o arrays dentro de `Product`. Se descarta porque impide administración consistente, integridad referencial, filtros eficientes y slugs únicos.
+
+### 15. Perfil único de tienda y snapshots empresariales
+
+Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada, datos de contacto opcionales y referencia al logo. Solo `ADMIN` podrá modificarlo; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados.
+
+Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento. De este modo, editar la empresa no reescribe órdenes, facturas ni PDFs históricos.
+
+Alternativa considerada: consultar siempre el perfil vigente al renderizar. Se descarta porque produciría documentos históricos distintos después de una modificación empresarial.
+
+### 16. Consultas paginadas y autocomplete remoto
+
+Toda colección potencialmente no acotada se resolverá en el backend y devolverá la forma común:
+
+```text
+items, page, pageSize, totalItems, totalPages
+```
+
+Esto incluye usuarios, productos, categorías, etiquetas, wishlist, balances y movimientos, órdenes y facturas. El API aplicará búsqueda, filtros autorizados y orden antes de contar y paginar. Las interfaces colocarán la búsqueda sobre la lista; el storefront usará filtros a la izquierda y el backoffice filtros a la derecha. Cualquier cambio de criterios reiniciará `page=1`.
+
+Los selectores de cliente y producto para factura manual reutilizarán consultas REST paginadas con un tamaño reducido. Un custom hook controlará término, espera breve, cancelación de solicitudes obsoletas, caché y estados de carga; el formulario guardará el identificador seleccionado, no el texto visible. Los resultados serán navegables por teclado y el API revalidará toda selección al guardar.
+
+Alternativa considerada: descargar clientes y productos completos para filtrar en memoria. Se descarta por exposición innecesaria, consumo creciente y resultados desactualizados.
+
+### 17. Extensiones del contrato REST
+
+OpenAPI incorporará, además de los endpoints ya planificados, las siguientes rutas bajo `/api/v1`:
+
+```text
+GET    /categories
+POST   /categories
+GET    /categories/:categoryId
+PATCH  /categories/:categoryId
+DELETE /categories/:categoryId
+
+GET    /tags
+POST   /tags
+GET    /tags/:tagId
+PATCH  /tags/:tagId
+DELETE /tags/:tagId
+
+GET    /wishlist
+POST   /wishlist/items
+DELETE /wishlist/items/:productId
+
+GET    /store-profile
+PATCH  /store-profile
+```
+
+Los endpoints existentes `GET /products` y `GET /users` admitirán consultas limitadas para autocomplete mediante `search`, `page`, `pageSize` y filtros autorizados; no se crearán endpoints que devuelvan catálogos o clientes completos. `GET /products` añadirá filtros por categoría, etiquetas, disponibilidad y rango de precio, y el detalle público podrá resolverse por slug sin eliminar el acceso administrativo por identificador. Todas las rutas conservarán validación Zod en la frontera frontend, validación autoritativa en NestJS, autorización, errores uniformes y cliente generado.
+
+Alternativa considerada: exponer el autocomplete mediante rutas especiales sin paginación. Se descarta porque duplicaría reglas de consulta y contratos.
+
+### 18. Sistemas visuales independientes y temas por aplicación
+
+`packages/ui` compartirá primitivas sin apariencia cerrada, comportamiento accesible y contratos de composición, pero no impondrá una identidad visual única. Cada aplicación definirá su propio conjunto de tokens semánticos para superficie, texto, borde, acento, estados, elevación, radio, espaciado y densidad:
+
+- El storefront usará una identidad comercial tecnológica, mayor protagonismo de imágenes, tarjetas de producto amplias, espacios más generosos, acentos de marca y jerarquías orientadas a descubrir, comparar y comprar.
+- El back office usará una identidad empresarial diferenciada, paleta neutral basada en slate, navy y azul, densidad operativa mayor, tablas compactas, tarjetas KPI, navegación sobria y colores semánticos para estados.
+
+Tailwind consumirá variables CSS separadas por aplicación y tema bajo un atributo `data-theme="light|dark"`. No se copiará una única paleta invirtiendo colores: cada combinación storefront-claro, storefront-oscuro, backoffice-claro y backoffice-oscuro tendrá tokens propios y contrastes verificados.
+
+La primera visita tomará `prefers-color-scheme`. Después de una selección explícita, cada aplicación persistirá su preferencia con una clave local independiente. Un bootstrap temprano aplicará el atributo antes de la primera presentación visible para evitar parpadeo del tema contrario; un store Zustand pequeño expondrá el estado visual y la acción de alternar sin introducir Server Actions ni persistencia de negocio. El control mostrará nombre accesible, estado actual y soporte de teclado.
+
+Las pruebas cubrirán contraste WCAG AA, foco, hover, active, disabled, error, success, warning, gráficos, tablas, formularios, modales, mensajes, sidebars y drawers. El color nunca será el único medio para comunicar estado.
+
+Alternativa considerada: compartir un único tema y cambiar solo el logo. Se descarta porque no cumple la separación de experiencias solicitada. También se descarta persistir el tema en PostgreSQL para la primera versión porque es una preferencia visual local que no necesita coordinación transaccional ni una API adicional.
+
+### 19. Dashboard administrativo agregado y autorizado
+
+El back office tendrá una ruta inicial de dashboard dentro de su shell. Sus tarjetas y accesos se compondrán por rol:
+
+```text
+ADMIN
+  clientes totales
+  productos activos
+  productos con stock bajo o agotado
+  órdenes PROCESSING
+  facturas PENDING_PAYMENT
+
+BILLING
+  órdenes PROCESSING elegibles para facturación
+  órdenes pendientes de facturar
+  facturas PENDING_PAYMENT
+  facturas PAID en el período resumido
+```
+
+El API expondrá `GET /api/v1/dashboard/summary`. Un servicio de lectura agregado consultará proyecciones de identidad, catálogo, inventario, órdenes y facturación mediante las operaciones públicas de cada módulo, sin acceder desde el controlador a repositorios ajenos. El contrato devolverá únicamente métricas autorizadas al rol y metadatos del período o criterio usado; `CUSTOMER` no podrá invocarlo.
+
+Los indicadores son informativos y enlazan a listas filtradas que continúan siendo la fuente operativa. No permiten mutaciones directas ni sustituyen los controles de permisos de cada módulo. Se podrán cachear por un período breve si el volumen lo exige, dejando visible la fecha de actualización y evitando presentar el resumen como balance transaccional en tiempo real.
+
+Alternativa considerada: realizar una solicitud frontend independiente por cada tarjeta. Se descarta porque duplica reglas, aumenta latencia y puede producir un dashboard formado por conteos tomados en momentos diferentes. También se descarta incorporar analítica histórica avanzada, gráficos configurables o un data warehouse en este alcance.
+
 ## Risks / Trade-offs
 
 - [El alcance inicial abarca varios dominios] → Implementar en incrementos verticales y mantener cada módulo utilizable antes de avanzar al siguiente.
@@ -171,6 +303,16 @@ La estrategia de pruebas incluirá:
 - [Los PDFs pueden consumir CPU o memoria] → Usar un adaptador, límites de tamaño y posibilidad futura de generación asíncrona.
 - [Los pagos simulados no representan fallos reales] → Aislarlos detrás de un puerto de pago para reemplazarlos posteriormente sin alterar checkout.
 - [La facturación no cumple normativa tributaria real] → Etiquetarla como facturación interna y tratar cualquier integración fiscal como cambio posterior.
+- [Dos sidebars y múltiples estados responsive pueden degradar la usabilidad] → Separar navegación izquierda de filtros derechos, usar drawers en pantallas pequeñas y validar accesibilidad y navegación por teclado.
+- [Mensajes flash excesivos pueden producir ruido o anuncios repetidos] → Deduplicar eventos, limitar duración, conservar errores accionables y probar regiones `aria-live`.
+- [Cambiar slugs publicados puede romper enlaces externos] → No regenerarlos automáticamente y validar cualquier cambio explícito con una estrategia de redirección futura fuera del alcance inicial.
+- [El perfil de tienda puede estar incompleto al emitir documentos] → Validar campos obligatorios antes de habilitar checkout o emisión y conservar snapshots inmutables.
+- [Autocompletes con muchas solicitudes pueden aumentar carga] → Exigir término mínimo, aplicar espera breve, cancelar solicitudes obsoletas, limitar `pageSize` e indexar campos de búsqueda.
+- [Dos sistemas visuales aumentan el costo de diseño y mantenimiento] → Compartir primitivas accesibles y contratos, pero probar por separado los tokens y variantes de cada aplicación.
+- [El tema puede parpadear o discrepar durante hidratación] → Aplicar la preferencia antes de la primera presentación, usar claves locales independientes y probar SSR, navegación y recarga.
+- [Un modo oscuro incompleto puede dejar componentes ilegibles] → Mantener una matriz obligatoria de estados y componentes y ejecutar pruebas de contraste y regresión visual en ambos temas.
+- [El resumen del dashboard puede quedar momentáneamente desactualizado] → Mostrar fecha de actualización, limitar cualquier caché y enlazar siempre a las listas autoritativas.
+- [Los indicadores agregados pueden filtrar información entre roles] → Construir respuestas específicas por rol y verificar permisos y ausencia de campos prohibidos con pruebas de contrato y autorización negativa.
 
 ## Migration Plan
 

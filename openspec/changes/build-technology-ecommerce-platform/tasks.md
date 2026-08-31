@@ -97,3 +97,77 @@
 - [ ] 11.3 Configurar CI con instalación bloqueada, caché, controles de calidad, pruebas y builds por aplicación afectada; verificar una ejecución completa y una ejecución incremental.
 - [ ] 11.4 Documentar variables de entorno, comandos locales, seed, migraciones, roles iniciales y límites de pagos/facturación simulados; verificar que un entorno nuevo puede levantarse siguiendo únicamente esa documentación.
 - [ ] 11.5 Validar la implementación contra todos los escenarios OpenSpec y ejecutar `openspec validate build-technology-ecommerce-platform --strict`; registrar cualquier desviación y verificar estado válido antes de solicitar archivo del cambio.
+
+## 12. Layouts, navegación y retroalimentación compartida
+
+- [ ] 12.1 Implementar `StorefrontShell` con header, navbar superior, área principal, footer, nombre de tienda y logo SVG; verificar persistencia del layout, regiones semánticas y navegación responsive mediante pruebas de componentes.
+- [ ] 12.2 Integrar en el navbar del storefront inicio, acciones de cuenta y login/logout según sesión y badge con la suma de unidades del carrito; verificar estados visitante, cliente autenticado, carrito vacío y carrito con múltiples cantidades.
+- [ ] 12.3 Implementar `BackofficeShell` con navegación lateral izquierda colapsable y opciones condicionadas por `ADMIN` y `BILLING`; verificar expansión, colapso, teclado, pantalla pequeña y ausencia de enlaces no autorizados.
+- [ ] 12.4 Implementar el hero del storefront con imagen tecnológica semitransparente, contenido legible y buscador conectado al catálogo; verificar contraste, adaptación responsive y navegación a la primera página de resultados con la URL correcta.
+- [ ] 12.5 Implementar un sistema compartido de mensajes flash accesibles para éxito, error, advertencia e información; verificar región `aria-live`, deduplicación y mensajes de login, logout y mutaciones sin usar `useEffect` para inferir eventos.
+- [ ] 12.6 Implementar un diálogo de confirmación reutilizable con Tailwind para operaciones destructivas; verificar foco inicial y de retorno, cierre por teclado, cancelación sin solicitud y bloqueo de envíos duplicados.
+- [ ] 12.7 Integrar mensajes flash y confirmaciones en CRUD de productos, categorías, etiquetas y usuarios y en agregar, actualizar o eliminar líneas del carrito; verificar cada operación exitosa, fallida y cancelada mediante pruebas de componentes.
+
+## 13. Categorías, etiquetas y slugs
+
+- [ ] 13.1 Añadir migraciones para categorías, etiquetas, relación producto-etiqueta, categoría principal y slug de producto con índices, unicidad y eliminación lógica; verificar migración desde cero y restricciones con pruebas PostgreSQL.
+- [ ] 13.2 Implementar normalización y resolución determinista de slugs sin regenerarlos automáticamente al cambiar nombres; verificar caracteres especiales, colisiones, edición explícita y unicidad concurrente.
+- [ ] 13.3 Implementar CRUD REST autorizado de categorías y etiquetas con búsqueda, filtros, orden y paginación; verificar OpenAPI, validaciones, permisos `ADMIN` y conservación de referencias al desactivar o eliminar lógicamente.
+- [ ] 13.4 Extender productos y catálogo con categoría, etiquetas, slug y detalle público por slug; verificar creación, edición, filtros combinados y rechazo de clasificaciones inactivas en nuevas asignaciones.
+- [ ] 13.5 Crear pantallas administrativas paginadas para categorías y etiquetas con búsqueda superior, filtros colapsables y formularios React Hook Form más Zod; verificar CRUD, mensajes flash y confirmaciones contra el API.
+- [ ] 13.6 Integrar selectores de categoría y etiquetas en formularios de producto y filtros en el catálogo público; verificar selección accesible, persistencia en URL y vuelta a página 1 al cambiar criterios.
+- [ ] 13.7 Regenerar el cliente TypeScript y los esquemas Zod después de ampliar el contrato de catálogo; verificar compilación de API, storefront y backoffice y ausencia de diferencias de contrato sin generar.
+
+## 14. Lista de deseos
+
+- [ ] 14.1 Añadir migraciones y repositorios para una wishlist por cliente y elementos únicos por producto; verificar unicidad, aislamiento por propietario y conservación de referencias a productos inactivos.
+- [ ] 14.2 Implementar endpoints REST para listar deseos paginados, agregar y eliminar productos con autorización de propietario; verificar duplicados, producto inexistente, cliente ajeno y metadatos de paginación.
+- [ ] 14.3 Crear controles para agregar o quitar deseos desde tarjetas y detalle de producto y una página de wishlist del cliente; verificar estados activo, agotado e inactivo, invalidación de caché y mensajes flash.
+- [ ] 14.4 Permitir agregar al carrito desde la wishlist sin eliminar automáticamente el deseo; verificar stock válido, stock insuficiente, badge del carrito y permanencia del producto guardado.
+- [ ] 14.5 Añadir pruebas end-to-end de wishlist para persistencia entre sesiones, ausencia de duplicados, aislamiento de clientes y transición válida al carrito; verificar el flujo completo con dos clientes.
+
+## 15. Perfil empresarial y snapshots
+
+- [ ] 15.1 Añadir la migración del perfil único de tienda con nombre comercial, razón social, identificador fiscal, dirección, contacto y referencia de logo; verificar unicidad del registro y validaciones obligatorias en PostgreSQL y dominio.
+- [ ] 15.2 Implementar `GET /api/v1/store-profile` y `PATCH /api/v1/store-profile` con modificación exclusiva de `ADMIN`, lectura autorizada para `ADMIN` y `BILLING` y auditoría; verificar la matriz de permisos y OpenAPI.
+- [ ] 15.3 Crear el formulario de empresa en backoffice con React Hook Form, Zod y carga o selección de logo; verificar valores iniciales, errores accesibles, guardado, mensaje flash y permisos por rol.
+- [ ] 15.4 Incorporar el snapshot empresarial al confirmar órdenes y a facturas manuales o derivadas de órdenes; verificar que editar el perfil no altera documentos existentes y que una factura desde orden reutiliza el emisor histórico.
+- [ ] 15.5 Actualizar las plantillas PDF para usar únicamente el snapshot empresarial de cada orden o factura; verificar nombre comercial, razón social, identificador fiscal, dirección y logo antes y después de modificar el perfil vigente.
+- [ ] 15.6 Añadir pruebas de integración y end-to-end del perfil empresarial, autorización y persistencia histórica; verificar edición por Admin, lectura por Billing, rechazo de modificación por Billing y regeneración estable de PDF.
+
+## 16. Listas, sidebars y paginación uniforme
+
+- [ ] 16.1 Normalizar en OpenAPI la respuesta `items`, `page`, `pageSize`, `totalItems` y `totalPages` para usuarios, productos, categorías, etiquetas, wishlist, inventario, órdenes y facturas; verificar pruebas de contrato para cada colección.
+- [ ] 16.2 Completar consultas backend de búsqueda, filtros permitidos, orden y conteo previo a paginación para todas las colecciones; verificar que ningún endpoint descarga el conjunto completo ni pagina en memoria.
+- [ ] 16.3 Implementar el sidebar izquierdo colapsable de filtros del catálogo y su drawer responsive; verificar conservación de criterios, accesibilidad, URL y reinicio de página.
+- [ ] 16.4 Implementar slots compartidos de búsqueda superior y sidebar derecho colapsable para listas del backoffice; verificar productos, usuarios, clientes, categorías, etiquetas, inventario, órdenes y facturas en escritorio y pantalla pequeña.
+- [ ] 16.5 Reutilizar el control numerado con primera, anterior, hasta cuatro páginas a cada lado, siguiente, última y elipsis en todas las listas; verificar extremos, página intermedia, una sola página y ausencia de duplicados.
+- [ ] 16.6 Añadir pruebas de componentes y end-to-end que combinen búsqueda, filtros, orden y paginación en storefront y backoffice; verificar recarga, historial del navegador y metadatos concordantes con el backend.
+
+## 17. Autocomplete para facturación manual
+
+- [ ] 17.1 Extender las consultas REST paginadas de usuarios y productos para autocomplete autorizado con término mínimo, tamaño limitado e índices adecuados; verificar rendimiento básico, permisos y que no se expongan colecciones completas.
+- [ ] 17.2 Implementar un componente y custom hook de autocomplete remoto con espera breve, cancelación de solicitudes obsoletas, caché y navegación por teclado; verificar carga, vacío, error, selección y lectores de pantalla mediante pruebas de componentes.
+- [ ] 17.3 Integrar autocomplete de clientes y productos en la factura manual guardando identificadores confirmados en React Hook Form; verificar selección, cambio, eliminación de línea y validación Zod.
+- [ ] 17.4 Revalidar cliente, productos, cantidades, precios e impuestos en el API al crear la factura; verificar rechazo de identificadores manipulados o inactivos y ausencia de movimientos de inventario.
+- [ ] 17.5 Añadir pruebas end-to-end de factura manual con autocomplete para `ADMIN` y `BILLING`; verificar búsqueda remota, selección por teclado, creación exitosa y autorización negativa.
+
+## 18. Validación integral de las revisiones
+
+- [ ] 18.1 Regenerar OpenAPI, cliente TypeScript y esquemas Zod para todas las rutas y modelos añadidos; verificar repositorio sin diferencias de generación y typecheck de las tres aplicaciones.
+- [ ] 18.2 Ejecutar pruebas de accesibilidad y responsive para shells, navbar, hero, sidebars, drawers, mensajes y modales; corregir fallos hasta verificar teclado, foco, contraste y anuncios accesibles.
+- [ ] 18.3 Ejecutar lint, typecheck, pruebas unitarias, integración, contrato, componentes y end-to-end incluyendo categorías, wishlist, perfil empresarial y autocomplete; corregir fallos hasta obtener una suite completa exitosa.
+- [ ] 18.4 Actualizar README y AGENTS.md con las rutas, entidades, layouts y reglas incorporadas; verificar que la documentación coincide con OpenAPI, specs y design sin sustituirlos como fuentes de verdad.
+- [ ] 18.5 Ejecutar `openspec validate build-technology-ecommerce-platform --strict` y revisar todos los escenarios añadidos; verificar resultado válido y que ninguna tarea se marque completada sin evidencia.
+
+## 19. Identidades visuales, temas y dashboard
+
+- [ ] 19.1 Definir tokens semánticos independientes para storefront claro/oscuro y backoffice claro/oscuro, incluyendo superficies, texto, bordes, acentos, estados, elevación, radio, espaciado y densidad; verificar las cuatro combinaciones en un catálogo visual de componentes sin reutilizar una apariencia completa.
+- [ ] 19.2 Implementar la infraestructura de tema con variables CSS, atributo `data-theme`, preferencia inicial del sistema, claves locales separadas y store Zustand visual; verificar primera visita, cambio inmediato, navegación, recarga, independencia entre aplicaciones y ausencia perceptible de parpadeo durante hidratación.
+- [ ] 19.3 Aplicar al storefront un look and feel de e-commerce tecnológico con jerarquía comercial, imágenes protagonistas, contenido destacado, tarjetas, detalle y acciones de compra; verificar mediante pruebas de componentes y revisión responsive que no contiene patrones visuales propios del panel administrativo.
+- [ ] 19.4 Aplicar al backoffice un look and feel minimalista, elegante y empresarial con paleta administrativa, navegación sobria, tablas densas, formularios, estados y tarjetas KPI; verificar consistencia visual y funcional en las vistas de `ADMIN` y `BILLING`.
+- [ ] 19.5 Implementar `GET /api/v1/dashboard/summary` mediante operaciones de lectura de los módulos y respuestas específicas por rol; verificar contrato OpenAPI, conteos de Admin y Billing, período o fecha de actualización y rechazo sin fuga de campos para `CUSTOMER`.
+- [ ] 19.6 Crear el dashboard inicial del backoffice con indicadores y accesos rápidos autorizados para `ADMIN` y `BILLING`; verificar métricas, estados de carga/error/vacío, enlaces hacia listas filtradas y ausencia de tarjetas o enlaces prohibidos por rol.
+- [ ] 19.7 Extender los cuatro temas a navbar, hero, tarjetas, dashboard, gráficos, tablas, formularios, sidebars, drawers, modales, mensajes y todos sus estados interactivos; verificar que ningún componente queda sin tokens o comunica significado únicamente por color.
+- [ ] 19.8 Añadir pruebas de contraste WCAG AA, teclado, foco, preferencia del sistema, persistencia y regresión visual para las cuatro combinaciones; corregir diferencias hasta verificar vistas representativas de storefront y backoffice en escritorio y pantalla pequeña.
+- [ ] 19.9 Actualizar README y AGENTS.md con la separación visual, los temas, el dashboard, su endpoint y las nuevas tareas; verificar que ambos documentos coinciden con proposal, specs y design y continúan describiendo funcionalidades planificadas, no implementadas.
