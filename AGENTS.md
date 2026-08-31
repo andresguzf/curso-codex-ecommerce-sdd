@@ -1,8 +1,383 @@
+# Project context
+
+Este repositorio contiene la planificación y futura implementación de una plataforma e-commerce para productos tecnológicos.
+
+Estado actual al redactar estas instrucciones:
+
+- La planificación OpenSpec está completa.
+- El cambio activo es `build-technology-ecommerce-platform`.
+- Existen propuesta, diseño, siete especificaciones y 67 tareas verificables.
+- Todavía no existe una implementación funcional de las aplicaciones.
+- Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
+
+## Sources of truth
+
+Usa estas fuentes según el tipo de información:
+
+1. Las instrucciones actuales del usuario definen la intención inmediata.
+2. `openspec/changes/build-technology-ecommerce-platform/specs/*/spec.md` define el comportamiento y los escenarios de aceptación.
+3. `openspec/changes/build-technology-ecommerce-platform/design.md` define la arquitectura y las decisiones técnicas.
+4. `openspec/changes/build-technology-ecommerce-platform/tasks.md` define el orden y la verificación del trabajo de implementación.
+5. `openspec/changes/build-technology-ecommerce-platform/proposal.md` define motivación, alcance e impacto.
+6. `README.md` es el resumen general para personas; no sustituye las especificaciones.
+
+Cuando una solicitud cambie requisitos, arquitectura o alcance, no modifiques silenciosamente solo el código. Actualiza primero los artefactos OpenSpec mediante el workflow adecuado cuando el usuario haya pedido ese cambio de planificación.
+
+# Product summary
+
+La solución ofrecerá:
+
+- Storefront público con landing page, hero y catálogo tecnológico.
+- Registro, login, sesión y autorización por roles.
+- Búsqueda, filtros, ordenamiento, paginación y detalle de productos.
+- Carrito persistente y checkout con pagos y envíos simulados.
+- Historial de compras y gestión administrativa de órdenes.
+- Control de inventario transaccional y auditable.
+- Facturación manual o derivada de órdenes.
+- Exportación PDF de órdenes y facturas.
+- Back office separado para usuarios, catálogo, inventario, órdenes y facturación.
+
+# Architecture
+
+La arquitectura planificada es un monorepo con aplicaciones desplegables de forma independiente:
+
+```text
++---------------------+       +---------------------+
+| Next.js Storefront  |       | Next.js Backoffice  |
+| catalog/cart/account|       | admin/billing       |
++----------+----------+       +----------+----------+
+           |                             |
+           +--------- REST / OpenAPI ----+
+                         |
+                 +-------v--------+
+                 | NestJS API     |
+                 | modular monolith|
+                 +-------+--------+
+                         |
+                 +-------v--------+
+                 | PostgreSQL     |
+                 +----------------+
+```
+
+Frontend y backend comparten repositorio, pero no ejecución ni acceso a datos.
+
+## Planned repository structure
+
+```text
+apps/
+  storefront/       Next.js: catálogo, carrito, checkout y cuenta
+  backoffice/       Next.js: usuarios, productos, stock, órdenes y facturas
+  api/              NestJS: API REST y lógica de negocio
+
+packages/
+  api-client/       Cliente TypeScript generado desde OpenAPI
+  api-schemas/      Esquemas Zod para fronteras HTTP
+  ui/               Componentes presentacionales compartidos
+  config-*/         TypeScript, ESLint y Tailwind compartidos
+
+infra/
+  database/         PostgreSQL, migraciones y entorno local
+  docker/           Imágenes y composición de servicios
+  deployment/       Configuración de despliegue
+```
+
+No fuerces esta estructura si ya existe una implementación equivalente. Conserva las convenciones reales del repositorio y mantén los límites arquitectónicos.
+
+## Dependency boundaries
+
+```text
+storefront  --> api-client, api-schemas, ui
+backoffice  --> api-client, api-schemas, ui
+api         --> dominio, persistencia, infraestructura
+
+storefront  -x-> ORM o PostgreSQL
+backoffice  -x-> ORM o PostgreSQL
+frontend    -x-> entidades internas del backend
+```
+
+- Solo `apps/api` accede a PostgreSQL.
+- Frontend y backend comparten contratos públicos, no entidades de persistencia.
+- Los controladores del API no acceden directamente a repositorios de otros módulos.
+- Checkout coordina catálogo, carrito, pago simulado, órdenes e inventario mediante operaciones de módulo.
+- Mantén el backend como monolito modular; no introduzcas microservicios sin un cambio OpenSpec explícito.
+
+# Technology conventions
+
+## Monorepo
+
+- pnpm workspaces.
+- Turborepo para tareas y caché.
+- Configuraciones compartidas de TypeScript, ESLint, Tailwind y testing.
+- Aplicaciones con build, variables de entorno y despliegue independientes.
+
+## Frontend
+
+- Next.js con App Router y TypeScript.
+- React estable 19.2.8 o posterior disponible al implementar; mantén `react-dom` alineado y evita canales canary o experimentales salvo petición explícita.
+- Tailwind CSS para estilos.
+- TanStack Query para estado remoto, caché, mutaciones e invalidación.
+- Zustand con `create()` solo para estado global del cliente que no duplique datos del servidor.
+- Zod para entradas y respuestas HTTP no confiables.
+- React Hook Form integrado con Zod mediante `zodResolver`.
+- Componentes pequeños, puros y con una sola responsabilidad.
+- Estado inmutable y hooks llamados únicamente en el nivel superior.
+- `useEffect` solo para sincronizar con sistemas externos; no para lógica derivada ni eventos de usuario.
+- Los Server Components pueden hacer lecturas REST para SSR o SEO.
+- No uses Server Actions ni Route Handlers de Next.js para lógica de negocio o acceso a datos.
+- No crees un backend paralelo dentro de las aplicaciones Next.js.
+
+## Backend
+
+- NestJS como API REST modular.
+- Prefijo público `/api/v1`.
+- OpenAPI como contrato de la API.
+- Cliente TypeScript generado desde OpenAPI.
+- Errores uniformes con código estable, mensaje seguro, detalles de campo y correlation ID.
+- ORM con migraciones y transacciones; usa SQL explícito cuando el bloqueo o la concurrencia lo requieran.
+- Autorización, propiedad de recursos y validación de entrada aplicadas en el API.
+- Adaptadores para pago simulado, envío, almacenamiento de imágenes y generación PDF.
+
+## Data
+
+- PostgreSQL es la autoridad transaccional.
+- Usa importes decimales de precisión fija y código de moneda; nunca `float` para dinero.
+- Usa fechas con zona horaria.
+- Conserva snapshots históricos en líneas de orden y factura.
+- Productos y usuarios con referencias históricas se desactivan o eliminan lógicamente.
+- Las imágenes viven fuera de PostgreSQL; guarda solo clave, URL y metadatos.
+- Cada variación de inventario debe producir un movimiento auditable.
+
+# Domain modules
+
+- `identity-access`: usuarios, sesiones, roles, propiedad y autorización.
+- `product-catalog`: productos, imágenes, búsqueda, filtros, detalle y paginación.
+- `shopping-cart-checkout`: carrito, totales, pago/envío simulado e idempotencia.
+- `order-management`: órdenes, snapshots, historial y transiciones.
+- `inventory-control`: balances, movimientos, ajustes y concurrencia.
+- `billing-invoicing`: facturas manuales o desde orden, numeración y estados.
+- `document-export`: PDF de órdenes y facturas.
+- `audit-observability`: auditoría, correlation IDs, logs y métricas.
+
+# Roles and authorization
+
+El sistema reconoce exactamente:
+
+- `CUSTOMER`: navega, compra, administra su carrito y consulta únicamente sus compras, facturas y documentos.
+- `ADMIN`: administra usuarios, productos, inventario, órdenes y facturas.
+- `BILLING`: consulta clientes y órdenes, crea facturas manuales o desde órdenes y gestiona estados de facturación; no administra usuarios, catálogo ni inventario.
+
+Reglas obligatorias:
+
+- El registro público siempre crea `CUSTOMER` desde el backend.
+- Solo `ADMIN` asigna o modifica roles.
+- No se puede desactivar al último administrador activo.
+- `BILLING` no puede cancelar ni completar órdenes fuera del flujo de facturación.
+- Un `CUSTOMER` nunca accede a recursos de otro cliente.
+- La interfaz puede ocultar acciones, pero el API siempre debe volver a autorizarlas.
+
+# Business invariants
+
+1. El frontend consume exclusivamente el API REST.
+2. Orden, pago y factura son agregados independientes.
+3. El carrito no reserva ni descuenta stock.
+4. Un checkout aprobado crea la orden y descuenta inventario exactamente una vez.
+5. Un pago rechazado no confirma orden ni modifica inventario.
+6. El stock nunca puede quedar negativo, incluso ante compras concurrentes.
+7. El checkout usa una clave de idempotencia para evitar duplicados.
+8. Cancelar una orden elegible restituye inventario exactamente una vez mediante un movimiento compensatorio.
+9. Facturar, pagar, anular o exportar una factura nunca modifica inventario.
+10. Una factura manual no modifica inventario.
+11. Una venta administrativa de productos físicos debe originarse como orden antes de facturarse.
+12. Una orden no puede producir dos facturas activas.
+13. Factura y cambio de la orden a `INVOICED` deben confirmarse atómicamente.
+14. Cambios posteriores de productos, clientes o direcciones no alteran órdenes, facturas ni PDFs históricos.
+
+## State machines
+
+```text
+Order:   PROCESSING --> INVOICED --> COMPLETED
+              |
+              +--> CANCELLED, cuando la transición sea válida
+
+Payment: PENDING --> APPROVED | REJECTED
+
+Invoice: DRAFT --> PENDING_PAYMENT --> PAID
+             |
+             +--> VOID, cuando la transición sea válida
+```
+
+# Planned REST API
+
+Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI, su contrato será la fuente autoritativa. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes.
+
+## Health
+
+- `GET /api/v1/health`: salud y readiness del API.
+
+## Authentication
+
+- `POST /api/v1/auth/register`: registro público como `CUSTOMER`.
+- `POST /api/v1/auth/login`: autenticación.
+- `POST /api/v1/auth/refresh`: renovación protegida de sesión.
+- `POST /api/v1/auth/logout`: revocación de sesión.
+- `GET /api/v1/auth/me`: identidad y rol actuales.
+
+## User administration
+
+- `GET /api/v1/users`: listado administrativo paginado.
+- `POST /api/v1/users`: creación por `ADMIN`.
+- `GET /api/v1/users/:userId`: detalle autorizado.
+- `PATCH /api/v1/users/:userId`: datos, rol o estado según permisos.
+- `DELETE /api/v1/users/:userId`: eliminación lógica o desactivación, nunca destrucción de historial.
+
+## Products and catalog
+
+- `GET /api/v1/products`: catálogo o listado administrativo con `page`, `pageSize`, `search`, filtros y orden.
+- `POST /api/v1/products`: creación por `ADMIN`.
+- `GET /api/v1/products/:productId`: detalle autorizado.
+- `PATCH /api/v1/products/:productId`: edición por `ADMIN`.
+- `DELETE /api/v1/products/:productId`: eliminación lógica por `ADMIN`.
+- `PATCH /api/v1/products/:productId/status`: activar o desactivar.
+- `POST /api/v1/products/:productId/image`: cargar o reemplazar imagen mediante el adaptador de almacenamiento.
+
+Las listas paginadas responden con `items` y metadatos `page`, `pageSize`, `totalItems` y `totalPages`. La UI muestra primera, anterior, hasta cuatro páginas a cada lado de la actual, siguiente, última y elipsis sin duplicar extremos.
+
+## Inventory
+
+- `GET /api/v1/inventory`: balances paginados para `ADMIN`.
+- `GET /api/v1/inventory/:productId/movements`: historial de movimientos.
+- `POST /api/v1/inventory/:productId/adjustments`: ajuste con cantidad y motivo.
+
+No expongas una actualización genérica de `stock` dentro del `PATCH` de producto. El catálogo puede proyectar `stockAvailable`, pero los cambios deben pasar por movimientos de inventario.
+
+## Cart and checkout
+
+- `GET /api/v1/cart`: carrito activo del cliente.
+- `POST /api/v1/cart/items`: agregar producto.
+- `PATCH /api/v1/cart/items/:itemId`: cambiar cantidad.
+- `DELETE /api/v1/cart/items/:itemId`: eliminar línea.
+- `POST /api/v1/checkout`: validar, simular pago/envío y confirmar compra; requiere `Idempotency-Key`.
+
+## Orders
+
+- `GET /api/v1/orders`: listado administrativo para `ADMIN` y `BILLING` con permisos diferentes.
+- `GET /api/v1/orders/mine`: historial del cliente autenticado.
+- `GET /api/v1/orders/:orderId`: detalle con comprobación de propiedad o rol.
+- `PATCH /api/v1/orders/:orderId/status`: transición administrativa permitida.
+- `POST /api/v1/orders/:orderId/cancel`: cancelación con motivo e inventario compensatorio.
+- `POST /api/v1/orders/:orderId/invoice`: generar factura desde una orden elegible.
+- `GET /api/v1/orders/:orderId/pdf`: descargar PDF autorizado.
+
+## Invoices
+
+- `GET /api/v1/invoices`: listado paginado y filtrado.
+- `POST /api/v1/invoices`: factura manual sin impacto en inventario.
+- `GET /api/v1/invoices/:invoiceId`: detalle autorizado.
+- `PATCH /api/v1/invoices/:invoiceId/status`: transición de estado autorizada.
+- `GET /api/v1/invoices/:invoiceId/pdf`: descargar PDF autorizado.
+
+Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. Si una ruta difiere de OpenAPI o de las specs, actualiza el artefacto correcto en vez de crear contratos paralelos.
+
+# Catalog and pagination behavior
+
+Cada producto incluye al menos ID, SKU, nombre, descripción, precio, moneda, imagen, fechas, estado y disponibilidad proyectada.
+
+- El storefront solo muestra productos activos.
+- Un producto agotado puede mostrarse, pero no agregarse al carrito.
+- La búsqueda cubre nombre, descripción y SKU.
+- Los filtros y campos ordenables están permitidos explícitamente por el API.
+- Búsqueda, filtros, orden y página viven en la URL.
+- Cambiar cualquier criterio reinicia la página a 1.
+- La paginación se calcula en el backend; no descargues todos los resultados para paginar en memoria.
+
+# Transactional flows
+
+## Approved checkout
+
+Dentro de una transacción corta:
+
+1. Reclamar o recuperar la clave de idempotencia.
+2. Bloquear balances en un orden estable.
+3. Revalidar productos activos, precios y cantidades.
+4. Crear orden, líneas y pago aprobado.
+5. Descontar inventario y crear movimientos vinculados a la orden.
+6. Cerrar el carrito.
+7. Guardar el resultado idempotente.
+
+Si cualquier paso falla, revierte todo. No mantengas una transacción abierta esperando interacción del usuario o un proveedor externo.
+
+## Invoice from order
+
+En una sola transacción:
+
+1. Verificar rol `ADMIN` o `BILLING`.
+2. Verificar que la orden sea elegible y no tenga otra factura activa.
+3. Crear la factura desde snapshots de la orden.
+4. Establecer el estado de factura según el pago registrado.
+5. Cambiar la orden a `INVOICED`.
+6. No invocar ninguna operación de inventario.
+
+## Manual invoice
+
+- Selecciona un cliente y define líneas válidas.
+- Usa origen `MANUAL` y no referencia orden.
+- No reserva, descuenta ni repone stock.
+- Si se necesita vender físicamente desde back office, crea una orden administrativa mediante una capacidad explícita; no uses la factura para evadir inventario.
+
+# Quality and verification
+
+Todo cambio debe verificarse en proporción a su alcance:
+
+- Lint y typecheck.
+- Pruebas unitarias para permisos, cálculos y estados.
+- Pruebas de integración con PostgreSQL para restricciones y transacciones.
+- Pruebas concurrentes para stock.
+- Pruebas de idempotencia de checkout y cancelación.
+- Pruebas de contrato entre OpenAPI, API y cliente generado.
+- Pruebas de componentes para formularios, catálogo, carrito y paginación.
+- Pruebas end-to-end para registro, compra, administración y facturación.
+- Pruebas negativas para elevación de rol y acceso a recursos ajenos.
+- Builds de producción independientes.
+
+Al implementar el cambio activo:
+
+- Sigue `tasks.md` en orden de dependencias.
+- Marca una tarea como completada solo después de verificarla.
+- No marques bloques completos por inferencia.
+- Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.
+- No archives el cambio mientras queden tareas o escenarios sin cumplir.
+
 # Available skills
 
-- `react-rules`: Crea o modifica aplicaciones e interfaces React con TypeScript y las convenciones de frontend del proyecto. Fuente: `.agents/skills/react-rules/SKILL.md`.
+- `openspec-explore`: Analiza ideas, decisiones, problemas o requisitos sin implementar. Fuente: `.agents/skills/openspec-explore/SKILL.md`.
+- `openspec-propose`: Crea un nuevo cambio con propuesta, specs, diseño y tareas. Fuente: `.agents/skills/openspec-propose/SKILL.md`.
+- `openspec-update-change`: Revisa artefactos de planificación existentes sin editar código. Fuente: `.agents/skills/openspec-update-change/SKILL.md`.
+- `openspec-apply-change`: Implementa o continúa las tareas de un cambio OpenSpec. Fuente: `.agents/skills/openspec-apply-change/SKILL.md`.
+- `openspec-sync-specs`: Sincroniza specs delta con las specs principales sin archivar el cambio. Fuente: `.agents/skills/openspec-sync-specs/SKILL.md`.
+- `openspec-archive-change`: Archiva un cambio después de que su implementación esté completa y validada. Fuente: `.agents/skills/openspec-archive-change/SKILL.md`.
+- `react-rules`: Aplica las convenciones React, Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y REST del proyecto. Fuente: `.agents/skills/react-rules/SKILL.md`.
 
 # Skill trigger rules
 
-- Usa `react-rules` cuando el usuario pida crear una aplicación o componente React, o agregar o modificar componentes, hooks, estado, formularios o lógica de UI en React.
-- Antes de realizar ese trabajo, lee completamente `.agents/skills/react-rules/SKILL.md` y aplica sus instrucciones junto con las convenciones existentes del repositorio.
+- Antes de usar un skill, lee completamente su `SKILL.md` y sigue sus límites.
+- Usa `openspec-explore` cuando el usuario quiera analizar o aclarar antes de planificar o implementar. En explore no escribas código.
+- Usa `openspec-propose` cuando el usuario pida crear una propuesta nueva y todos sus artefactos. En propose crea planificación, no implementación.
+- Usa `openspec-update-change` cuando el usuario cambie decisiones, alcance, arquitectura o requisitos del cambio existente. No edites código con este skill.
+- Usa `openspec-apply-change` cuando el usuario pida comenzar, continuar o completar la implementación del cambio `build-technology-ecommerce-platform`.
+- Usa `react-rules` junto con `openspec-apply-change` cuando una tarea implemente o modifique aplicaciones, componentes, hooks, estado, formularios o UI React/Next.js.
+- Usa `openspec-sync-specs` solo cuando el usuario pida llevar deltas aprobados a las specs principales sin archivar.
+- Usa `openspec-archive-change` solo después de completar y verificar implementación, tareas y especificaciones.
+- No combines explore o propose con implementación en el mismo turno.
+- Si el usuario solicita un cambio funcional durante apply que contradice los artefactos, detén esa parte y usa primero `openspec-update-change` cuando el usuario autorice actualizar la planificación.
+
+# Working rules for agents
+
+- Preserva cambios existentes del usuario y revisa `git status` antes de editar.
+- Prefiere `rg` y `rg --files` para búsquedas.
+- Usa `apply_patch` para editar archivos manualmente.
+- No modifiques archivos no relacionados con la tarea actual.
+- No introduzcas funcionalidades fuera del alcance sin autorización.
+- Mantén secretos fuera del repositorio, logs, fixtures y respuestas.
+- Actualiza OpenAPI, cliente generado, pruebas y documentación cuando cambie un contrato REST.
+- Actualiza specs y diseño cuando cambien comportamientos o decisiones, usando el workflow OpenSpec correspondiente.
+- Trata `README.md` como resumen y mantenlo alineado cuando haya cambios sustanciales de alcance o arquitectura.

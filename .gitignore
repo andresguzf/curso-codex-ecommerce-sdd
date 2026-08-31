@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.*
+
+# Next.js and application builds
+.next/
+out/
+dist/
+build/
+.turbo/
+.cache/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests and coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+.npmrc.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Hosting and deployment state
+.vercel/
+.netlify/
+.wrangler/
+
+# Local databases and runtime storage
+*.sqlite
+*.sqlite3
+.docker-data/
+.local-storage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.tgz
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# Tool caches
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.vite/
+.swc/
