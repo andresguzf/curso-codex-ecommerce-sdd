@@ -1,8 +1,10 @@
 {
   "extends": "@technology-ecommerce/config-typescript/nestjs.json",
   "compilerOptions": {
+    "declaration": false,
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
-  }
+  },
+  "include": ["src/**/*.ts"]
 }

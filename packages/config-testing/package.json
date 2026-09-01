@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "files": ["vitest.mjs"],
+  "files": ["vitest.mjs", "vitest.d.mts"],
   "exports": {
-    "./vitest": "./vitest.mjs"
+    "./vitest": {
+      "types": "./vitest.d.mts",
+      "default": "./vitest.mjs"
+    }
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.11",

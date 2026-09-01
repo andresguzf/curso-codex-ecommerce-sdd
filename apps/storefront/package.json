@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
     "lint": "eslint . --max-warnings=0",
     "start": "next start",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,12 +18,14 @@
   "devDependencies": {
     "@technology-ecommerce/config-eslint": "workspace:*",
     "@technology-ecommerce/config-tailwind": "workspace:*",
+    "@technology-ecommerce/config-testing": "workspace:*",
     "@technology-ecommerce/config-typescript": "workspace:*",
     "@types/node": "26.4.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "eslint": "9.39.5",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
   }
 }

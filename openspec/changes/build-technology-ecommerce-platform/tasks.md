@@ -4,16 +4,16 @@
 - [x] 1.2 Inicializar storefront y back office con Next.js, TypeScript, App Router, Tailwind y React estable 19.2.8 o posterior disponible; verificar versiones instaladas, typecheck y build de ambas aplicaciones.
 - [x] 1.3 Inicializar el API NestJS modular con endpoint de salud y configuración validada por entorno; verificar el arranque y una prueba HTTP del health check.
 - [x] 1.4 Crear configuraciones compartidas de TypeScript, ESLint, Tailwind y testing sin ocultar dependencias entre paquetes; verificar lint y typecheck desde la raíz.
-- [ ] 1.5 Configurar PostgreSQL local y variables de entorno mediante infraestructura reproducible; verificar conexión del API y persistencia después de reiniciar el servicio.
-- [ ] 1.6 Añadir comandos raíz de desarrollo, build, lint, typecheck y test para todas las aplicaciones; verificar que cada comando termina correctamente en un checkout limpio.
+- [x] 1.5 Configurar PostgreSQL local y variables de entorno mediante infraestructura reproducible; verificar conexión del API y persistencia después de reiniciar el servicio.
+- [x] 1.6 Añadir comandos raíz de desarrollo, build, lint, typecheck y test para todas las aplicaciones; verificar que cada comando termina correctamente en un checkout limpio.
 
 ## 2. Persistencia, contratos y límites
 
-- [ ] 2.1 Configurar el ORM, migraciones y cliente PostgreSQL exclusivo del API; verificar que una base vacía puede migrarse hacia adelante desde cero.
-- [ ] 2.2 Crear las tablas y restricciones de usuarios, sesiones, roles y auditoría; verificar integridad de correos únicos, roles admitidos y referencias mediante pruebas de integración.
-- [ ] 2.3 Crear las tablas de productos, imágenes, balances y movimientos de inventario; verificar SKU único, precio no negativo y balance no negativo en la base de datos.
-- [ ] 2.4 Crear las tablas de carritos, líneas, órdenes, líneas de orden, pagos e idempotencia; verificar relaciones, unicidad y snapshots mediante una migración y pruebas de repositorio.
-- [ ] 2.5 Crear las tablas de facturas y líneas con origen, estados, numeración y referencia opcional a orden; verificar unicidad de número y de factura activa por orden.
+- [x] 2.1 Configurar el ORM, migraciones y cliente PostgreSQL exclusivo del API; verificar que una base vacía puede migrarse hacia adelante desde cero.
+- [x] 2.2 Crear las tablas y restricciones de usuarios, sesiones, roles y auditoría; verificar integridad de correos únicos, roles admitidos y referencias mediante pruebas de integración.
+- [x] 2.3 Crear las tablas de productos, imágenes, balances y movimientos de inventario; verificar SKU único, precio no negativo y balance no negativo en la base de datos.
+- [x] 2.4 Crear las tablas de carritos, líneas, órdenes, líneas de orden, pagos e idempotencia; verificar relaciones, unicidad y snapshots mediante una migración y pruebas de repositorio.
+- [x] 2.5 Crear las tablas de facturas y líneas con origen, estados, numeración y referencia opcional a orden; verificar unicidad de número y de factura activa por orden.
 - [ ] 2.6 Crear seed reproducible para los tres roles, un administrador inicial y datos de catálogo de desarrollo; verificar que puede ejecutarse dos veces sin duplicar registros.
 - [ ] 2.7 Publicar OpenAPI versionado bajo `/api/v1`, generar `packages/api-client` y definir esquemas Zod para fronteras HTTP; verificar que el cliente se regenera sin cambios inesperados y compila en ambos frontends.
 - [ ] 2.8 Aplicar reglas de dependencia que impidan a los frontends importar persistencia o dominio interno del API; verificar las reglas con lint o pruebas de arquitectura que fallen ante una importación prohibida.

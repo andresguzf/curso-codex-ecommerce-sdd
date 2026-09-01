@@ -5,16 +5,22 @@
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
+    "db:check": "drizzle-kit check --config=drizzle.config.ts",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "lint": "eslint . --max-warnings=0",
     "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.spec.json"
   },
   "dependencies": {
     "@nestjs/common": "12.0.1",
     "@nestjs/config": "12.0.0",
     "@nestjs/core": "12.0.1",
     "@nestjs/platform-fastify": "12.0.1",
+    "drizzle-orm": "0.45.2",
     "fastify": "5.12.1",
+    "pg": "8.23.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.5.4"
@@ -22,9 +28,14 @@
   "devDependencies": {
     "@nestjs/cli": "12.0.0",
     "@technology-ecommerce/config-eslint": "workspace:*",
+    "@technology-ecommerce/config-testing": "workspace:*",
     "@technology-ecommerce/config-typescript": "workspace:*",
     "@types/node": "26.4.0",
+    "@types/pg": "8.23.1",
+    "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
     "eslint": "9.39.5",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
   }
 }
