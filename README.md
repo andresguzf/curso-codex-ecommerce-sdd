@@ -24,6 +24,9 @@ Construir una plataforma que cubra de forma coherente:
 - Exportación PDF de órdenes y facturas.
 - Back office separado con navegación lateral, búsquedas y filtros colapsables para administración y facturación.
 - Back office empresarial con dashboard, identidad visual distinta y temas claro y oscuro independientes.
+- Seed no productivo con 20 productos tecnológicos, al menos 60 imágenes y usuarios de ejemplo `ADMIN` y `CUSTOMER`.
+- Landing con los 9 productos activos más recientes y catálogo completo separado con paginación.
+- Imagen de portada para tarjetas y galería accesible tipo carrusel en el detalle.
 
 El diseño busca preservar consistencia entre compra, orden, inventario y facturación sin asumir microservicios ni integraciones externas prematuras.
 
@@ -34,7 +37,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 117 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 127 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -69,6 +72,10 @@ Estas decisiones son invariantes del proyecto:
 19. Storefront y backoffice comparten primitivas técnicas, pero mantienen identidades visuales, paletas, densidades y jerarquías diferentes.
 20. Cada aplicación ofrece temas claro y oscuro accesibles y conserva su preferencia visual de forma independiente.
 21. El resumen del dashboard está autorizado por rol y nunca expone métricas administrativas a `CUSTOMER`.
+22. Un producto publicable tiene exactamente una portada y una colección ordenada de imágenes con texto alternativo.
+23. Las tarjetas usan la portada; la galería completa pertenece al detalle y nunca avanza automáticamente.
+24. La landing muestra como máximo los 9 productos activos más recientes sin paginador; el catálogo completo conserva búsqueda, filtros, orden y paginación backend.
+25. El seed demostrativo es idempotente, explícito y está bloqueado en producción.
 
 ## Arquitectura general
 
@@ -243,7 +250,7 @@ Cada producto tendrá al menos:
 - Descripción.
 - Precio no negativo.
 - Moneda.
-- Imagen e información alternativa para accesibilidad.
+- Una imagen principal de portada y una colección ordenada de imágenes con texto alternativo.
 - Stock disponible proyectado desde inventario.
 - Fecha de creación.
 - Fecha de actualización.
@@ -256,14 +263,15 @@ El storefront incluirá:
 
 - Shell reutilizable con header, navbar superior, logo SVG, área principal y footer.
 - Navbar con inicio, cuenta, login/logout según sesión y carrito con badge de unidades.
-- Landing page con hero, imagen tecnológica semitransparente y buscador.
-- Listado de productos activos.
+- Landing page con hero, imagen tecnológica semitransparente, buscador y los 9 productos activos más recientes sin paginador.
+- Enlace “Ver todos los productos” hacia una página de catálogo separada.
+- Catálogo completo de productos activos con búsqueda, filtros, ordenamiento y paginación backend.
 - Tarjetas de producto.
 - Búsqueda por nombre, descripción o SKU.
 - Filtros por categoría, etiquetas, disponibilidad, precio y criterios permitidos.
 - Sidebar izquierdo de filtros colapsable y drawer equivalente en pantallas pequeñas.
 - Ordenamiento por campos explícitamente autorizados.
-- Detalle público por slug con imagen, descripción, precio y stock.
+- Detalle público por slug con galería tipo carrusel, miniaturas, controles, teclado, gestos táctiles, descripción, precio y stock.
 - Indicación de producto agotado.
 - Acción de compra deshabilitada cuando no exista disponibilidad.
 - Controles para agregar o retirar productos de la wishlist.
@@ -275,12 +283,24 @@ El back office permitirá exclusivamente a `ADMIN`:
 - Administrar categorías y etiquetas con nombres y slugs únicos.
 - Activar y desactivar productos.
 - Eliminar productos lógicamente.
-- Gestionar imágenes.
+- Gestionar múltiples imágenes, su orden, texto alternativo y portada única.
 - Ajustar inventario mediante operaciones separadas del formulario comercial.
 - Usar navegación lateral izquierda colapsable, búsqueda superior y filtros derechos colapsables.
 - Recibir mensajes flash y confirmar acciones destructivas mediante un modal accesible.
 
-### 3. Lista de deseos
+### 3. Datos demostrativos
+
+Los entornos de desarrollo y pruebas podrán cargar de forma idempotente:
+
+- Exactamente 20 productos tecnológicos con categorías, etiquetas, slugs, precios y estados válidos.
+- Al menos 3 imágenes por producto: una portada y dos imágenes adicionales, para un mínimo de 60 assets optimizados.
+- Inventario inicial creado mediante balances y movimientos auditables de apertura.
+- Al menos 9 productos activos para poblar la sección de recientes de la landing.
+- Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con contraseñas almacenadas únicamente como hashes.
+
+Los assets serán propios, generados o aprobados para el proyecto y no usarán hotlinks. El seed nunca se ejecutará automáticamente en producción y una segunda ejecución no duplicará registros ni archivos.
+
+### 4. Lista de deseos
 
 La wishlist forma parte de `product-catalog` y está disponible únicamente para clientes autenticados:
 
@@ -292,7 +312,7 @@ La wishlist forma parte de `product-catalog` y está disponible únicamente para
 - Agregar desde deseos al carrito vuelve a validar producto, cantidad y stock.
 - Agregar al carrito no elimina automáticamente el producto guardado.
 
-### 4. Paginación
+### 5. Paginación
 
 Todas las colecciones potencialmente grandes usarán paginación ejecutada por el backend. Esto incluye usuarios, productos, categorías, etiquetas, wishlist, balances, movimientos, órdenes y facturas.
 
@@ -325,7 +345,7 @@ Ejemplo para la página 10 de 25:
 
 Búsqueda, filtros, orden, página y tamaño vivirán en query parameters de la URL. Cambiar un criterio reiniciará la lista a la primera página.
 
-### 5. Carrito y checkout
+### 6. Carrito y checkout
 
 Especificación: [`shopping-cart-checkout/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/shopping-cart-checkout/spec.md)
 
@@ -345,7 +365,7 @@ Especificación: [`shopping-cart-checkout/spec.md`](openspec/changes/build-techn
 - Un pago rechazado no crea una orden confirmada ni descuenta stock.
 - Una clave de idempotencia evita duplicados ante reintentos.
 
-### 6. Órdenes
+### 7. Órdenes
 
 Especificación: [`order-management/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/order-management/spec.md)
 
@@ -380,7 +400,7 @@ Reglas:
 - Si la orden consumió stock, cancelar genera una restitución exactamente una vez.
 - Editar después el producto o usuario no altera la orden histórica.
 
-### 7. Inventario
+### 8. Inventario
 
 Especificación: [`inventory-control/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/inventory-control/spec.md)
 
@@ -413,7 +433,7 @@ Reglas transaccionales:
 - Una factura manual no reserva, descuenta ni repone inventario.
 - Balances y movimientos se buscan, filtran, ordenan y paginan desde el backend.
 
-### 8. Facturación
+### 9. Facturación
 
 Especificación: [`billing-invoicing/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/billing-invoicing/spec.md)
 
@@ -463,7 +483,7 @@ DRAFT --> PENDING_PAYMENT --> PAID
 
 Las facturas emitidas tienen numeración única y snapshots del emisor, cliente, líneas, precios, impuestos, moneda y totales. El perfil empresarial incluye al menos nombre comercial, razón social, identificador fiscal, dirección física y logo; solo `ADMIN` lo modifica y `BILLING` puede consultarlo para facturación.
 
-### 9. Exportación documental
+### 10. Exportación documental
 
 Especificación: [`document-export/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/document-export/spec.md)
 
@@ -647,13 +667,15 @@ Todas las rutas se ubican bajo `/api/v1`. El mapa es planificación; OpenAPI ser
 - `PATCH /products/:productId`
 - `DELETE /products/:productId`
 - `PATCH /products/:productId/status`
-- `POST /products/:productId/image`
+- `POST /products/:productId/images`
+- `PATCH /products/:productId/images/:imageId`
+- `DELETE /products/:productId/images/:imageId`
 - `GET|POST /categories`
 - `GET|PATCH|DELETE /categories/:categoryId`
 - `GET|POST /tags`
 - `GET|PATCH|DELETE /tags/:tagId`
 
-El detalle público se resolverá también mediante slug conforme al contrato OpenAPI definitivo. Las consultas de productos aceptarán búsqueda, categoría, etiquetas, disponibilidad, rango de precio, orden y paginación.
+Los listados devuelven `coverImage`; el detalle devuelve `images` ordenadas. El detalle público se resolverá también mediante slug conforme al contrato OpenAPI definitivo. Las consultas de productos aceptarán búsqueda, categoría, etiquetas, disponibilidad, rango de precio, orden y paginación.
 
 ### Wishlist, carrito y checkout
 
@@ -726,6 +748,9 @@ Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con 
 - Tokens visuales independientes para storefront y backoffice, con variantes claras y oscuras propias.
 - Switch de tema accesible, preferencia inicial del sistema, persistencia independiente y aplicación previa a la hidratación visible.
 - Zustand limitado al estado visual del tema; la preferencia no requiere PostgreSQL ni Server Actions.
+- Las tarjetas renderizan únicamente `coverImage`; el detalle consume la colección `images` ordenada.
+- La galería evita autoplay, permite miniaturas, anterior/siguiente, teclado y gestos, y carga diferidamente imágenes no visibles.
+- La landing solicita `page=1`, `pageSize=9`, productos activos y orden descendente por creación, pero no renderiza paginador.
 - Estado inmutable; no se mutan objetos ni arrays directamente.
 - `useEffect` solo sincroniza con sistemas externos.
 - Los cálculos derivados se realizan durante render o en handlers.
@@ -774,13 +799,14 @@ El API emitirá logs estructurados, correlation IDs y métricas para autenticaci
 - Pruebas de accesibilidad y responsive para shells, sidebars, drawers, modales y mensajes.
 - Pruebas de contraste, temas, persistencia, hidratación y regresión visual para las cuatro combinaciones de interfaz.
 - Pruebas de contrato y autorización negativa para el resumen del dashboard.
+- Pruebas de seed, portada única, orden de imágenes, fallback, galería, últimos 9 productos y catálogo completo.
 - Pruebas end-to-end de registro, compra, historial, administración, wishlist, perfil empresarial, autocomplete y facturación.
 - Pruebas negativas de roles, propiedad y fuga de datos.
 - Lint, typecheck y builds de producción para todas las aplicaciones.
 
 ## Hoja de ruta de implementación
 
-La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en diecinueve etapas:
+La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veinte etapas:
 
 1. Fundaciones del monorepo y aplicaciones base.
 2. Persistencia, migraciones, contratos OpenAPI y límites de dependencias.
@@ -801,8 +827,9 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 17. Autocomplete para facturación manual.
 18. Validación integral de las revisiones y actualización documental.
 19. Identidades visuales, temas y dashboard.
+20. Seed demostrativo, imágenes y navegación del catálogo.
 
-Cada una de las 117 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
+Cada una de las 127 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
 
 ## Fuera del alcance inicial
 
@@ -836,6 +863,10 @@ Estas funcionalidades pueden añadirse mediante cambios OpenSpec posteriores sin
 - Parpadeo o discrepancia de tema durante hidratación: aplicación temprana de la preferencia y pruebas SSR.
 - Resumen administrativo desactualizado: fecha visible, caché breve y enlaces a listas autoritativas.
 - Fuga de indicadores entre roles: respuestas específicas por rol y pruebas negativas para `CUSTOMER`.
+- Volumen del seed de imágenes: assets optimizados, manifiesto estable y cargas idempotentes.
+- Conflictos al reordenar imágenes o cambiar portada: restricciones y transacción backend.
+- Credenciales seed conocidas: bloqueo estricto en producción y ausencia de secretos en logs.
+- Accesibilidad o rendimiento del carrusel: sin autoplay, navegación por teclado, dimensiones reservadas y lazy loading.
 
 ## Continuar con la implementación
 

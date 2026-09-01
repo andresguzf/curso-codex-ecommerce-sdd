@@ -6,7 +6,7 @@ Estado actual al redactar estas instrucciones:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 117 tareas verificables.
+- Existen propuesta, diseño, siete especificaciones y 127 tareas verificables.
 - Todavía no existe una implementación funcional de las aplicaciones.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
@@ -42,6 +42,9 @@ La solución ofrecerá:
 - Back office con navegación lateral, búsquedas superiores y filtros colapsables para usuarios, catálogo, inventario, órdenes y facturación.
 - Dashboard empresarial por rol y un sistema visual completamente distinto del storefront.
 - Temas claro y oscuro independientes y persistentes para cada aplicación.
+- Seed no productivo con 20 productos, al menos 60 imágenes y usuarios `ADMIN` y `CUSTOMER` de ejemplo.
+- Landing con los 9 productos activos más recientes sin paginación y catálogo completo separado.
+- Portada única para tarjetas y galería accesible tipo carrusel en el detalle.
 
 # Architecture
 
@@ -191,6 +194,8 @@ BackofficeShell
 - Los slugs son únicos y no se regeneran automáticamente cuando cambia un nombre publicado.
 - Las imágenes viven fuera de PostgreSQL; guarda solo clave, URL y metadatos.
 - Cada variación de inventario debe producir un movimiento auditable.
+- `ProductImage` representa una colección ordenada con `isPrimary`, `sortOrder` y `altText`; un producto publicable tiene exactamente una portada.
+- Los seed de productos y usuarios son explícitos, idempotentes, exclusivos de desarrollo/pruebas y deben fallar antes de escribir en producción.
 
 # Domain modules
 
@@ -246,6 +251,11 @@ Reglas obligatorias:
 22. Storefront y backoffice deben ser visualmente distinguibles aunque compartan primitivas accesibles.
 23. Cada aplicación conserva de manera independiente la selección explícita entre tema claro y oscuro.
 24. El dashboard devuelve únicamente indicadores autorizados para `ADMIN` o `BILLING`; `CUSTOMER` no accede al resumen.
+25. Las tarjetas usan únicamente la portada; el detalle devuelve y presenta la galería ordenada.
+26. La galería no usa autoplay y soporta miniaturas, teclado, controles anterior/siguiente y gestos táctiles.
+27. La landing muestra como máximo los 9 productos activos más recientes sin paginador.
+28. El catálogo completo es una página separada con búsqueda, filtros, orden y paginación backend.
+29. El seed crea exactamente 20 productos y usuarios `ADMIN` y `CUSTOMER` sin duplicados y nunca se ejecuta automáticamente en producción.
 
 ## State machines
 
@@ -293,9 +303,11 @@ Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI
 - `PATCH /api/v1/products/:productId`: edición por `ADMIN`.
 - `DELETE /api/v1/products/:productId`: eliminación lógica por `ADMIN`.
 - `PATCH /api/v1/products/:productId/status`: activar o desactivar.
-- `POST /api/v1/products/:productId/image`: cargar o reemplazar imagen mediante el adaptador de almacenamiento.
+- `POST /api/v1/products/:productId/images`: agregar una imagen mediante el adaptador de almacenamiento.
+- `PATCH /api/v1/products/:productId/images/:imageId`: editar texto alternativo, orden o portada.
+- `DELETE /api/v1/products/:productId/images/:imageId`: eliminar una imagen sin dejar un producto activo sin portada.
 
-El detalle público deberá resolverse también mediante slug conforme al contrato OpenAPI definitivo; no inventes una ruta paralela antes de definirla en OpenAPI y specs.
+Los listados devuelven `coverImage`; el detalle devuelve `images` ordenadas. El detalle público deberá resolverse también mediante slug conforme al contrato OpenAPI definitivo; no inventes una ruta paralela antes de definirla en OpenAPI y specs.
 
 ## Categories and tags
 
@@ -377,7 +389,7 @@ Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. 
 
 # Catalog and pagination behavior
 
-Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, moneda, imagen, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada.
+Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, moneda, portada, galería ordenada, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada.
 
 - El storefront solo muestra productos activos.
 - Un producto agotado puede mostrarse, pero no agregarse al carrito.
@@ -394,6 +406,11 @@ Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, mone
 - La landing y el catálogo mantienen un look and feel comercial sin patrones visuales propios de administración.
 - El backoffice abre en un dashboard minimalista con indicadores y accesos permitidos por rol.
 - Todos los componentes, incluidos gráficos y estados interactivos, soportan las cuatro combinaciones visuales.
+- La landing consulta la primera página con tamaño 9, productos activos y orden de creación descendente, renderiza solo los resultados y no muestra paginador.
+- “Ver todos los productos” navega al catálogo completo, donde búsqueda, filtros, orden y página viven en la URL.
+- Las tarjetas usan `coverImage`; el detalle usa una galería sin autoplay con lazy loading de imágenes no visibles.
+- El seed incluye exactamente 20 productos, mínimo 3 imágenes por producto, categorías, etiquetas, precios y movimientos de inventario de apertura.
+- El seed incluye usuarios `ADMIN` y `CUSTOMER` no productivos, hashea contraseñas, no registra credenciales y rechaza producción.
 
 # Transactional flows
 
@@ -447,6 +464,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 - Pruebas de componentes y accesibilidad para shells, navbar, sidebars, drawers, mensajes, modales y autocomplete.
 - Pruebas de contraste WCAG AA, teclado, foco, preferencia del sistema, persistencia, hidratación y regresión visual para las cuatro combinaciones.
 - Pruebas de contrato y autorización para el dashboard, incluyendo ausencia de campos prohibidos y rechazo de `CUSTOMER`.
+- Pruebas de integración, contrato, componentes y end-to-end para seed, portada, orden de imágenes, galería, landing y catálogo completo.
 - Pruebas end-to-end para registro, compra, wishlist, administración, perfil empresarial, autocomplete y facturación.
 - Pruebas negativas para elevación de rol y acceso a recursos ajenos.
 - Builds de producción independientes.
@@ -454,7 +472,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 117 tareas distribuidas en 19 grupos; las tareas 12 a 19 incorporan las revisiones de layouts, catálogo ampliado, temas y dashboard.
+- El plan contiene 127 tareas distribuidas en 20 grupos; las tareas 12 a 20 incorporan las revisiones de layouts, catálogo ampliado, temas, dashboard, seed e imágenes.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.
