@@ -212,3 +212,81 @@ Ambos temas MUST mantener contraste equivalente al nivel AA, foco visible, legib
 #### Scenario: Carga con preferencia persistida
 - **WHEN** una persona vuelve a una aplicación que tiene un tema guardado
 - **THEN** la primera presentación visible usa ese tema sin mostrar primero de forma perceptible el tema contrario
+
+### Requirement: Imágenes múltiples y portada de producto
+El sistema SHALL permitir múltiples imágenes ordenadas por producto, MUST mantener exactamente una imagen principal entre las imágenes de un producto publicable y SHALL conservar texto alternativo descriptivo para cada imagen.
+
+#### Scenario: Producto con galería válida
+- **WHEN** un administrador guarda un producto con una portada y varias imágenes adicionales válidas
+- **THEN** el sistema conserva una única portada, el orden de la galería y el texto alternativo de todas las imágenes
+
+#### Scenario: Cambio de portada
+- **WHEN** un administrador selecciona otra imagen de la galería como principal
+- **THEN** el sistema desmarca la portada anterior y mantiene exactamente una imagen principal
+
+#### Scenario: Producto sin portada
+- **WHEN** se intenta activar o publicar un producto con imágenes pero sin una portada válida
+- **THEN** el sistema rechaza la operación e identifica el requisito de imagen principal
+
+### Requirement: Uso de portada en tarjetas de catálogo
+Las tarjetas de producto de la landing, catálogo, wishlist y back office SHALL usar la imagen principal como portada y SHALL mostrar un fallback accesible cuando la imagen no pueda cargarse.
+
+#### Scenario: Tarjeta con imágenes múltiples
+- **WHEN** una tarjeta representa un producto que tiene portada e imágenes adicionales
+- **THEN** la tarjeta muestra únicamente la portada sin convertir la propia tarjeta en una galería
+
+#### Scenario: Fallo de la portada
+- **WHEN** la portada no puede cargarse
+- **THEN** la tarjeta conserva su estructura y muestra un fallback con nombre o descripción accesible del producto
+
+### Requirement: Galería accesible en el detalle del producto
+La página de detalle SHALL presentar la portada y las imágenes adicionales mediante una galería tipo carrusel con miniaturas, controles anterior y siguiente, navegación por teclado y gestos táctiles, y MUST NOT avanzar automáticamente.
+
+#### Scenario: Selección de miniatura
+- **WHEN** una persona selecciona una miniatura de la galería
+- **THEN** la imagen seleccionada pasa a ser la imagen grande visible sin cambiar la portada persistida del producto
+
+#### Scenario: Navegación por teclado
+- **WHEN** una persona enfoca la galería y usa los controles o teclas admitidas
+- **THEN** puede recorrer las imágenes en orden y recibe una indicación accesible de la posición actual
+
+#### Scenario: Producto con una sola imagen
+- **WHEN** un producto contiene únicamente su portada
+- **THEN** el detalle muestra la imagen sin controles de carrusel inactivos o engañosos
+
+### Requirement: Productos recientes en la landing
+La landing SHALL mostrar como máximo los nueve productos activos más recientes ordenados por fecha de creación descendente, SHALL omitir controles de paginación y SHALL ofrecer un enlace visible hacia el catálogo completo.
+
+#### Scenario: Existen más de nueve productos activos
+- **WHEN** una persona visita la landing y existen más de nueve productos activos
+- **THEN** la página muestra exactamente los nueve más recientes, no muestra paginador y permite ir a “Ver todos los productos”
+
+#### Scenario: Existen menos de nueve productos activos
+- **WHEN** existen menos de nueve productos activos
+- **THEN** la landing muestra todos los disponibles sin completar con productos inactivos ni presentar paginación
+
+### Requirement: Página de catálogo completo
+El storefront SHALL ofrecer una página de catálogo separada que permita explorar todos los productos activos mediante búsqueda, filtros, ordenamiento y paginación calculados por el backend con los controles numéricos ya definidos.
+
+#### Scenario: Acceso desde la landing
+- **WHEN** una persona activa “Ver todos los productos” desde la landing
+- **THEN** navega a la primera página del catálogo completo sin heredar una paginación oculta de la sección de recientes
+
+#### Scenario: Navegación del catálogo
+- **WHEN** una persona busca, filtra, ordena o cambia de página en el catálogo completo
+- **THEN** el storefront consulta únicamente la página correspondiente, conserva los criterios en la URL y muestra los metadatos y controles de paginación aplicables
+
+### Requirement: Seed demostrativo del catálogo
+Los entornos de desarrollo y pruebas SHALL poder cargar de forma idempotente exactamente veinte productos tecnológicos de ejemplo con datos válidos, categorías, etiquetas, precios, disponibilidad y al menos tres imágenes por producto, incluyendo una portada, sin habilitar este contenido automáticamente en producción.
+
+#### Scenario: Primera ejecución del seed
+- **WHEN** se ejecuta el seed en un entorno permitido con una base preparada
+- **THEN** quedan disponibles veinte productos coherentes, al menos nueve activos para la landing y un mínimo de sesenta imágenes ordenadas con texto alternativo
+
+#### Scenario: Reejecución del seed
+- **WHEN** se vuelve a ejecutar el seed sobre los mismos datos
+- **THEN** el sistema actualiza o conserva los registros deterministas sin duplicar productos, imágenes, categorías, etiquetas ni balances
+
+#### Scenario: Intento en producción
+- **WHEN** se intenta ejecutar el seed demostrativo en un entorno de producción
+- **THEN** el sistema rechaza la operación antes de crear usuarios, productos, imágenes o inventario de ejemplo

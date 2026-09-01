@@ -83,3 +83,14 @@ La interfaz administrativa MUST solicitar confirmación explícita mediante un d
 #### Scenario: Administrador cancela la confirmación
 - **WHEN** un administrador inicia la desactivación de un usuario y cancela el diálogo
 - **THEN** la interfaz cierra el diálogo sin enviar la operación ni cambiar el usuario
+
+### Requirement: Usuarios demostrativos no productivos
+Los entornos de desarrollo y pruebas SHALL poder crear idempotentemente un usuario de ejemplo `ADMIN` y un usuario de ejemplo `CUSTOMER` con credenciales explícitamente no productivas, y MUST impedir que este seed se ejecute automáticamente en producción.
+
+#### Scenario: Seed de usuarios permitido
+- **WHEN** se ejecuta el seed en desarrollo o pruebas con su configuración válida
+- **THEN** el sistema crea o actualiza exactamente los usuarios demostrativos `ADMIN` y `CUSTOMER` sin duplicarlos y almacena sus contraseñas únicamente como hashes
+
+#### Scenario: Seed de usuarios en producción
+- **WHEN** se intenta ejecutar el seed demostrativo de usuarios en producción
+- **THEN** el sistema rechaza la operación antes de crear o modificar cuentas y no registra las credenciales en logs

@@ -294,6 +294,65 @@ Los indicadores son informativos y enlazan a listas filtradas que continúan sie
 
 Alternativa considerada: realizar una solicitud frontend independiente por cada tarjeta. Se descarta porque duplica reglas, aumenta latencia y puede producir un dashboard formado por conteos tomados en momentos diferentes. También se descarta incorporar analítica histórica avanzada, gráficos configurables o un data warehouse en este alcance.
 
+### 20. Modelo de imágenes y galería de producto
+
+`ProductImage` representará una colección ordenada y no una única imagen:
+
+```text
+ProductImage(
+  id,
+  productId,
+  storageKey,
+  url,
+  altText,
+  isPrimary,
+  sortOrder,
+  width,
+  height,
+  mimeType,
+  createdAt,
+  updatedAt
+)
+```
+
+Una restricción única parcial garantizará como máximo una imagen `isPrimary=true` por producto. La regla de activación exigirá exactamente una portada para cualquier producto publicable. `sortOrder` será único dentro del producto o se normalizará transaccionalmente al reordenar. El API devolverá `coverImage` en listados y tarjetas, mientras que el detalle devolverá la colección `images` completa y ordenada.
+
+El contrato REST ampliará la gestión de imágenes bajo `/api/v1`:
+
+```text
+POST   /products/:productId/images
+PATCH  /products/:productId/images/:imageId
+DELETE /products/:productId/images/:imageId
+```
+
+La mutación permitirá actualizar texto alternativo, orden o portada con autorización `ADMIN`. El almacenamiento seguirá detrás del adaptador existente y la base guardará únicamente claves, URL y metadatos. Eliminar una imagen deberá coordinar referencia y archivo sin dejar un producto activo sin portada.
+
+La galería del storefront no tendrá autoplay. Mantendrá una imagen grande, miniaturas y controles anterior/siguiente, responderá a teclado y gestos táctiles y anunciará posición y texto alternativo. La portada se cargará con prioridad apropiada; las imágenes no activas usarán carga diferida, dimensiones reservadas y formatos optimizados para evitar desplazamientos de layout.
+
+Alternativa considerada: almacenar un array de URLs en `Product`. Se descarta porque dificulta ordenar, definir portada, editar texto alternativo, aplicar integridad y gestionar archivos individuales. También se descarta un carrusel automático porque perjudica control, legibilidad y accesibilidad.
+
+### 21. Seed demostrativo y separación landing-catálogo
+
+El seed será una operación explícita, determinista, idempotente y bloqueada por configuración en producción. Usará identificadores naturales estables para crear o actualizar:
+
+- Exactamente veinte productos tecnológicos de distintas categorías.
+- Categorías, etiquetas, slugs, precios y estados válidos.
+- Un mínimo de tres imágenes por producto: una portada y al menos dos imágenes de galería.
+- Balances iniciales y movimientos auditables de apertura, sin escribir stock directamente fuera de inventario.
+- Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con credenciales solo de desarrollo o pruebas almacenadas como hashes y nunca impresas en logs.
+
+Las imágenes serán fixtures propias o generadas y aprobadas para uso en el proyecto, sin hotlinks a terceros. Un manifiesto estable asociará cada asset con producto, texto alternativo, orden y condición de portada. El adaptador de almacenamiento comprobará la clave antes de cargar para que una reejecución no duplique archivos. La documentación indicará cómo configurar las credenciales no productivas sin convertirlas en secretos reales.
+
+La landing reutilizará el listado existente con una consulta equivalente a:
+
+```text
+GET /api/v1/products?page=1&pageSize=9&sort=createdAt:desc&status=ACTIVE
+```
+
+Renderizará solo `items`, sin control paginado, y mostrará un enlace a la ruta de catálogo completo. La página de catálogo utilizará el mismo endpoint con búsqueda, filtros, orden y página reflejados en la URL y con los controles numéricos existentes. No se introducirá un endpoint `/latest` ni se descargarán todos los productos para recortarlos en el frontend.
+
+Alternativa considerada: mantener landing y catálogo como una misma vista paginada. Se descarta porque la landing necesita una selección breve y comercial, mientras que el catálogo necesita exploración exhaustiva y estado navegable. También se descarta cargar imágenes remotas durante cada seed porque vuelve el entorno frágil y no reproducible.
+
 ## Risks / Trade-offs
 
 - [El alcance inicial abarca varios dominios] → Implementar en incrementos verticales y mantener cada módulo utilizable antes de avanzar al siguiente.
@@ -313,6 +372,11 @@ Alternativa considerada: realizar una solicitud frontend independiente por cada 
 - [Un modo oscuro incompleto puede dejar componentes ilegibles] → Mantener una matriz obligatoria de estados y componentes y ejecutar pruebas de contraste y regresión visual en ambos temas.
 - [El resumen del dashboard puede quedar momentáneamente desactualizado] → Mostrar fecha de actualización, limitar cualquier caché y enlazar siempre a las listas autoritativas.
 - [Los indicadores agregados pueden filtrar información entre roles] → Construir respuestas específicas por rol y verificar permisos y ausencia de campos prohibidos con pruebas de contrato y autorización negativa.
+- [Sesenta o más imágenes seed pueden aumentar tamaño y tiempo de preparación] → Usar assets optimizados, un manifiesto estable y cargas idempotentes mediante el adaptador.
+- [Reordenar imágenes concurrentemente puede duplicar posiciones o portadas] → Aplicar restricciones, transacción y normalización de orden en el backend.
+- [Un seed con credenciales conocidas sería peligroso en producción] → Bloquearlo por entorno, separar configuración no productiva, almacenar hashes y probar explícitamente el rechazo.
+- [El carrusel puede degradar accesibilidad o rendimiento] → Evitar autoplay, soportar teclado y gestos, reservar dimensiones y cargar diferidamente imágenes no visibles.
+- [Landing y catálogo podrían divergir en reglas de visibilidad] → Reutilizar el mismo endpoint, filtros de producto activo y cliente generado, cambiando solo tamaño, orden y presentación.
 
 ## Migration Plan
 
