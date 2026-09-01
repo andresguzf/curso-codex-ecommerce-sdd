@@ -500,6 +500,7 @@ Al implementar el cambio activo:
 - `openspec-sync-specs`: Sincroniza specs delta con las specs principales sin archivar el cambio. Fuente: `.agents/skills/openspec-sync-specs/SKILL.md`.
 - `openspec-archive-change`: Archiva un cambio después de que su implementación esté completa y validada. Fuente: `.agents/skills/openspec-archive-change/SKILL.md`.
 - `react-rules`: Aplica las convenciones React, Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y REST del proyecto. Fuente: `.agents/skills/react-rules/SKILL.md`.
+- `frontend-design`: Dirige el diseño visual intencional de interfaces, incluyendo HTML/JSX, CSS/Tailwind, UI/UX, look and feel, paletas, tipografía, composición, responsive, movimiento y revisión crítica para evitar resultados genéricos. Fuente: `.agents/skills/frontend-design/SKILL.md`.
 
 # Skill trigger rules
 
@@ -509,6 +510,8 @@ Al implementar el cambio activo:
 - Usa `openspec-update-change` cuando el usuario cambie decisiones, alcance, arquitectura o requisitos del cambio existente. No edites código con este skill.
 - Usa `openspec-apply-change` cuando el usuario pida comenzar, continuar o completar la implementación del cambio `build-technology-ecommerce-platform`.
 - Usa `react-rules` junto con `openspec-apply-change` cuando una tarea implemente o modifique aplicaciones, componentes, hooks, estado, formularios o UI React/Next.js.
+- Usa `frontend-design` cuando una solicitud cree o reformule HTML/JSX, CSS o Tailwind, layouts, componentes visuales, temas, tokens, tipografía, paletas, motion, responsive, accesibilidad visual, UI/UX o el look and feel de storefront o backoffice.
+- Combina `frontend-design`, `react-rules` y `openspec-apply-change` cuando una tarea OpenSpec implemente o modifique la presentación visual React/Next.js. Para cambios React exclusivamente lógicos y sin impacto visual, aplica `react-rules` sin forzar `frontend-design`.
 - Usa `openspec-sync-specs` solo cuando el usuario pida llevar deltas aprobados a las specs principales sin archivar.
 - Usa `openspec-archive-change` solo después de completar y verificar implementación, tareas y especificaciones.
 - No combines explore o propose con implementación en el mismo turno.

@@ -1,9 +1,9 @@
 ## 1. Fundaciones del monorepo
 
-- [ ] 1.1 Crear el workspace pnpm y la configuración Turborepo con `apps/storefront`, `apps/backoffice`, `apps/api` y los paquetes compartidos definidos en el diseño; verificar que pnpm reconoce todos los workspaces y que el grafo de tareas no contiene ciclos.
-- [ ] 1.2 Inicializar storefront y back office con Next.js, TypeScript, App Router, Tailwind y React estable 19.2.8 o posterior disponible; verificar versiones instaladas, typecheck y build de ambas aplicaciones.
-- [ ] 1.3 Inicializar el API NestJS modular con endpoint de salud y configuración validada por entorno; verificar el arranque y una prueba HTTP del health check.
-- [ ] 1.4 Crear configuraciones compartidas de TypeScript, ESLint, Tailwind y testing sin ocultar dependencias entre paquetes; verificar lint y typecheck desde la raíz.
+- [x] 1.1 Crear el workspace pnpm y la configuración Turborepo con `apps/storefront`, `apps/backoffice`, `apps/api` y los paquetes compartidos definidos en el diseño; verificar que pnpm reconoce todos los workspaces y que el grafo de tareas no contiene ciclos.
+- [x] 1.2 Inicializar storefront y back office con Next.js, TypeScript, App Router, Tailwind y React estable 19.2.8 o posterior disponible; verificar versiones instaladas, typecheck y build de ambas aplicaciones.
+- [x] 1.3 Inicializar el API NestJS modular con endpoint de salud y configuración validada por entorno; verificar el arranque y una prueba HTTP del health check.
+- [x] 1.4 Crear configuraciones compartidas de TypeScript, ESLint, Tailwind y testing sin ocultar dependencias entre paquetes; verificar lint y typecheck desde la raíz.
 - [ ] 1.5 Configurar PostgreSQL local y variables de entorno mediante infraestructura reproducible; verificar conexión del API y persistencia después de reiniciar el servicio.
 - [ ] 1.6 Añadir comandos raíz de desarrollo, build, lint, typecheck y test para todas las aplicaciones; verificar que cada comando termina correctamente en un checkout limpio.
 

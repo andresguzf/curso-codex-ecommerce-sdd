@@ -1,0 +1,13 @@
+{
+  "name": "@technology-ecommerce/config-tailwind",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["postcss.mjs"],
+  "exports": {
+    "./postcss": "./postcss.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "4.3.3"
+  }
+}
