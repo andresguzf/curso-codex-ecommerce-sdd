@@ -25,7 +25,7 @@ Construir una plataforma que cubra de forma coherente:
 - Back office separado con navegación lateral, búsquedas y filtros colapsables para administración y facturación.
 - Back office empresarial con dashboard, identidad visual distinta y temas claro y oscuro independientes.
 - Seed no productivo con 20 productos tecnológicos, al menos 60 imágenes y usuarios de ejemplo `ADMIN` y `CUSTOMER`.
-- Landing con los 9 productos activos más recientes y catálogo completo separado con paginación.
+- Landing con 3 destacados, 9 productos recientes no repetidos y hasta 3 categorías importantes con 3 productos cada una.
 - Imagen de portada para tarjetas y galería accesible tipo carrusel en el detalle.
 
 El diseño busca preservar consistencia entre compra, orden, inventario y facturación sin asumir microservicios ni integraciones externas prematuras.
@@ -37,7 +37,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 127 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 135 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -74,8 +74,13 @@ Estas decisiones son invariantes del proyecto:
 21. El resumen del dashboard está autorizado por rol y nunca expone métricas administrativas a `CUSTOMER`.
 22. Un producto publicable tiene exactamente una portada y una colección ordenada de imágenes con texto alternativo.
 23. Las tarjetas usan la portada; la galería completa pertenece al detalle y nunca avanza automáticamente.
-24. La landing muestra como máximo los 9 productos activos más recientes sin paginador; el catálogo completo conserva búsqueda, filtros, orden y paginación backend.
+24. La sección de recientes de la landing muestra como máximo 9 productos activos sin paginador; el catálogo completo conserva búsqueda, filtros, orden y paginación backend.
 25. El seed demostrativo es idempotente, explícito y está bloqueado en producción.
+26. Solo `ADMIN` destaca productos y selecciona u ordena categorías importantes.
+27. La landing muestra primero hasta 3 destacados por `featuredAt`, luego hasta 9 recientes sin repetirlos y finalmente entre 2 y 3 categorías importantes.
+28. Cada categoría importante muestra hasta 3 productos activos recientes y puede repetir productos de las secciones anteriores por su contexto editorial.
+29. Las categorías vacías o inactivas y los productos inactivos se omiten de la composición pública.
+30. La landing se obtiene mediante una única respuesta REST agregada y no mediante consultas independientes desde el frontend.
 
 ## Arquitectura general
 
@@ -263,7 +268,10 @@ El storefront incluirá:
 
 - Shell reutilizable con header, navbar superior, logo SVG, área principal y footer.
 - Navbar con inicio, cuenta, login/logout según sesión y carrito con badge de unidades.
-- Landing page con hero, imagen tecnológica semitransparente, buscador y los 9 productos activos más recientes sin paginador.
+- Landing page con hero, imagen tecnológica semitransparente y buscador.
+- Primera sección con hasta 3 productos activos destacados recientemente.
+- Segunda sección con hasta 9 productos activos recientes, excluyendo los destacados ya mostrados.
+- Entre 2 y 3 secciones de categorías importantes, ordenadas, con hasta 3 productos activos recientes cada una.
 - Enlace “Ver todos los productos” hacia una página de catálogo separada.
 - Catálogo completo de productos activos con búsqueda, filtros, ordenamiento y paginación backend.
 - Tarjetas de producto.
@@ -281,6 +289,8 @@ El back office permitirá exclusivamente a `ADMIN`:
 - Listar productos activos, inactivos y archivados según filtros.
 - Crear y editar productos.
 - Administrar categorías y etiquetas con nombres y slugs únicos.
+- Destacar productos y retirar su destaque.
+- Seleccionar, ordenar o retirar hasta 3 categorías importantes para la landing.
 - Activar y desactivar productos.
 - Eliminar productos lógicamente.
 - Gestionar múltiples imágenes, su orden, texto alternativo y portada única.
@@ -297,8 +307,22 @@ Los entornos de desarrollo y pruebas podrán cargar de forma idempotente:
 - Inventario inicial creado mediante balances y movimientos auditables de apertura.
 - Al menos 9 productos activos para poblar la sección de recientes de la landing.
 - Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con contraseñas almacenadas únicamente como hashes.
+- Tres productos activos destacados con fechas deterministas.
+- Tres categorías importantes con posiciones editoriales 1, 2 y 3.
 
 Los assets serán propios, generados o aprobados para el proyecto y no usarán hotlinks. El seed nunca se ejecutará automáticamente en producción y una segunda ejecución no duplicará registros ni archivos.
+
+#### Composición comercial de la landing
+
+```text
+1. Productos destacados:         hasta 3, featuredAt descendente
+2. Productos recientes:          hasta 9, createdAt descendente
+                                  sin repetir los destacados
+3. Categorías importantes:       entre 2 y 3, orden configurado
+   Productos por categoría:      hasta 3 recientes
+```
+
+Las secciones de categorías pueden volver a mostrar productos anteriores porque aportan contexto editorial. Si una categoría no tiene productos activos, se omite sin alterar el orden persistido de las restantes. Ninguna sección de la landing muestra paginador.
 
 ### 4. Lista de deseos
 
@@ -661,6 +685,7 @@ Todas las rutas se ubican bajo `/api/v1`. El mapa es planificación; OpenAPI ser
 
 ### Productos, categorías y etiquetas
 
+- `GET /catalog/landing`
 - `GET /products`
 - `POST /products`
 - `GET /products/:productId`
@@ -676,6 +701,8 @@ Todas las rutas se ubican bajo `/api/v1`. El mapa es planificación; OpenAPI ser
 - `GET|PATCH|DELETE /tags/:tagId`
 
 Los listados devuelven `coverImage`; el detalle devuelve `images` ordenadas. El detalle público se resolverá también mediante slug conforme al contrato OpenAPI definitivo. Las consultas de productos aceptarán búsqueda, categoría, etiquetas, disponibilidad, rango de precio, orden y paginación.
+
+`GET /catalog/landing` devuelve `featuredProducts`, `latestProducts` y `highlightedCategories` en una única respuesta pública. Los `PATCH` existentes de productos y categorías administran `isFeatured`, `featuredAt`, `showOnLanding` y `landingOrder` con autorización `ADMIN`.
 
 ### Wishlist, carrito y checkout
 
@@ -750,7 +777,8 @@ Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con 
 - Zustand limitado al estado visual del tema; la preferencia no requiere PostgreSQL ni Server Actions.
 - Las tarjetas renderizan únicamente `coverImage`; el detalle consume la colección `images` ordenada.
 - La galería evita autoplay, permite miniaturas, anterior/siguiente, teclado y gestos, y carga diferidamente imágenes no visibles.
-- La landing solicita `page=1`, `pageSize=9`, productos activos y orden descendente por creación, pero no renderiza paginador.
+- La landing consume `GET /catalog/landing` y respeta el orden destacados, recientes y categorías importantes sin renderizar paginadores.
+- Los recientes excluyen los IDs destacados; las categorías se renderizan independientemente y pueden repetir productos anteriores.
 - Estado inmutable; no se mutan objetos ni arrays directamente.
 - `useEffect` solo sincroniza con sistemas externos.
 - Los cálculos derivados se realizan durante render o en handlers.
@@ -799,14 +827,15 @@ El API emitirá logs estructurados, correlation IDs y métricas para autenticaci
 - Pruebas de accesibilidad y responsive para shells, sidebars, drawers, modales y mensajes.
 - Pruebas de contraste, temas, persistencia, hidratación y regresión visual para las cuatro combinaciones de interfaz.
 - Pruebas de contrato y autorización negativa para el resumen del dashboard.
-- Pruebas de seed, portada única, orden de imágenes, fallback, galería, últimos 9 productos y catálogo completo.
+- Pruebas de seed, portada única, orden de imágenes, fallback, galería, sección de 9 productos recientes y catálogo completo.
+- Pruebas de productos destacados, máximo de 3 categorías importantes, orden editorial, deduplicación entre destacados y recientes y endpoint agregado de landing.
 - Pruebas end-to-end de registro, compra, historial, administración, wishlist, perfil empresarial, autocomplete y facturación.
 - Pruebas negativas de roles, propiedad y fuga de datos.
 - Lint, typecheck y builds de producción para todas las aplicaciones.
 
 ## Hoja de ruta de implementación
 
-La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veinte etapas:
+La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veintiuna etapas:
 
 1. Fundaciones del monorepo y aplicaciones base.
 2. Persistencia, migraciones, contratos OpenAPI y límites de dependencias.
@@ -828,8 +857,9 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 18. Validación integral de las revisiones y actualización documental.
 19. Identidades visuales, temas y dashboard.
 20. Seed demostrativo, imágenes y navegación del catálogo.
+21. Productos destacados y categorías importantes.
 
-Cada una de las 127 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
+Cada una de las 135 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
 
 ## Fuera del alcance inicial
 
@@ -867,6 +897,9 @@ Estas funcionalidades pueden añadirse mediante cambios OpenSpec posteriores sin
 - Conflictos al reordenar imágenes o cambiar portada: restricciones y transacción backend.
 - Credenciales seed conocidas: bloqueo estricto en producción y ausencia de secretos en logs.
 - Accesibilidad o rendimiento del carrusel: sin autoplay, navegación por teclado, dimensiones reservadas y lazy loading.
+- Sección de recientes incompleta por exclusión: consultar suficientes candidatos antes de aplicar el límite de 9.
+- Configuración editorial parcial: advertir al administrador y tolerar temporalmente menos de 2 categorías visibles.
+- Costo del endpoint agregado: límites pequeños, índices dedicados y caché pública breve con invalidación editorial.
 
 ## Continuar con la implementación
 

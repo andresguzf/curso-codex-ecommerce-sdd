@@ -353,6 +353,40 @@ Renderizará solo `items`, sin control paginado, y mostrará un enlace a la ruta
 
 Alternativa considerada: mantener landing y catálogo como una misma vista paginada. Se descarta porque la landing necesita una selección breve y comercial, mientras que el catálogo necesita exploración exhaustiva y estado navegable. También se descarta cargar imágenes remotas durante cada seed porque vuelve el entorno frágil y no reproducible.
 
+### 22. Destaques y composición agregada de la landing
+
+El modelo de catálogo añadirá metadatos comerciales explícitos:
+
+```text
+Product.isFeatured       boolean default false
+Product.featuredAt       timestamptz nullable
+Category.showOnLanding   boolean default false
+Category.landingOrder    smallint nullable
+```
+
+Al pasar `isFeatured` de falso a verdadero, el backend establecerá `featuredAt` con la fecha de la operación; editar otros campos no alterará esa fecha. Retirar el destaque limpiará su elegibilidad pública. Las categorías seleccionadas usarán posiciones únicas del 1 al 3 y una restricción de dominio impedirá más de tres selecciones activas. El formulario administrativo mostrará el límite y permitirá ordenar o retirar categorías mediante los `PATCH` existentes de producto y categoría.
+
+El catálogo expondrá `GET /api/v1/catalog/landing` con una respuesta conceptual:
+
+```text
+featuredProducts: ProductCard[]            // hasta 3, featuredAt desc
+latestProducts: ProductCard[]              // hasta 9, createdAt desc
+highlightedCategories: [
+  {
+    category: CategorySummary,
+    products: ProductCard[]                // hasta 3, createdAt desc
+  }
+]
+```
+
+El servicio de aplicación construirá la respuesta usando solo productos activos y no eliminados. Resolverá primero los tres destacados, luego excluirá esos identificadores al obtener los nueve recientes. Después cargará entre dos y tres categorías activas por `landingOrder`; sus productos se calculan independientemente y pueden repetirse respecto de las secciones anteriores porque representan contexto de categoría. Las categorías sin productos activos se omiten de la respuesta final sin reordenar persistentemente las demás.
+
+La composición se resolverá dentro del módulo de catálogo mediante consultas acotadas, índices sobre `isFeatured`, `featuredAt`, `showOnLanding`, `landingOrder`, `categoryId`, `status` y `createdAt`, y una lectura suficientemente consistente para que todas las secciones correspondan al mismo instante lógico. El DTO incluirá solo campos públicos y `coverImage`; nunca expondrá banderas administrativas, costes internos o datos de inventario no públicos.
+
+El seed marcará tres productos activos con fechas de destaque deterministas y tres categorías activas con posiciones 1, 2 y 3. Deberá conservar al menos nueve productos activos adicionales para que la sección de recientes se complete sin repetir destacados.
+
+Alternativa considerada: ejecutar una consulta REST independiente para destacados, recientes y cada categoría. Se descarta porque requeriría entre cuatro y cinco solicitudes, duplicaría reglas de exclusión y podría mezclar estados tomados en momentos diferentes. También se descarta inferir categorías importantes por cantidad de productos o ventas, ya que el administrador necesita control editorial explícito.
+
 ## Risks / Trade-offs
 
 - [El alcance inicial abarca varios dominios] → Implementar en incrementos verticales y mantener cada módulo utilizable antes de avanzar al siguiente.
@@ -377,6 +411,10 @@ Alternativa considerada: mantener landing y catálogo como una misma vista pagin
 - [Un seed con credenciales conocidas sería peligroso en producción] → Bloquearlo por entorno, separar configuración no productiva, almacenar hashes y probar explícitamente el rechazo.
 - [El carrusel puede degradar accesibilidad o rendimiento] → Evitar autoplay, soportar teclado y gestos, reservar dimensiones y cargar diferidamente imágenes no visibles.
 - [Landing y catálogo podrían divergir en reglas de visibilidad] → Reutilizar el mismo endpoint, filtros de producto activo y cliente generado, cambiando solo tamaño, orden y presentación.
+- [La sección de recientes puede quedarse corta al excluir destacados] → Consultar suficientes candidatos y aplicar el límite de nueve después de la exclusión.
+- [Una configuración parcial puede dejar menos de dos categorías visibles] → Tolerar estados transitorios, omitir secciones vacías y advertir al administrador antes de guardar una configuración incompleta.
+- [Productos repetidos en categorías pueden parecer redundantes] → Permitir repetición solo en secciones contextuales de categoría y evitarla estrictamente entre destacados y recientes.
+- [El endpoint agregado puede volverse costoso] → Mantener límites pequeños, índices dedicados, consultas acotadas y caché pública breve con invalidación tras cambios editoriales.
 
 ## Migration Plan
 

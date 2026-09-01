@@ -290,3 +290,70 @@ Los entornos de desarrollo y pruebas SHALL poder cargar de forma idempotente exa
 #### Scenario: Intento en producción
 - **WHEN** se intenta ejecutar el seed demostrativo en un entorno de producción
 - **THEN** el sistema rechaza la operación antes de crear usuarios, productos, imágenes o inventario de ejemplo
+
+### Requirement: Administración de productos destacados
+El sistema SHALL permitir exclusivamente a `ADMIN` destacar o retirar el destaque de productos y SHALL registrar el momento de la última activación del destaque para ordenar su presentación comercial.
+
+#### Scenario: Destacar producto activo
+- **WHEN** un administrador destaca un producto activo
+- **THEN** el sistema registra el producto como destacado y actualiza la fecha de destaque usada por la landing
+
+#### Scenario: Retirar destaque
+- **WHEN** un administrador retira el destaque de un producto
+- **THEN** el producto deja de ser elegible para la sección de destacados sin cambiar su estado, inventario ni presencia normal en el catálogo
+
+#### Scenario: Producto destacado desactivado
+- **WHEN** un producto destacado se desactiva o elimina lógicamente
+- **THEN** la landing lo excluye de todas sus secciones públicas aunque conserve el dato histórico de destaque
+
+### Requirement: Administración de categorías importantes
+El sistema SHALL permitir exclusivamente a `ADMIN` seleccionar entre dos y tres categorías activas para la landing, ordenar sus secciones y retirar una selección sin alterar la clasificación de los productos.
+
+#### Scenario: Configurar tres categorías
+- **WHEN** un administrador selecciona tres categorías activas y define su orden
+- **THEN** el sistema conserva exactamente esas categorías y su posición relativa para la landing
+
+#### Scenario: Intentar una cuarta categoría
+- **WHEN** un administrador intenta seleccionar una cuarta categoría sin retirar una de las tres existentes
+- **THEN** el sistema rechaza la operación e informa el límite máximo permitido
+
+#### Scenario: Categoría importante desactivada
+- **WHEN** una categoría seleccionada se desactiva o elimina lógicamente
+- **THEN** la landing omite su sección sin mostrar productos inactivos ni alterar las asociaciones históricas
+
+### Requirement: Composición ordenada de la landing
+La landing SHALL presentar primero hasta tres productos activos destacados ordenados por fecha de destaque descendente, después hasta nueve productos activos recientes que no aparezcan en destacados y finalmente entre dos y tres secciones de categorías importantes ordenadas, cada una con hasta tres productos activos recientes.
+
+#### Scenario: Landing con contenido completo
+- **WHEN** existen al menos tres destacados activos, nueve productos recientes adicionales y tres categorías importantes con productos
+- **THEN** la landing muestra en orden tres destacados, nueve recientes sin repetir los destacados y tres secciones de categoría con tres productos cada una
+
+#### Scenario: Productos repetidos en categorías
+- **WHEN** un producto de una categoría importante ya apareció en destacados o recientes
+- **THEN** la sección de categoría puede volver a mostrarlo porque representa un contexto comercial independiente
+
+#### Scenario: Contenido insuficiente
+- **WHEN** una sección tiene menos productos activos que su límite
+- **THEN** la landing muestra únicamente los disponibles sin completar con productos inactivos, duplicados artificiales ni controles vacíos
+
+#### Scenario: Sección de categoría vacía
+- **WHEN** una categoría importante no contiene productos activos
+- **THEN** la landing omite esa sección y conserva el orden relativo de las demás categorías configuradas
+
+### Requirement: Respuesta REST agregada de landing
+El API SHALL devolver mediante una única consulta pública la composición vigente de la landing con `featuredProducts`, `latestProducts` y `highlightedCategories`, aplicando límites, orden, visibilidad y deduplicación antes de responder.
+
+#### Scenario: Consulta pública de landing
+- **WHEN** el storefront solicita la composición de la landing
+- **THEN** el API devuelve las secciones en el orden configurado con portadas y datos públicos, sin productos inactivos, paginadores ni campos administrativos de destaque
+
+#### Scenario: Landing sin configuración comercial
+- **WHEN** no existen destacados o categorías importantes configuradas
+- **THEN** el API devuelve esas secciones vacías y mantiene la sección de productos recientes con los productos activos disponibles
+
+### Requirement: Destaques del seed demostrativo
+El seed de desarrollo y pruebas SHALL marcar al menos tres productos activos como destacados y exactamente tres categorías activas como importantes con un orden determinista.
+
+#### Scenario: Seed de composición comercial
+- **WHEN** se ejecuta el seed demostrativo en un entorno permitido
+- **THEN** la respuesta agregada de landing contiene tres destacados, nueve recientes no repetidos y tres categorías importantes configuradas de forma reproducible

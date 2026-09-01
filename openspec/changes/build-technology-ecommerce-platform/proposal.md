@@ -30,6 +30,8 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Incorporar un seed idempotente y exclusivo de desarrollo y pruebas con veinte productos tecnológicos completos, sus categorías, etiquetas, precios, inventario e imágenes, además de usuarios de ejemplo `ADMIN` y `CUSTOMER`.
 - Permitir múltiples imágenes ordenadas por producto, con una portada principal para tarjetas y una galería tipo carrusel en la página de detalle.
 - Separar la landing del catálogo completo: la landing mostrará los nueve productos activos más recientes sin paginación y enlazará a una página de catálogo con todos los productos, buscador, filtros, ordenamiento y paginación backend.
+- Ampliar la landing con una primera sección de hasta tres productos destacados recientemente, seguida de nueve productos recientes no repetidos y de dos o tres secciones de categorías importantes con tres productos recientes por categoría.
+- Permitir que `ADMIN` destaque productos y seleccione, ordene o retire hasta tres categorías importantes para la landing.
 
 ## Capabilities
 
@@ -50,6 +52,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `product-catalog`: layouts del storefront y back office, filtros colapsables, categorías, etiquetas, slugs y lista de deseos.
 - `product-catalog`: identidades visuales diferenciadas, dashboard administrativo por rol y selección persistente de tema claro u oscuro.
 - `product-catalog`: seed de veinte productos, múltiples imágenes con portada, galería accesible y separación entre productos recientes de la landing y catálogo completo paginado.
+- `product-catalog`: productos destacados, categorías importantes configurables y composición agregada y ordenada de las secciones comerciales de la landing.
 - `shopping-cart-checkout`: indicador de cantidad del carrito, mensajes flash y confirmación al retirar líneas.
 - `order-management`: búsqueda y paginación administrativa y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
@@ -71,3 +74,4 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.
 - Nuevas fixtures de desarrollo para productos, imágenes y usuarios, ampliación del modelo y contrato de imágenes de producto, y nuevas pruebas de galería y navegación entre landing y catálogo.
+- Nuevos campos y filtros de destaque para productos y categorías, un endpoint REST agregado de landing y pruebas de orden, límites, deduplicación y autorización administrativa.
