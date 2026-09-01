@@ -1,8 +1,12 @@
+/// <reference types="node" />
+
+import { env } from "node:process";
+
 import "dotenv/config";
 
 import { defineConfig } from "drizzle-kit";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
