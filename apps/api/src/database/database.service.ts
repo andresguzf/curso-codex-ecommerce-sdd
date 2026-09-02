@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnApplicationBootstrap,
@@ -24,7 +25,9 @@ export class DatabaseService
   private readonly pool: Pool;
   readonly client: NodePgDatabase<typeof schema>;
 
-  constructor(config: ConfigService<EnvironmentVariables, true>) {
+  constructor(
+    @Inject(ConfigService) config: ConfigService<EnvironmentVariables, true>,
+  ) {
     this.pool = new Pool({
       application_name: "technology-ecommerce-api",
       connectionString: config.get("DATABASE_URL", { infer: true }),

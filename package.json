@@ -7,6 +7,8 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "openapi:check": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate:check",
+    "openapi:generate": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
   },

@@ -27,7 +27,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
 - Incorporar un dashboard inicial del back office con indicadores y accesos operativos adaptados a los permisos de `ADMIN` y `BILLING`.
 - Permitir seleccionar entre temas claro y oscuro en storefront y back office, con preferencias independientes, persistentes y accesibles.
-- Incorporar un seed idempotente y exclusivo de desarrollo y pruebas con veinte productos tecnológicos completos, sus categorías, etiquetas, precios, inventario e imágenes, además de usuarios de ejemplo `ADMIN` y `CUSTOMER`.
+- Incorporar un seed idempotente y exclusivo de desarrollo y pruebas con veinte productos tecnológicos completos, sus categorías, etiquetas, precios, inventario e imágenes temporales de Lorem Picsum seleccionadas mediante IDs fijos revisados visualmente, además de usuarios de ejemplo `ADMIN` y `CUSTOMER`; las referencias se reemplazarán por assets gestionados en Cloudinary antes de producción.
 - Permitir múltiples imágenes ordenadas por producto, con una portada principal para tarjetas y una galería tipo carrusel en la página de detalle.
 - Separar la landing del catálogo completo: la landing mostrará los nueve productos activos más recientes sin paginación y enlazará a una página de catálogo con todos los productos, buscador, filtros, ordenamiento y paginación backend.
 - Ampliar la landing con una primera sección de hasta tres productos destacados recientemente, seguida de nueve productos recientes no repetidos y de dos o tres secciones de categorías importantes con tres productos recientes por categoría.
@@ -73,5 +73,5 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Nuevas entidades y contratos REST para categorías, etiquetas, lista de deseos y perfil de empresa, además de búsquedas remotas para autocompletado.
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.
-- Nuevas fixtures de desarrollo para productos, imágenes y usuarios, ampliación del modelo y contrato de imágenes de producto, y nuevas pruebas de galería y navegación entre landing y catálogo.
+- Nuevas fixtures de desarrollo para productos, imágenes temporales deterministas de Lorem Picsum y usuarios, ampliación del modelo y contrato de imágenes de producto, una ruta explícita de migración posterior a Cloudinary y nuevas pruebas de galería y navegación entre landing y catálogo.
 - Nuevos campos y filtros de destaque para productos y categorías, un endpoint REST agregado de landing y pruebas de orden, límites, deduplicación y autorización administrativa.

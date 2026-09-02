@@ -1,5 +1,35 @@
 {
   "name": "@technology-ecommerce/api-client",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./generated": {
+      "types": "./src/generated/openapi.ts",
+      "default": "./src/generated/openapi.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "generate": "openapi-typescript ../../apps/api/openapi/openapi.json -o src/generated/openapi.ts",
+    "generate:check": "openapi-typescript ../../apps/api/openapi/openapi.json -o src/generated/openapi.ts --check",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@technology-ecommerce/config-eslint": "workspace:*",
+    "@technology-ecommerce/config-typescript": "workspace:*",
+    "eslint": "9.39.5",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
 }

@@ -277,9 +277,9 @@ Invoice: DRAFT --> PENDING_PAYMENT --> PAID
              +--> VOID, cuando la transición sea válida
 ```
 
-# Planned REST API
+# REST API and OpenAPI status
 
-Este mapa de endpoints está planificado, no implementado. Cuando exista OpenAPI, su contrato será la fuente autoritativa. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes.
+El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, se sirve en `/api/v1/openapi.json` y expone Swagger UI en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Por ahora solo el health check está implementado; el resto de este mapa continúa planificado. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
 
 ## Health
 
@@ -421,6 +421,7 @@ Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, mone
 - “Ver todos los productos” navega al catálogo completo, donde búsqueda, filtros, orden y página viven en la URL.
 - Las tarjetas usan `coverImage`; el detalle usa una galería sin autoplay con lazy loading de imágenes no visibles.
 - El seed incluye exactamente 20 productos, mínimo 3 imágenes por producto, categorías, etiquetas, precios y movimientos de inventario de apertura.
+- Las imágenes seed pueden usar temporalmente IDs fijos de Lorem Picsum revisados visualmente solo en desarrollo y pruebas; conserva asociaciones deterministas y futuras claves de Cloudinary, y reemplaza los hotlinks por assets gestionados antes de producción.
 - El seed incluye usuarios `ADMIN` y `CUSTOMER` no productivos, hashea contraseñas, no registra credenciales y rechaza producción.
 - El seed marca 3 productos activos como destacados y 3 categorías activas como importantes con orden determinista.
 

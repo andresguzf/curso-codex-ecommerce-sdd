@@ -14,9 +14,9 @@
 - [x] 2.3 Crear las tablas de productos, imágenes, balances y movimientos de inventario; verificar SKU único, precio no negativo y balance no negativo en la base de datos.
 - [x] 2.4 Crear las tablas de carritos, líneas, órdenes, líneas de orden, pagos e idempotencia; verificar relaciones, unicidad y snapshots mediante una migración y pruebas de repositorio.
 - [x] 2.5 Crear las tablas de facturas y líneas con origen, estados, numeración y referencia opcional a orden; verificar unicidad de número y de factura activa por orden.
-- [ ] 2.6 Crear seed reproducible para los tres roles, un administrador inicial y datos de catálogo de desarrollo; verificar que puede ejecutarse dos veces sin duplicar registros.
-- [ ] 2.7 Publicar OpenAPI versionado bajo `/api/v1`, generar `packages/api-client` y definir esquemas Zod para fronteras HTTP; verificar que el cliente se regenera sin cambios inesperados y compila en ambos frontends.
-- [ ] 2.8 Aplicar reglas de dependencia que impidan a los frontends importar persistencia o dominio interno del API; verificar las reglas con lint o pruebas de arquitectura que fallen ante una importación prohibida.
+- [x] 2.6 Crear seed reproducible para los tres roles, un administrador inicial y datos de catálogo de desarrollo; verificar que puede ejecutarse dos veces sin duplicar registros.
+- [x] 2.7 Publicar OpenAPI versionado bajo `/api/v1`, generar `packages/api-client` y definir esquemas Zod para fronteras HTTP; verificar que el cliente se regenera sin cambios inesperados y compila en ambos frontends.
+- [x] 2.8 Aplicar reglas de dependencia que impidan a los frontends importar persistencia o dominio interno del API; verificar las reglas con lint o pruebas de arquitectura que fallen ante una importación prohibida.
 
 ## 3. Identidad, sesión y autorización
 
@@ -176,7 +176,7 @@
 
 - [ ] 20.1 Ampliar `ProductImage` para múltiples imágenes con texto alternativo, portada única, orden y metadatos, y añadir sus migraciones y restricciones; verificar con pruebas PostgreSQL que un producto no admite dos portadas ni posiciones inválidas y que un producto activo conserva una portada.
 - [ ] 20.2 Implementar los endpoints REST para agregar, editar, reordenar, elegir portada y eliminar imágenes de producto; verificar autorización `ADMIN`, validación, OpenAPI, cliente generado y coordinación segura con el adaptador de almacenamiento.
-- [ ] 20.3 Preparar un manifiesto y al menos sesenta assets optimizados, propios o aprobados, con una portada y dos imágenes adicionales por producto; verificar existencia, dimensiones, formato, texto alternativo, ausencia de hotlinks y asociación determinista de todos los archivos.
+- [ ] 20.3 Preparar un manifiesto de al menos sesenta imágenes temporales de Lorem Picsum mediante IDs fijos revisados visualmente, con una portada y dos imágenes adicionales por producto, futura clave de Cloudinary, dimensiones, formato y texto alternativo; verificar URLs deterministas, asociación coherente, fallbacks y uso exclusivo en desarrollo o pruebas, y documentar su sustitución por assets propios o aprobados en Cloudinary antes de producción.
 - [ ] 20.4 Implementar el seed idempotente de exactamente veinte productos tecnológicos con categorías, etiquetas, slugs, precios, estados, imágenes y balances creados mediante movimientos de apertura; verificar conteos, relaciones, al menos nueve productos activos y una segunda ejecución sin duplicados.
 - [ ] 20.5 Implementar usuarios seed `ADMIN` y `CUSTOMER` exclusivos de desarrollo y pruebas con configuración no productiva y contraseñas hasheadas; verificar idempotencia, login de ambos roles, ausencia de credenciales en logs y rechazo de ejecución en producción.
 - [ ] 20.6 Extender los contratos de listado y detalle para devolver `coverImage` en tarjetas y `images` ordenadas en detalle; verificar respuestas para múltiples imágenes, una sola imagen, portada faltante, fallback y regeneración coherente de cliente y esquemas Zod.

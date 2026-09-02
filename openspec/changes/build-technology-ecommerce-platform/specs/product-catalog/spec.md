@@ -277,15 +277,19 @@ El storefront SHALL ofrecer una página de catálogo separada que permita explor
 - **THEN** el storefront consulta únicamente la página correspondiente, conserva los criterios en la URL y muestra los metadatos y controles de paginación aplicables
 
 ### Requirement: Seed demostrativo del catálogo
-Los entornos de desarrollo y pruebas SHALL poder cargar de forma idempotente exactamente veinte productos tecnológicos de ejemplo con datos válidos, categorías, etiquetas, precios, disponibilidad y al menos tres imágenes por producto, incluyendo una portada, sin habilitar este contenido automáticamente en producción.
+Los entornos de desarrollo y pruebas SHALL poder cargar de forma idempotente exactamente veinte productos tecnológicos de ejemplo con datos válidos, categorías, etiquetas, precios, disponibilidad y al menos tres imágenes por producto, incluyendo una portada, sin habilitar este contenido automáticamente en producción. Las imágenes demostrativas MAY usar URLs temporales de Lorem Picsum con IDs fijos revisados visualmente y MUST conservar una asociación determinista preparada para su reemplazo por assets de Cloudinary antes de producción.
 
 #### Scenario: Primera ejecución del seed
 - **WHEN** se ejecuta el seed en un entorno permitido con una base preparada
-- **THEN** quedan disponibles veinte productos coherentes, al menos nueve activos para la landing y un mínimo de sesenta imágenes ordenadas con texto alternativo
+- **THEN** quedan disponibles veinte productos coherentes, al menos nueve activos para la landing y un mínimo de sesenta imágenes ordenadas con texto alternativo y URLs de Picsum deterministas asociadas mediante IDs fijos revisados visualmente
 
 #### Scenario: Reejecución del seed
 - **WHEN** se vuelve a ejecutar el seed sobre los mismos datos
 - **THEN** el sistema actualiza o conserva los registros deterministas sin duplicar productos, imágenes, categorías, etiquetas ni balances
+
+#### Scenario: Sustitución para producción
+- **WHEN** se prepara el catálogo demostrativo para un entorno productivo
+- **THEN** las referencias temporales de Picsum se reemplazan por assets propios o aprobados gestionados en Cloudinary sin cambiar la asociación, el orden, la portada ni el texto alternativo del producto
 
 #### Scenario: Intento en producción
 - **WHEN** se intenta ejecutar el seed demostrativo en un entorno de producción

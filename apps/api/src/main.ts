@@ -7,6 +7,7 @@ import {
 import "reflect-metadata";
 
 import { AppModule } from "./app.module";
+import { configureApplication } from "./application";
 import type { EnvironmentVariables } from "./config/environment";
 
 async function bootstrap(): Promise<void> {
@@ -16,7 +17,7 @@ async function bootstrap(): Promise<void> {
   );
   const config = app.get(ConfigService<EnvironmentVariables, true>);
 
-  app.setGlobalPrefix("api/v1");
+  configureApplication(app);
 
   await app.listen({
     host: config.get("HOST", { infer: true }),

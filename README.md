@@ -303,14 +303,14 @@ El back office permitirá exclusivamente a `ADMIN`:
 Los entornos de desarrollo y pruebas podrán cargar de forma idempotente:
 
 - Exactamente 20 productos tecnológicos con categorías, etiquetas, slugs, precios y estados válidos.
-- Al menos 3 imágenes por producto: una portada y dos imágenes adicionales, para un mínimo de 60 assets optimizados.
+- Al menos 3 imágenes por producto: una portada y dos imágenes adicionales, para un mínimo de 60 referencias deterministas.
 - Inventario inicial creado mediante balances y movimientos auditables de apertura.
 - Al menos 9 productos activos para poblar la sección de recientes de la landing.
 - Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con contraseñas almacenadas únicamente como hashes.
 - Tres productos activos destacados con fechas deterministas.
 - Tres categorías importantes con posiciones editoriales 1, 2 y 3.
 
-Los assets serán propios, generados o aprobados para el proyecto y no usarán hotlinks. El seed nunca se ejecutará automáticamente en producción y una segunda ejecución no duplicará registros ni archivos.
+En desarrollo y pruebas se usarán temporalmente URLs de Lorem Picsum con IDs fijos seleccionados mediante revisión visual y asociadas a futuras claves de Cloudinary. Antes de producción se reemplazarán por assets propios o aprobados gestionados en Cloudinary, de modo que producción no dependa de hotlinks. El seed nunca se ejecutará automáticamente en producción y una segunda ejecución no duplicará registros ni referencias.
 
 #### Composición comercial de la landing
 
@@ -662,9 +662,9 @@ El dashboard inicial adapta indicadores y accesos al rol:
 
 Los indicadores son informativos y enlazan a las listas filtradas autoritativas. Cada resumen muestra su período o fecha de actualización.
 
-## API REST planificada
+## API REST y contrato OpenAPI
 
-Todas las rutas se ubican bajo `/api/v1`. El mapa es planificación; OpenAPI será el contrato autoritativo cuando se implemente.
+Todas las rutas se ubican bajo `/api/v1`. El contrato OpenAPI base ya está implementado y se publica en `/api/v1/openapi.json`, con interfaz Swagger en `/api/v1/docs`; actualmente documenta el health check y se ampliará junto con los endpoints planificados. `pnpm openapi:generate` regenera el documento y el cliente TypeScript, mientras que `pnpm openapi:check` verifica que el cliente generado esté actualizado.
 
 ### Salud y autenticación
 

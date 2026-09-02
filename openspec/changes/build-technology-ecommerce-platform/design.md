@@ -337,11 +337,11 @@ El seed será una operación explícita, determinista, idempotente y bloqueada p
 
 - Exactamente veinte productos tecnológicos de distintas categorías.
 - Categorías, etiquetas, slugs, precios y estados válidos.
-- Un mínimo de tres imágenes por producto: una portada y al menos dos imágenes de galería.
+- Un mínimo de tres imágenes por producto: una portada y al menos dos imágenes de galería, representadas temporalmente en desarrollo y pruebas por URLs de Lorem Picsum con IDs fijos seleccionados tras revisión visual para aproximarse al tipo de producto.
 - Balances iniciales y movimientos auditables de apertura, sin escribir stock directamente fuera de inventario.
 - Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con credenciales solo de desarrollo o pruebas almacenadas como hashes y nunca impresas en logs.
 
-Las imágenes serán fixtures propias o generadas y aprobadas para uso en el proyecto, sin hotlinks a terceros. Un manifiesto estable asociará cada asset con producto, texto alternativo, orden y condición de portada. El adaptador de almacenamiento comprobará la clave antes de cargar para que una reejecución no duplique archivos. La documentación indicará cómo configurar las credenciales no productivas sin convertirlas en secretos reales.
+Durante desarrollo y pruebas, las imágenes podrán ser hotlinks temporales de Lorem Picsum elegidos por ID fijo y no mediante respuestas aleatorias. Como Picsum no ofrece búsqueda semántica por producto, cada ID deberá revisarse visualmente y asociarse de forma explícita en un manifiesto estable con producto, texto alternativo, orden, condición de portada y futura clave de Cloudinary. Antes de producción, esas referencias deberán reemplazarse por assets propios o aprobados cargados mediante el adaptador de Cloudinary; producción no dependerá de hotlinks de Picsum. El adaptador comprobará la clave antes de cargar para que una reejecución no duplique archivos. La documentación indicará cómo configurar las credenciales no productivas sin convertirlas en secretos reales.
 
 La landing reutilizará el listado existente con una consulta equivalente a:
 
@@ -351,7 +351,7 @@ GET /api/v1/products?page=1&pageSize=9&sort=createdAt:desc&status=ACTIVE
 
 Renderizará solo `items`, sin control paginado, y mostrará un enlace a la ruta de catálogo completo. La página de catálogo utilizará el mismo endpoint con búsqueda, filtros, orden y página reflejados en la URL y con los controles numéricos existentes. No se introducirá un endpoint `/latest` ni se descargarán todos los productos para recortarlos en el frontend.
 
-Alternativa considerada: mantener landing y catálogo como una misma vista paginada. Se descarta porque la landing necesita una selección breve y comercial, mientras que el catálogo necesita exploración exhaustiva y estado navegable. También se descarta cargar imágenes remotas durante cada seed porque vuelve el entorno frágil y no reproducible.
+Alternativa considerada: mantener landing y catálogo como una misma vista paginada. Se descarta porque la landing necesita una selección breve y comercial, mientras que el catálogo necesita exploración exhaustiva y estado navegable. También se descartan URLs aleatorias o búsquedas remotas durante cada ejecución del seed: el seed persistirá un manifiesto de URLs de Picsum con IDs fijos para conservar resultados deterministas, aceptando la dependencia externa únicamente en entornos no productivos hasta migrar los assets a Cloudinary.
 
 ### 22. Destaques y composición agregada de la landing
 
@@ -407,6 +407,7 @@ Alternativa considerada: ejecutar una consulta REST independiente para destacado
 - [El resumen del dashboard puede quedar momentáneamente desactualizado] → Mostrar fecha de actualización, limitar cualquier caché y enlazar siempre a las listas autoritativas.
 - [Los indicadores agregados pueden filtrar información entre roles] → Construir respuestas específicas por rol y verificar permisos y ausencia de campos prohibidos con pruebas de contrato y autorización negativa.
 - [Sesenta o más imágenes seed pueden aumentar tamaño y tiempo de preparación] → Usar assets optimizados, un manifiesto estable y cargas idempotentes mediante el adaptador.
+- [Los hotlinks temporales de Picsum pueden fallar, cambiar de disponibilidad o no representar fielmente el producto] → Usar IDs fijos revisados visualmente solo en desarrollo y pruebas, conservar fallbacks accesibles y reemplazarlos por assets gestionados en Cloudinary antes de producción.
 - [Reordenar imágenes concurrentemente puede duplicar posiciones o portadas] → Aplicar restricciones, transacción y normalización de orden en el backend.
 - [Un seed con credenciales conocidas sería peligroso en producción] → Bloquearlo por entorno, separar configuración no productiva, almacenar hashes y probar explícitamente el rechazo.
 - [El carrusel puede degradar accesibilidad o rendimiento] → Evitar autoplay, soportar teclado y gestos, reservar dimensiones y cargar diferidamente imágenes no visibles.

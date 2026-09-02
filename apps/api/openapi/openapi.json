@@ -1,0 +1,91 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check API and PostgreSQL readiness",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Technology Ecommerce API",
+    "description": "Versioned REST contract for the technology ecommerce platform.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "API and PostgreSQL readiness"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "HealthDatabaseResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "up"
+            ],
+            "example": "up"
+          },
+          "name": {
+            "type": "string",
+            "example": "ecommerce_backend_sdd"
+          }
+        },
+        "required": [
+          "status",
+          "name"
+        ]
+      },
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "api"
+            ],
+            "example": "api"
+          },
+          "database": {
+            "$ref": "#/components/schemas/HealthDatabaseResponseDto"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "database"
+        ]
+      }
+    }
+  }
+}
