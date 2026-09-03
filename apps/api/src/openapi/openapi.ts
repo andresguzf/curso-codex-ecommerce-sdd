@@ -34,6 +34,9 @@ function createOpenApiConfig() {
     )
     .addTag("authentication", "Login, session renewal and logout")
     .addTag("health", "API and PostgreSQL readiness")
+    .addTag("catalog-media", "Binary catalog image delivery")
+    .addTag("products", "Administrative and public product catalog")
+    .addTag("inventory", "Inventory balances and auditable movements")
     .build();
 }
 

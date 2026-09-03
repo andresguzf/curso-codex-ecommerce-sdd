@@ -21,6 +21,42 @@ export {
 } from "./common";
 export { healthResponseSchema, type HealthResponse } from "./health";
 export {
+  inventoryAdjustmentMovementSchema,
+  inventoryAdjustmentRequestSchema,
+  inventoryAdjustmentResponseSchema,
+  type InventoryAdjustmentMovement,
+  type InventoryAdjustmentRequest,
+  type InventoryAdjustmentResponse,
+} from "./inventory";
+export {
+  administrativeProductSchema,
+  createProductRequestSchema,
+  productAvailabilitySchema,
+  productDetailSchema,
+  productImageReferenceSchema,
+  productListItemSchema,
+  productListQuerySchema,
+  productListViewSchema,
+  productPageSchema,
+  productSortFieldSchema,
+  productStatusSchema,
+  updateProductRequestSchema,
+  updateProductStatusRequestSchema,
+  type AdministrativeProduct,
+  type CreateProductRequest,
+  type ProductAvailability,
+  type ProductDetail,
+  type ProductImageReference,
+  type ProductListItem,
+  type ProductListQuery,
+  type ProductListView,
+  type ProductPage,
+  type ProductSortField,
+  type ProductStatus,
+  type UpdateProductRequest,
+  type UpdateProductStatusRequest,
+} from "./products";
+export {
   administrativeUserSchema,
   createUserRequestSchema,
   updateUserRequestSchema,

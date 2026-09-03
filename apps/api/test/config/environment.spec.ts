@@ -15,6 +15,23 @@ describe("HTTP security environment", () => {
       "http://localhost:3000",
       "http://localhost:3001",
     ]);
+    expect(environment.IMAGE_STORAGE_MAX_BYTES).toBe(5 * 1_024 * 1_024);
+    expect(environment.IMAGE_STORAGE_LOCAL_ROOT).toBe(".local-storage/images");
+  });
+
+  it("validates image storage limits and public URLs", () => {
+    expect(() =>
+      validateEnvironment({
+        DATABASE_URL: databaseUrl,
+        IMAGE_STORAGE_MAX_BYTES: "100",
+      }),
+    ).toThrow("IMAGE_STORAGE_MAX_BYTES");
+    expect(() =>
+      validateEnvironment({
+        DATABASE_URL: databaseUrl,
+        IMAGE_STORAGE_PUBLIC_BASE_URL: "not-a-url",
+      }),
+    ).toThrow("IMAGE_STORAGE_PUBLIC_BASE_URL");
   });
 
   it("defaults to secure cookies and rejects an explicit downgrade in production", () => {

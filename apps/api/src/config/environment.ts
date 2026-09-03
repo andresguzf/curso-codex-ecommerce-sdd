@@ -77,6 +77,22 @@ const environmentSchema = z
       .max(86_400)
       .default(900),
     CORS_ALLOWED_ORIGINS: allowedOriginsSchema,
+    IMAGE_STORAGE_LOCAL_ROOT: z
+      .string()
+      .trim()
+      .min(1)
+      .default(".local-storage/images"),
+    IMAGE_STORAGE_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1_024)
+      .max(20 * 1_024 * 1_024)
+      .default(5 * 1_024 * 1_024),
+    IMAGE_STORAGE_PUBLIC_BASE_URL: z
+      .string()
+      .trim()
+      .url()
+      .default("http://localhost:3001/api/v1/media/images"),
   })
   .superRefine((environment, context) => {
     if (

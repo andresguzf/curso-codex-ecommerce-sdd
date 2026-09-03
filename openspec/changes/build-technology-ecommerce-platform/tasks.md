@@ -29,12 +29,12 @@
 
 ## 4. Catálogo e inventario en el API
 
-- [ ] 4.1 Implementar almacenamiento de imágenes mediante un adaptador con proveedor local de desarrollo; verificar carga, lectura, validación de tipo/tamaño y eliminación segura de una imagen no referenciada.
-- [ ] 4.2 Implementar CRUD REST de productos con SKU, precio, moneda, imagen, fechas, estado y eliminación lógica; verificar validaciones y que solo `ADMIN` puede mutar productos.
-- [ ] 4.3 Implementar listado público y administrativo con búsqueda, filtros, campos de orden permitidos y paginación con totales; verificar combinaciones de criterios y límites de página mediante pruebas del API.
-- [ ] 4.4 Implementar detalle público que excluya productos inactivos o eliminados y proyecte disponibilidad; verificar respuestas para producto activo, inactivo, inexistente y agotado.
-- [ ] 4.5 Implementar ajustes de inventario como movimientos auditables separados del CRUD de productos; verificar aumentos, reducciones, motivo obligatorio y rechazo de balance negativo.
-- [ ] 4.6 Implementar operaciones atómicas de descuento y restitución con bloqueo en orden estable; verificar mediante una prueba concurrente que dos compras no pueden consumir la misma última unidad.
+- [x] 4.1 Implementar almacenamiento de imágenes mediante un adaptador con proveedor local de desarrollo; verificar carga, lectura, validación de tipo/tamaño y eliminación segura de una imagen no referenciada.
+- [x] 4.2 Implementar CRUD REST de productos con SKU, precio, moneda, imagen, fechas, estado y eliminación lógica; verificar validaciones y que solo `ADMIN` puede mutar productos.
+- [x] 4.3 Implementar listado público y administrativo con búsqueda, filtros, campos de orden permitidos y paginación con totales; verificar combinaciones de criterios y límites de página mediante pruebas del API.
+- [x] 4.4 Implementar detalle público que excluya productos inactivos o eliminados y proyecte disponibilidad; verificar respuestas para producto activo, inactivo, inexistente y agotado.
+- [x] 4.5 Implementar ajustes de inventario como movimientos auditables separados del CRUD de productos; verificar aumentos, reducciones, motivo obligatorio y rechazo de balance negativo.
+- [x] 4.6 Implementar operaciones atómicas de descuento y restitución con bloqueo en orden estable; verificar mediante una prueba concurrente que dos compras no pueden consumir la misma última unidad.
 
 ## 5. Experiencia de catálogo y back office
 

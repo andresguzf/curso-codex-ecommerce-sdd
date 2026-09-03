@@ -5,6 +5,8 @@ import { validateEnvironment } from "./config/environment";
 import { DatabaseModule } from "./database/database.module";
 import { HealthModule } from "./health/health.module";
 import { AuthModule } from "./identity-access/auth.module";
+import { InventoryControlModule } from "./inventory-control/inventory-control.module";
+import { ProductCatalogModule } from "./product-catalog/product-catalog.module";
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { AuthModule } from "./identity-access/auth.module";
     }),
     DatabaseModule,
     AuthModule,
+    InventoryControlModule,
+    ProductCatalogModule,
     HealthModule,
   ],
   exports: [AuthModule],

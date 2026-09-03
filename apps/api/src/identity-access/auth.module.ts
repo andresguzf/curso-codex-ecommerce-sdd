@@ -13,6 +13,7 @@ import { UserAdministrationRepository } from "./user-administration.repository";
 import { UserAdministrationService } from "./user-administration.service";
 import {
   AuthenticationGuard,
+  OptionalAuthenticationGuard,
   OwnershipGuard,
   ResourceOwnershipService,
   RolesGuard,
@@ -20,6 +21,7 @@ import {
 
 const authorizationProviders = [
   AuthenticationGuard,
+  OptionalAuthenticationGuard,
   OwnershipGuard,
   ResourceOwnershipService,
   RolesGuard,

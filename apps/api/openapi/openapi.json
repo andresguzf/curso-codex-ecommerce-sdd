@@ -522,6 +522,518 @@
         ]
       }
     },
+    "/api/v1/inventory/{productId}/adjustments": {
+      "post": {
+        "operationId": "adjustProductInventory",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryAdjustmentRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryAdjustmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid quantity or missing reason"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "409": {
+            "description": "The adjustment would produce an invalid balance"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Adjust available product inventory",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "post": {
+        "operationId": "createProduct",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product data"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "409": {
+            "description": "Duplicate SKU or image reference"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create a product",
+        "tags": [
+          "products"
+        ]
+      },
+      "get": {
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "createdAt",
+                "name",
+                "price",
+                "sku",
+                "stockAvailable",
+                "updatedAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "availability",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "IN_STOCK",
+                "OUT_OF_STOCK"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "public",
+                "administrative"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductPageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters"
+          },
+          "401": {
+            "description": "Administrative view requires authentication"
+          },
+          "403": {
+            "description": "Administrative view requires ADMIN"
+          }
+        },
+        "summary": "List public or administrative products",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}": {
+      "patch": {
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product data"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "409": {
+            "description": "Duplicate SKU or image reference"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Update a product",
+        "tags": [
+          "products"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted logically"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Soft-delete a product",
+        "tags": [
+          "products"
+        ]
+      },
+      "get": {
+        "operationId": "getProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "public",
+                "administrative"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product identifier or view"
+          },
+          "401": {
+            "description": "Administrative view requires authentication"
+          },
+          "403": {
+            "description": "Administrative view requires ADMIN"
+          },
+          "404": {
+            "description": "Product not found or not publicly visible"
+          }
+        },
+        "summary": "Read a public or administrative product detail",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/status": {
+      "patch": {
+        "operationId": "updateProductStatus",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductStatusRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product status"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Activate or deactivate a product",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/media/images/{storageKey}": {
+      "get": {
+        "operationId": "readCatalogImage",
+        "parameters": [
+          {
+            "name": "storageKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored image bytes",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found"
+          }
+        },
+        "summary": "Read an image from the configured catalog storage",
+        "tags": [
+          "catalog-media"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -559,6 +1071,18 @@
     {
       "name": "health",
       "description": "API and PostgreSQL readiness"
+    },
+    {
+      "name": "catalog-media",
+      "description": "Binary catalog image delivery"
+    },
+    {
+      "name": "products",
+      "description": "Administrative and public product catalog"
+    },
+    {
+      "name": "inventory",
+      "description": "Inventory balances and auditable movements"
     }
   ],
   "servers": [],
@@ -870,6 +1394,457 @@
             ]
           }
         }
+      },
+      "InventoryAdjustmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "quantityDelta": {
+            "type": "number",
+            "description": "Signed quantity to add to or remove from available inventory",
+            "example": -2,
+            "maximum": 2147483647,
+            "minimum": -2147483647
+          },
+          "reason": {
+            "type": "string",
+            "example": "Damaged units removed during stock count",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "quantityDelta",
+          "reason"
+        ]
+      },
+      "InventoryAdjustmentMovementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ADJUSTMENT"
+            ]
+          },
+          "quantityDelta": {
+            "type": "number"
+          },
+          "balanceAfter": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "type",
+          "quantityDelta",
+          "balanceAfter",
+          "reason",
+          "actorUserId",
+          "createdAt"
+        ]
+      },
+      "InventoryAdjustmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "availableQuantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "movement": {
+            "$ref": "#/components/schemas/InventoryAdjustmentMovementDto"
+          }
+        },
+        "required": [
+          "productId",
+          "availableQuantity",
+          "version",
+          "updatedAt",
+          "movement"
+        ]
+      },
+      "ProductImageReferenceDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "example": "products/example/cover.webp",
+            "maxLength": 512
+          },
+          "url": {
+            "type": "string",
+            "example": "https://cdn.example.com/products/example/cover.webp"
+          }
+        },
+        "required": [
+          "storageKey",
+          "url"
+        ]
+      },
+      "CreateProductRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "NOTEBOOK-001",
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "example": "Notebook Pro 14",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00",
+            "pattern": "^\\d{1,10}(?:\\.\\d{1,2})?$"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP",
+            "pattern": "^[A-Za-z]{3}$"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ProductImageReferenceDto"
+          },
+          "status": {
+            "type": "string",
+            "default": "INACTIVE",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "description",
+          "price",
+          "currency",
+          "image"
+        ]
+      },
+      "AdministrativeProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ProductImageReferenceDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "description",
+          "price",
+          "currency",
+          "image",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "UpdateProductRequestDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^\\d{1,10}(?:\\.\\d{1,2})?$"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{3}$"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ProductImageReferenceDto"
+          }
+        }
+      },
+      "UpdateProductStatusRequestDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ProductListImageDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "storageKey",
+          "url"
+        ]
+      },
+      "ProductListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ProductListImageDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "stockAvailable": {
+            "type": "number",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "description",
+          "price",
+          "currency",
+          "image",
+          "status",
+          "stockAvailable",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ProductPageResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductListItemDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 1
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
+        ]
+      },
+      "ProductDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ProductListImageDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "stockAvailable": {
+            "type": "number",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "IN_STOCK",
+              "OUT_OF_STOCK"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "description",
+          "price",
+          "currency",
+          "image",
+          "status",
+          "stockAvailable",
+          "createdAt",
+          "updatedAt",
+          "availability"
+        ]
       },
       "HealthDatabaseResponseDto": {
         "type": "object",

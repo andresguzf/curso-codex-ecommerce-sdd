@@ -143,6 +143,94 @@ export interface paths {
         patch: operations["updateUser"];
         trace?: never;
     };
+    "/api/v1/inventory/{productId}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adjust available product inventory */
+        post: operations["adjustProductInventory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List public or administrative products */
+        get: operations["listProducts"];
+        put?: never;
+        /** Create a product */
+        post: operations["createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a public or administrative product detail */
+        get: operations["getProduct"];
+        put?: never;
+        post?: never;
+        /** Soft-delete a product */
+        delete: operations["deleteProduct"];
+        options?: never;
+        head?: never;
+        /** Update a product */
+        patch: operations["updateProduct"];
+        trace?: never;
+    };
+    "/api/v1/products/{productId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activate or deactivate a product */
+        patch: operations["updateProductStatus"];
+        trace?: never;
+    };
+    "/api/v1/media/images/{storageKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an image from the configured catalog storage */
+        get: operations["readCatalogImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -266,6 +354,146 @@ export interface components {
             role?: "CUSTOMER" | "ADMIN" | "BILLING";
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE" | "BLOCKED";
+        };
+        InventoryAdjustmentRequestDto: {
+            /**
+             * @description Signed quantity to add to or remove from available inventory
+             * @example -2
+             */
+            quantityDelta: number;
+            /** @example Damaged units removed during stock count */
+            reason: string;
+        };
+        InventoryAdjustmentMovementDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            /** @enum {string} */
+            type: "ADJUSTMENT";
+            quantityDelta: number;
+            balanceAfter: number;
+            reason: string;
+            /** Format: uuid */
+            actorUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InventoryAdjustmentResponseDto: {
+            /** Format: uuid */
+            productId: string;
+            availableQuantity: number;
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+            movement: components["schemas"]["InventoryAdjustmentMovementDto"];
+        };
+        ProductImageReferenceDto: {
+            /** @example products/example/cover.webp */
+            storageKey: string;
+            /** @example https://cdn.example.com/products/example/cover.webp */
+            url: string;
+        };
+        CreateProductRequestDto: {
+            /** @example NOTEBOOK-001 */
+            sku: string;
+            /** @example Notebook Pro 14 */
+            name: string;
+            description: string;
+            /** @example 1299990.00 */
+            price: string;
+            /** @example CLP */
+            currency: string;
+            image: components["schemas"]["ProductImageReferenceDto"];
+            /**
+             * @default INACTIVE
+             * @enum {string}
+             */
+            status: "ACTIVE" | "INACTIVE";
+        };
+        AdministrativeProductResponseDto: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            name: string;
+            description: string;
+            /** @example 1299990.00 */
+            price: string;
+            /** @example CLP */
+            currency: string;
+            image: components["schemas"]["ProductImageReferenceDto"];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            deletedAt: string | null;
+        };
+        UpdateProductRequestDto: {
+            sku?: string;
+            name?: string;
+            description?: string;
+            price?: string;
+            currency?: string;
+            image?: components["schemas"]["ProductImageReferenceDto"];
+        };
+        UpdateProductStatusRequestDto: {
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+        };
+        ProductListImageDto: {
+            storageKey: string;
+            /** Format: uri */
+            url: string;
+        };
+        ProductListItemDto: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            name: string;
+            description: string;
+            /** @example 1299990.00 */
+            price: string;
+            /** @example CLP */
+            currency: string;
+            image: components["schemas"]["ProductListImageDto"];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            stockAvailable: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProductPageResponseDto: {
+            items: components["schemas"]["ProductListItemDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        ProductDetailResponseDto: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            name: string;
+            description: string;
+            /** @example 1299990.00 */
+            price: string;
+            /** @example CLP */
+            currency: string;
+            image: components["schemas"]["ProductListImageDto"];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            stockAvailable: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @enum {string} */
+            availability: "IN_STOCK" | "OUT_OF_STOCK";
         };
         HealthDatabaseResponseDto: {
             /**
@@ -730,6 +958,405 @@ export interface operations {
             };
             /** @description Duplicate email or last active administrator */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adjustProductInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryAdjustmentRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryAdjustmentResponseDto"];
+                };
+            };
+            /** @description Invalid quantity or missing reason */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The adjustment would produce an invalid balance */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listProducts: {
+        parameters: {
+            query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "name" | "price" | "sku" | "stockAvailable" | "updatedAt";
+                maxPrice?: string;
+                minPrice?: string;
+                currency?: string;
+                availability?: "IN_STOCK" | "OUT_OF_STOCK";
+                status?: "ACTIVE" | "INACTIVE";
+                search?: string;
+                pageSize?: number;
+                page?: number;
+                view?: "public" | "administrative";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductPageResponseDto"];
+                };
+            };
+            /** @description Invalid query parameters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires ADMIN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrativeProductResponseDto"];
+                };
+            };
+            /** @description Invalid product data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate SKU or image reference */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getProduct: {
+        parameters: {
+            query?: {
+                view?: "public" | "administrative";
+            };
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponseDto"];
+                };
+            };
+            /** @description Invalid product identifier or view */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires ADMIN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found or not publicly visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product deleted logically */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrativeProductResponseDto"];
+                };
+            };
+            /** @description Invalid product data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate SKU or image reference */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateProductStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductStatusRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrativeProductResponseDto"];
+                };
+            };
+            /** @description Invalid product status */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readCatalogImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storageKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stored image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Image not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
