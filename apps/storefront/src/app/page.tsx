@@ -1,3 +1,5 @@
+import { SessionControls } from "@/features/auth/session-controls";
+
 export default function StorefrontHomePage() {
   return (
     <main className="grid min-h-screen place-items-center px-6 py-16">
@@ -12,6 +14,7 @@ export default function StorefrontHomePage() {
           Aplicación pública inicializada con Next.js, TypeScript, App Router y
           Tailwind CSS.
         </p>
+        <div className="mt-8"><SessionControls /></div>
       </section>
     </main>
   );

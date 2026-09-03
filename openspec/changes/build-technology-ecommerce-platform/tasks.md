@@ -20,12 +20,12 @@
 
 ## 3. Identidad, sesión y autorización
 
-- [ ] 3.1 Implementar hash de contraseñas, login, renovación y logout con revocación de sesión; verificar credenciales válidas, inválidas, expiradas y revocadas mediante pruebas de integración.
-- [ ] 3.2 Implementar registro público que asigne siempre `CUSTOMER`; verificar que enviar `ADMIN` o `BILLING` no eleva privilegios.
-- [ ] 3.3 Implementar guards para `CUSTOMER`, `ADMIN`, `BILLING` y comprobaciones de propiedad; verificar toda la matriz de acceso con pruebas positivas y negativas del API.
-- [ ] 3.4 Implementar CRUD administrativo de usuarios con activación, desactivación y cambio de rol; verificar auditoría y rechazo de la desactivación del último administrador activo.
-- [ ] 3.5 Configurar cookies, CORS, CSRF, orígenes permitidos y límites de intentos de autenticación; verificar cabeceras, cookies seguras y bloqueo de solicitudes desde orígenes no autorizados.
-- [ ] 3.6 Crear formularios de registro y login con React Hook Form y Zod, estado de sesión y logout en storefront y back office; verificar errores accesibles, redirecciones por rol y ausencia de Server Actions.
+- [x] 3.1 Implementar hash de contraseñas, login, renovación y logout con revocación de sesión; verificar credenciales válidas, inválidas, expiradas y revocadas mediante pruebas de integración.
+- [x] 3.2 Implementar registro público que asigne siempre `CUSTOMER`; verificar que enviar `ADMIN` o `BILLING` no eleva privilegios.
+- [x] 3.3 Implementar guards para `CUSTOMER`, `ADMIN`, `BILLING` y comprobaciones de propiedad; verificar toda la matriz de acceso con pruebas positivas y negativas del API.
+- [x] 3.4 Implementar CRUD administrativo de usuarios con activación, desactivación y cambio de rol; verificar auditoría y rechazo de la desactivación del último administrador activo.
+- [x] 3.5 Configurar cookies, CORS, CSRF, orígenes permitidos y límites de intentos de autenticación; verificar cabeceras, cookies seguras y bloqueo de solicitudes desde orígenes no autorizados.
+- [x] 3.6 Crear formularios de registro y login con React Hook Form y Zod, estado de sesión y logout en storefront y back office; verificar errores accesibles, redirecciones por rol y ausencia de Server Actions.
 
 ## 4. Catálogo e inventario en el API
 

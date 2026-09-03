@@ -15,6 +15,24 @@ function createOpenApiConfig() {
       "Versioned REST contract for the technology ecommerce platform.",
     )
     .setVersion("1.0.0")
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description: "Short-lived access token returned by the login endpoint",
+      },
+      "access-token",
+    )
+    .addCookieAuth(
+      "technology_ecommerce_refresh",
+      {
+        description: "HttpOnly rotating refresh credential",
+        type: "apiKey",
+      },
+      "technology_ecommerce_refresh",
+    )
+    .addTag("authentication", "Login, session renewal and logout")
     .addTag("health", "API and PostgreSQL readiness")
     .build();
 }
