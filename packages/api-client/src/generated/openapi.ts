@@ -160,6 +160,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory/{productId}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a product's auditable inventory movements */
+        get: operations["listProductInventoryMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -387,6 +404,36 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             movement: components["schemas"]["InventoryAdjustmentMovementDto"];
+        };
+        InventoryMovementActorDto: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            /** Format: email */
+            email: string;
+        };
+        InventoryMovementItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            /** @enum {string} */
+            type: "OPENING" | "ADJUSTMENT" | "SALE" | "CANCELLATION";
+            quantityDelta: number;
+            balanceAfter: number;
+            reason: string;
+            referenceType: string | null;
+            referenceId: string | null;
+            actor: components["schemas"]["InventoryMovementActorDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InventoryMovementPageDto: {
+            items: components["schemas"]["InventoryMovementItemDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
         };
         ProductImageReferenceDto: {
             /** @example products/example/cover.webp */
@@ -1018,6 +1065,58 @@ export interface operations {
             };
             /** @description The adjustment would produce an invalid balance */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listProductInventoryMovements: {
+        parameters: {
+            query?: {
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryMovementPageDto"];
+                };
+            };
+            /** @description Invalid product identifier or pagination */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

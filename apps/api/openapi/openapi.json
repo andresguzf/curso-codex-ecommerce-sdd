@@ -584,6 +584,71 @@
         ]
       }
     },
+    "/api/v1/inventory/{productId}/movements": {
+      "get": {
+        "operationId": "listProductInventoryMovements",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryMovementPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product identifier or pagination"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List a product's auditable inventory movements",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/api/v1/products": {
       "post": {
         "operationId": "createProduct",
@@ -1492,6 +1557,127 @@
           "version",
           "updatedAt",
           "movement"
+        ]
+      },
+      "InventoryMovementActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "email"
+        ]
+      },
+      "InventoryMovementItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "OPENING",
+              "ADJUSTMENT",
+              "SALE",
+              "CANCELLATION"
+            ]
+          },
+          "quantityDelta": {
+            "type": "number"
+          },
+          "balanceAfter": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string"
+          },
+          "referenceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "referenceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "actor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InventoryMovementActorDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "type",
+          "quantityDelta",
+          "balanceAfter",
+          "reason",
+          "referenceType",
+          "referenceId",
+          "actor",
+          "createdAt"
+        ]
+      },
+      "InventoryMovementPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryMovementItemDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 1
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
         ]
       },
       "ProductImageReferenceDto": {

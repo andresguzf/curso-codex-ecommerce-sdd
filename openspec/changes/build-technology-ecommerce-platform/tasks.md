@@ -38,12 +38,12 @@
 
 ## 5. Experiencia de catálogo y back office
 
-- [ ] 5.1 Crear componentes UI compartidos para navegación, formularios, tablas, estados de carga/error, modal de confirmación y paginación; verificar renderizado y accesibilidad básica con pruebas de componentes.
-- [ ] 5.2 Implementar el hero, listado y tarjetas del catálogo público usando el cliente REST y TanStack Query; verificar que solo aparecen productos activos y que los agotados deshabilitan la compra.
-- [ ] 5.3 Implementar detalle de producto con imagen, descripción, precio y stock disponible; verificar estados de carga, inexistente, inactivo y agotado.
-- [ ] 5.4 Implementar búsqueda, filtros y orden del catálogo sincronizados con la URL; verificar navegación, recarga y vuelta a página 1 cuando cambia un criterio.
-- [ ] 5.5 Implementar la paginación de back office con primera, última, anterior, siguiente, cuatro páginas a cada lado y elipsis; verificar páginas inicial, intermedia, final y resultados de una sola página.
-- [ ] 5.6 Implementar lista y formularios administrativos de crear, editar, activar, desactivar y eliminar lógicamente productos con React Hook Form y Zod; verificar cada flujo contra el API y la invalidación de caché.
+- [x] 5.1 Crear componentes UI compartidos para navegación, formularios, tablas, estados de carga/error, modal de confirmación y paginación; verificar renderizado y accesibilidad básica con pruebas de componentes.
+- [x] 5.2 Implementar el hero, listado y tarjetas del catálogo público usando el cliente REST y TanStack Query; verificar que solo aparecen productos activos y que los agotados deshabilitan la compra.
+- [x] 5.3 Implementar detalle de producto con imagen, descripción, precio y stock disponible; verificar estados de carga, inexistente, inactivo y agotado.
+- [x] 5.4 Implementar búsqueda, filtros y orden del catálogo sincronizados con la URL; verificar navegación, recarga y vuelta a página 1 cuando cambia un criterio.
+- [x] 5.5 Implementar la paginación de back office con primera, última, anterior, siguiente, cuatro páginas a cada lado y elipsis; verificar páginas inicial, intermedia, final y resultados de una sola página.
+- [x] 5.6 Implementar lista y formularios administrativos de crear, editar, activar, desactivar y eliminar lógicamente productos con React Hook Form y Zod; verificar cada flujo contra el API y la invalidación de caché.
 - [ ] 5.7 Implementar la interfaz de ajustes e historial de inventario para `ADMIN`; verificar que cada ajuste actualiza la disponibilidad y muestra su movimiento y autor.
 
 ## 6. Carrito, pago simulado y checkout

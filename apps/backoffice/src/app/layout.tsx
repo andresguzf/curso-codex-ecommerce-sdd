@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
-import { SessionProvider } from "@/features/auth/session-provider";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Technology Backoffice",
@@ -15,7 +15,7 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="es">
-      <body><SessionProvider>{children}</SessionProvider></body>
+      <body><Providers>{children}</Providers></body>
     </html>
   );
 }

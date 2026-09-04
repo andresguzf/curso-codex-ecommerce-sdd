@@ -671,6 +671,50 @@ describe("administrative product lifecycle", () => {
     });
     expect(missing.statusCode).toBe(404);
 
+    const forbiddenHistory = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory/${product.id}/movements`,
+      headers: authorization(tokens.billing),
+    });
+    expect(forbiddenHistory.statusCode).toBe(403);
+
+    const firstHistoryPage = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory/${product.id}/movements?page=1&pageSize=1`,
+      headers: authorization(tokens.admin),
+    });
+    expect(firstHistoryPage.statusCode).toBe(200);
+    expect(firstHistoryPage.json()).toMatchObject({
+      items: [
+        {
+          actor: {
+            displayName: "admin",
+            email: "products-admin@example.com",
+            id: userIds.admin,
+          },
+          balanceAfter: 2,
+          quantityDelta: -7,
+          reason: "Damaged units",
+          type: "ADJUSTMENT",
+        },
+      ],
+      page: 1,
+      pageSize: 1,
+      totalItems: 2,
+      totalPages: 2,
+    });
+
+    const secondHistoryPage = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory/${product.id}/movements?page=2&pageSize=1`,
+      headers: authorization(tokens.admin),
+    });
+    expect(secondHistoryPage.statusCode).toBe(200);
+    expect(secondHistoryPage.json()).toMatchObject({
+      items: [{ balanceAfter: 9, quantityDelta: 4 }],
+      page: 2,
+    });
+
     const [balance] = await database
       .select({
         availableQuantity: inventoryBalances.availableQuantity,

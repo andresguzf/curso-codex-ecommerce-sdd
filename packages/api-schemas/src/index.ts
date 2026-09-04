@@ -24,9 +24,17 @@ export {
   inventoryAdjustmentMovementSchema,
   inventoryAdjustmentRequestSchema,
   inventoryAdjustmentResponseSchema,
+  inventoryMovementActorSchema,
+  inventoryMovementPageSchema,
+  inventoryMovementSchema,
+  inventoryMovementTypeSchema,
   type InventoryAdjustmentMovement,
   type InventoryAdjustmentRequest,
   type InventoryAdjustmentResponse,
+  type InventoryMovement,
+  type InventoryMovementActor,
+  type InventoryMovementPage,
+  type InventoryMovementType,
 } from "./inventory";
 export {
   administrativeProductSchema,

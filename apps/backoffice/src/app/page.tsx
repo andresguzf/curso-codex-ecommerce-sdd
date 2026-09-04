@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LogoutButton } from "@/features/auth/logout-button";
@@ -32,7 +33,17 @@ export default function BackofficeHomePage() {
         </p>
         <p className="mt-5 text-sm font-semibold text-blue-700">{session.user.displayName} · {session.user.role}</p>
         <p aria-live="polite" className="mt-3 text-sm text-slate-600">{notice}</p>
-        <div className="mt-7"><LogoutButton /></div>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          {session.user.role === "ADMIN" ? (
+            <Link
+              className="rounded-lg bg-[#15345b] px-5 py-3 font-bold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
+              href="/products"
+            >
+              Administrar productos
+            </Link>
+          ) : null}
+          <LogoutButton />
+        </div>
       </section>
     </main>
   );
