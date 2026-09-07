@@ -50,14 +50,22 @@ const moneySchema = z
 const imageReferenceSchema = z
   .object({
     storageKey: z.string().trim().min(1).max(512),
-    url: z.string().trim().url().max(2_048),
+    // URLs may be absolute managed assets or a relative local placeholder.
+    // The storefront is responsible for resolving untrusted values safely.
+    url: z.string().trim().min(1).max(2_048),
+  })
+  .strict();
+const createImageReferenceSchema = z
+  .object({
+    storageKey: z.string().trim().max(512).optional(),
+    url: z.string().trim().max(2_048).optional(),
   })
   .strict();
 const createProductSchema = z
   .object({
     currency: z.string().trim().regex(/^[A-Za-z]{3}$/),
     description: z.string().trim().min(1).max(10_000),
-    image: imageReferenceSchema,
+    image: createImageReferenceSchema.optional(),
     name: z.string().trim().min(1).max(200),
     price: moneySchema,
     sku: z.string().trim().min(1).max(64),
@@ -103,8 +111,8 @@ class CreateProductRequestDto {
   @ApiProperty({ example: "CLP", pattern: "^[A-Za-z]{3}$" })
   currency!: string;
 
-  @ApiProperty({ type: ProductImageReferenceDto })
-  image!: ProductImageReferenceDto;
+  @ApiPropertyOptional({ type: ProductImageReferenceDto })
+  image?: ProductImageReferenceDto;
 
   @ApiPropertyOptional({ default: "INACTIVE", enum: PRODUCT_STATUSES })
   status?: (typeof PRODUCT_STATUSES)[number];
@@ -171,7 +179,14 @@ export class ProductAdministrationController {
     @Body() body: CreateProductRequestDto,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<AdministrativeProduct> {
-    return this.products.create(this.parse(createProductSchema, body), actor.id);
+    const input = this.parse(createProductSchema, body);
+    return this.products.create(
+      {
+        ...input,
+        image: this.defaultImageReference(input.image, input.sku),
+      },
+      actor.id,
+    );
   }
 
   @Patch(":productId")
@@ -237,5 +252,23 @@ export class ProductAdministrationController {
       });
     }
     return result.data;
+  }
+
+  private defaultImageReference(
+    image: z.output<typeof createImageReferenceSchema> | undefined,
+    sku: string,
+  ): { storageKey: string; url: string } {
+    const segment = sku
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    return {
+      storageKey:
+        image?.storageKey?.trim() ||
+        `defaults/products/${segment || "product"}/placeholder.svg`,
+      url: image?.url?.trim() || "/images/product-placeholder.svg",
+    };
   }
 }

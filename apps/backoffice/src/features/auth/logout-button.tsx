@@ -9,6 +9,7 @@ export function LogoutButton() {
   const router = useRouter();
   const { clear, notice, setNotice } = useSessionStore();
   async function logout() {
+    setNotice(null);
     try {
       await authClient.logout();
       clear();

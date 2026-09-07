@@ -8,6 +8,40 @@ import {
 } from "@technology-ecommerce/api-schemas";
 import { TextField } from "@technology-ecommerce/ui";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+const DEFAULT_PRODUCT_IMAGE_URL = "/images/product-placeholder.svg";
+
+const productFormSchema = createProductRequestSchema.extend({
+  image: z
+    .object({
+      storageKey: z.string().trim().max(512).optional(),
+      url: z.string().trim().max(2_048).optional(),
+    })
+    .optional(),
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
+
+function defaultImageStorageKey(sku: string): string {
+  const segment = sku
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `defaults/products/${segment || "product"}/placeholder.svg`;
+}
+
+function normalizeImage(
+  image: ProductFormValues["image"],
+  sku: string,
+): NonNullable<CreateProductRequest["image"]> {
+  return {
+    storageKey: image?.storageKey?.trim() || defaultImageStorageKey(sku),
+    url: image?.url?.trim() || DEFAULT_PRODUCT_IMAGE_URL,
+  };
+}
 
 export function ProductForm({
   isPending,
@@ -20,7 +54,7 @@ export function ProductForm({
   onSubmit: (input: CreateProductRequest) => void;
   product?: ProductListItem;
 }>) {
-  const { formState, handleSubmit, register } = useForm<CreateProductRequest>({
+  const { formState, handleSubmit, register } = useForm<ProductFormValues>({
     defaultValues: product
       ? {
           currency: product.currency,
@@ -40,7 +74,7 @@ export function ProductForm({
           sku: "",
           status: "INACTIVE",
         },
-    resolver: zodResolver(createProductRequestSchema),
+    resolver: zodResolver(productFormSchema),
   });
 
   const inputClass =
@@ -51,7 +85,11 @@ export function ProductForm({
       className="grid gap-5"
       noValidate
       onSubmit={handleSubmit((input) =>
-        onSubmit({ ...input, currency: input.currency.toUpperCase() }),
+        onSubmit({
+          ...input,
+          currency: input.currency.toUpperCase(),
+          image: normalizeImage(input.image, input.sku),
+        }),
       )}
     >
       <div className="grid gap-5 sm:grid-cols-2">
@@ -118,15 +156,15 @@ export function ProductForm({
 
       <TextField
         error={formState.errors.image?.url?.message}
-        hint="URL pública temporal; las cargas gestionadas se incorporarán en la tarea de imágenes."
+        hint="Opcional. Si se deja vacío, se usa una portada genérica. No se valida el formato de la URL."
         id="product-image-url"
         label="URL de imagen"
-        type="url"
+        type="text"
         {...register("image.url")}
       />
       <TextField
         error={formState.errors.image?.storageKey?.message}
-        hint="Identificador único del archivo en el proveedor de almacenamiento."
+        hint="Opcional. Si se deja vacío, se genera una clave única para la portada genérica."
         id="product-storage-key"
         label="Clave de almacenamiento"
         {...register("image.storageKey")}

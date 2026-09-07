@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   administrativeProductSchema,
   createProductRequestSchema,
+  productImageReferenceSchema,
   productDetailSchema,
   productListQuerySchema,
   productPageSchema,
@@ -24,6 +25,12 @@ const validProduct = {
 describe("product HTTP schemas", () => {
   it("accepts fixed-precision product input and rejects stock or float values", () => {
     expect(createProductRequestSchema.safeParse(validProduct).success).toBe(true);
+    expect(
+      productImageReferenceSchema.safeParse({
+        storageKey: "defaults/products/monitor/placeholder.svg",
+        url: "/images/product-placeholder.svg",
+      }).success,
+    ).toBe(true);
     expect(
       createProductRequestSchema.safeParse({ ...validProduct, price: 1299990 }),
     ).toMatchObject({ success: false });

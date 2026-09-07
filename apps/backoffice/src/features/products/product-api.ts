@@ -1,6 +1,7 @@
 import { createApiClient } from "@technology-ecommerce/api-client";
 import {
   administrativeProductSchema,
+  productDetailSchema,
   productPageSchema,
   type AdministrativeProduct,
   type CreateProductRequest,
@@ -49,6 +50,18 @@ export async function listAdministrativeProducts(
   });
   if (!result.data) throw new ProductApiError(result.response.status);
   return productPageSchema.parse(result.data);
+}
+
+export async function getAdministrativeProduct(
+  accessToken: string,
+  productId: string,
+) {
+  const result = await client.GET("/api/v1/products/{productId}", {
+    headers: authorization(accessToken),
+    params: { path: { productId }, query: { view: "administrative" } },
+  });
+  if (!result.data) throw new ProductApiError(result.response.status);
+  return productDetailSchema.parse(result.data);
 }
 
 export async function createProduct(

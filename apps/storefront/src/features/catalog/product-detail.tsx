@@ -2,11 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
-import Image from "next/image";
 import Link from "next/link";
 
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
+import { ProductImage } from "./product-image";
 
 export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
   const productQuery = useQuery({
@@ -63,7 +63,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
         </Link>
         <article className="mt-7 grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_80px_-48px_rgba(15,23,42,0.55)] lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
           <div className="relative min-h-[22rem] bg-slate-100 sm:min-h-[32rem] lg:min-h-[40rem]">
-            <Image
+            <ProductImage
               alt={product.name}
               className="object-cover"
               fill

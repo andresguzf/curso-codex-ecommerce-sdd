@@ -7,7 +7,8 @@ export const productStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const productImageReferenceSchema = z
   .object({
     storageKey: z.string().trim().min(1).max(512),
-    url: z.url().max(2_048),
+    // A reference can be a managed absolute URL or a relative local fallback.
+    url: z.string().trim().min(1).max(2_048),
   })
   .strict();
 

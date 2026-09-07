@@ -869,4 +869,25 @@ describe("administrative product lifecycle", () => {
       { balanceAfter: 1, quantityDelta: 1, type: "CANCELLATION" },
     ]);
   });
+
+  it("creates a unique local placeholder when the image is omitted", async () => {
+    const response = await server.inject({
+      method: "POST",
+      url: "/api/v1/products",
+      headers: authorization(tokens.admin),
+      payload: {
+        currency: "CLP",
+        description: "Producto temporal sin imagen cargada",
+        name: "Producto Placeholder",
+        price: "10.00",
+        sku: "DEFAULT-IMAGE-001",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json<ProductResponse>().image).toEqual({
+      storageKey: "defaults/products/default-image-001/placeholder.svg",
+      url: "/images/product-placeholder.svg",
+    });
+  });
 });

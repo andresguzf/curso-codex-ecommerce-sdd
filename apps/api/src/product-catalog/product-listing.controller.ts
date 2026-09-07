@@ -68,7 +68,7 @@ const productDetailQuerySchema = z
 
 class ProductListImageDto {
   @ApiProperty() storageKey!: string;
-  @ApiProperty({ format: "uri" }) url!: string;
+  @ApiProperty() url!: string;
 }
 
 class ProductListItemDto {

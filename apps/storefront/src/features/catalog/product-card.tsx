@@ -1,8 +1,8 @@
 import type { ProductListItem } from "@technology-ecommerce/api-schemas";
-import Image from "next/image";
 import Link from "next/link";
 
 import { formatProductPrice } from "./catalog-format";
+import { ProductImage } from "./product-image";
 
 export function ProductCard({
   onAddToCart,
@@ -17,7 +17,7 @@ export function ProductCard({
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_-35px_rgba(15,23,42,0.55)] transition duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-[0_24px_60px_-30px_rgba(37,99,235,0.38)] motion-reduce:transform-none">
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <Link aria-label={`Ver detalle de ${product.name}`} href={`/products/${product.id}`}>
-          <Image
+          <ProductImage
             alt={product.name}
             className="object-cover transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none"
             fill

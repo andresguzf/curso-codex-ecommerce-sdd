@@ -13,7 +13,7 @@ describe("HTTP security environment", () => {
     expect(environment.AUTH_COOKIE_SAME_SITE).toBe("lax");
     expect(environment.CORS_ALLOWED_ORIGINS).toEqual([
       "http://localhost:3000",
-      "http://localhost:3001",
+      "http://localhost:3002",
     ]);
     expect(environment.IMAGE_STORAGE_MAX_BYTES).toBe(5 * 1_024 * 1_024);
     expect(environment.IMAGE_STORAGE_LOCAL_ROOT).toBe(".local-storage/images");

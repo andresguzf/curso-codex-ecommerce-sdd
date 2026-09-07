@@ -89,11 +89,18 @@ describe("product administration", () => {
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Monitor Ultra 27" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Monitor para productividad" } });
     fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "299990.00" } });
-    fireEvent.change(screen.getByLabelText("URL de imagen"), { target: { value: "https://picsum.photos/id/1/800/600" } });
-    fireEvent.change(screen.getByLabelText("Clave de almacenamiento"), { target: { value: "products/monitor-ultra-27" } });
     fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
 
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ sku: "MON-ULTRA-27", status: "INACTIVE" })));
+    expect(api.createProduct).toHaveBeenCalledWith(
+      "admin-token",
+      expect.objectContaining({
+        image: {
+          storageKey: "defaults/products/mon-ultra-27/placeholder.svg",
+          url: "/images/product-placeholder.svg",
+        },
+      }),
+    );
     expect(await screen.findByText("Producto creado correctamente.")).toBeInTheDocument();
 
     const activeRow = screen.getByText("Teclado Nova 75").closest("tr");

@@ -3,7 +3,7 @@ import { z } from "zod";
 const DEVELOPMENT_ACCESS_TOKEN_SECRET =
   "development-only-access-token-secret-change-before-production";
 const DEVELOPMENT_ALLOWED_ORIGINS =
-  "http://localhost:3000,http://localhost:3001";
+  "http://localhost:3000,http://localhost:3002";
 
 const allowedOriginsSchema = z
   .string()

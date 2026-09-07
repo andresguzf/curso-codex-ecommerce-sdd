@@ -2,11 +2,160 @@
 
 :root {
   color-scheme: light;
+  --admin-page: #f1f5f9;
+  --admin-surface: #ffffff;
+  --admin-surface-subtle: #f8fafc;
+  --admin-surface-muted: #e2e8f0;
+  --admin-border: #cbd5e1;
+  --admin-text: #0f172a;
+  --admin-muted: #475569;
+  --admin-accent: #2563eb;
+  --admin-accent-soft: #dbeafe;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --admin-page: #080f1c;
+  --admin-surface: #101a2b;
+  --admin-surface-subtle: #152238;
+  --admin-surface-muted: #1e2c43;
+  --admin-border: #2b3b55;
+  --admin-text: #e6edf7;
+  --admin-muted: #9aabc3;
+  --admin-accent: #74bfff;
+  --admin-accent-soft: #163556;
 }
 
 body {
   margin: 0;
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--admin-page);
+  color: var(--admin-text);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Keep the existing Tailwind primitives readable across the admin surface. */
+html[data-theme="dark"] .bg-slate-100,
+html[data-theme="dark"] [class~="bg-slate-50/80"] {
+  background-color: var(--admin-page);
+}
+
+html[data-theme="dark"] .bg-white {
+  background-color: var(--admin-surface);
+}
+
+html[data-theme="dark"] .bg-slate-50 {
+  background-color: var(--admin-surface-subtle);
+}
+
+html[data-theme="dark"] .bg-slate-200 {
+  background-color: var(--admin-surface-muted);
+}
+
+html[data-theme="dark"] .bg-blue-50 {
+  background-color: var(--admin-accent-soft);
+}
+
+html[data-theme="dark"] .bg-amber-50 {
+  background-color: #3f3215;
+}
+
+html[data-theme="dark"] .bg-red-50 {
+  background-color: #3d1d2a;
+}
+
+html[data-theme="dark"] .bg-emerald-100 {
+  background-color: #123d35;
+}
+
+html[data-theme="dark"] .text-slate-950,
+html[data-theme="dark"] .text-slate-900,
+html[data-theme="dark"] .text-slate-800,
+html[data-theme="dark"] .text-slate-700,
+html[data-theme="dark"] .text-slate-600 {
+  color: var(--admin-text);
+}
+
+html[data-theme="dark"] .text-slate-500,
+html[data-theme="dark"] .text-slate-400 {
+  color: var(--admin-muted);
+}
+
+html[data-theme="dark"] .text-blue-950,
+html[data-theme="dark"] .text-blue-800,
+html[data-theme="dark"] .text-blue-700 {
+  color: var(--admin-accent);
+}
+
+html[data-theme="dark"] .text-emerald-800,
+html[data-theme="dark"] .text-emerald-700 {
+  color: #67e8b5;
+}
+
+html[data-theme="dark"] .text-rose-800,
+html[data-theme="dark"] .text-red-950,
+html[data-theme="dark"] .text-red-800,
+html[data-theme="dark"] .text-red-700 {
+  color: #ff9eb5;
+}
+
+html[data-theme="dark"] .text-amber-900 {
+  color: #f5cf70;
+}
+
+html[data-theme="dark"] .border-slate-200,
+html[data-theme="dark"] .border-slate-300,
+html[data-theme="dark"] .border-blue-200,
+html[data-theme="dark"] .border-blue-300,
+html[data-theme="dark"] .border-amber-300,
+html[data-theme="dark"] .border-red-200,
+html[data-theme="dark"] .border-red-300,
+html[data-theme="dark"] .border-emerald-300,
+html[data-theme="dark"] .divide-slate-200 {
+  border-color: var(--admin-border);
+}
+
+html[data-theme="dark"] [class~="hover:bg-slate-50"]:hover,
+html[data-theme="dark"] [class~="hover:bg-slate-100"]:hover {
+  background-color: var(--admin-surface-subtle);
+}
+
+html[data-theme="dark"] [class~="hover:bg-blue-50"]:hover {
+  background-color: var(--admin-accent-soft);
+}
+
+html[data-theme="dark"] [class~="hover:bg-amber-50"]:hover {
+  background-color: #4b3a18;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background-color: var(--admin-surface-subtle);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: var(--admin-muted);
+}
+
+html[data-theme="dark"] [data-slot="data-table"] {
+  border-color: var(--admin-border);
+}
+
+html[data-theme="dark"] [data-slot="data-table"] thead {
+  background-color: var(--admin-surface-muted);
+  color: var(--admin-text);
+}
+
+html[data-theme="dark"] [data-slot="data-table"] tbody {
+  background-color: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+html[data-theme="dark"] [data-slot="confirmation-dialog"] {
+  background-color: var(--admin-surface);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
 }

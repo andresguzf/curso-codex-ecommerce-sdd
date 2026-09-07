@@ -44,7 +44,7 @@
 - [x] 5.4 Implementar búsqueda, filtros y orden del catálogo sincronizados con la URL; verificar navegación, recarga y vuelta a página 1 cuando cambia un criterio.
 - [x] 5.5 Implementar la paginación de back office con primera, última, anterior, siguiente, cuatro páginas a cada lado y elipsis; verificar páginas inicial, intermedia, final y resultados de una sola página.
 - [x] 5.6 Implementar lista y formularios administrativos de crear, editar, activar, desactivar y eliminar lógicamente productos con React Hook Form y Zod; verificar cada flujo contra el API y la invalidación de caché.
-- [ ] 5.7 Implementar la interfaz de ajustes e historial de inventario para `ADMIN`; verificar que cada ajuste actualiza la disponibilidad y muestra su movimiento y autor.
+- [x] 5.7 Implementar la interfaz de ajustes e historial de inventario para `ADMIN`; verificar que cada ajuste actualiza la disponibilidad y muestra su movimiento y autor.
 
 ## 6. Carrito, pago simulado y checkout
 

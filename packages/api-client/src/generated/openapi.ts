@@ -451,7 +451,7 @@ export interface components {
             price: string;
             /** @example CLP */
             currency: string;
-            image: components["schemas"]["ProductImageReferenceDto"];
+            image?: components["schemas"]["ProductImageReferenceDto"];
             /**
              * @default INACTIVE
              * @enum {string}
@@ -492,7 +492,6 @@ export interface components {
         };
         ProductListImageDto: {
             storageKey: string;
-            /** Format: uri */
             url: string;
         };
         ProductListItemDto: {

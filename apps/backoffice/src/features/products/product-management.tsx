@@ -145,6 +145,7 @@ export function ProductManagement() {
           ) : (
             <button className="rounded-md border border-emerald-300 px-3 py-2 font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700" onClick={() => activate(product)} type="button">Activar</button>
           )}
+          <Link className="rounded-md border border-blue-300 px-3 py-2 font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" href={`/products/${product.id}/inventory`}>Inventario</Link>
           <button className="rounded-md border border-red-300 px-3 py-2 font-semibold text-red-800 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700" onClick={() => setConfirmation({ action: "delete", product })} type="button">Eliminar</button>
         </div>
       ),

@@ -4,4 +4,8 @@ export {
   createAuthBrowserClient,
   type AuthBrowserClient,
 } from "./auth-browser-client";
+export {
+  createAuthSessionCoordinator,
+  type AuthSessionChange,
+} from "./auth-session-coordinator";
 export type { components, operations, paths } from "./generated/openapi";
