@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { DatabaseTransaction } from "../database/database.service";
 import { InventoryStockRepository } from "./inventory-stock.repository";
 import type {
   InventoryStockChange,
@@ -60,6 +61,18 @@ export class InventoryStockService {
     );
   }
 
+  deductInTransaction(
+    transaction: DatabaseTransaction,
+    items: readonly InventoryStockItem[],
+    reference: InventoryStockReference,
+  ): Promise<readonly InventoryStockChange[]> {
+    return this.repository.deductInTransaction(
+      transaction,
+      normalizeInventoryStockItems(items),
+      normalizeReference(reference),
+    );
+  }
+
   restore(
     items: readonly InventoryStockItem[],
     reference: InventoryStockReference,
@@ -70,4 +83,3 @@ export class InventoryStockService {
     );
   }
 }
-

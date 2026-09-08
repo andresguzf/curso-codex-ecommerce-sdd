@@ -48,10 +48,10 @@
 
 ## 6. Carrito, pago simulado y checkout
 
-- [ ] 6.1 Implementar el carrito persistente único por cliente con endpoints para consultar, agregar, cambiar cantidad y eliminar líneas; verificar propiedad, cantidades positivas y rechazo de stock insuficiente.
-- [ ] 6.2 Implementar el cálculo autoritativo de subtotales y total desde precios vigentes; verificar redondeo monetario y recálculo después de cada mutación.
-- [ ] 6.3 Implementar puertos y adaptadores configurables de pago y envío simulados con resultados aprobado/rechazado y costos de envío; verificar escenarios deterministas de cada método.
-- [ ] 6.4 Implementar checkout transaccional e idempotente que revalide catálogo, precios y stock, cree orden y pago, descuente inventario y cierre el carrito; verificar repetición de la misma clave sin duplicados.
+- [x] 6.1 Implementar el carrito persistente único por cliente con endpoints para consultar, agregar, cambiar cantidad y eliminar líneas; verificar propiedad, cantidades positivas y rechazo de stock insuficiente.
+- [x] 6.2 Implementar el cálculo autoritativo de subtotales y total desde precios vigentes; verificar redondeo monetario y recálculo después de cada mutación.
+- [x] 6.3 Implementar puertos y adaptadores configurables de pago y envío simulados con resultados aprobado/rechazado y costos de envío; verificar escenarios deterministas de cada método.
+- [x] 6.4 Implementar checkout transaccional e idempotente que revalide catálogo, precios y stock, cree orden y pago, descuente inventario y cierre el carrito; verificar repetición de la misma clave sin duplicados.
 - [ ] 6.5 Añadir pruebas de integración para stock cambiado, producto inactivo, pago rechazado, conflicto concurrente y rollback por error; verificar que ningún fallo parcial crea orden o movimiento inconsistente.
 - [ ] 6.6 Crear la interfaz del carrito con cambio de cantidades, eliminación, disponibilidad y totales automáticos, usando TanStack Query para datos remotos y Zustand solo para estado visual; verificar límites de cantidad y actualización inmediata.
 - [ ] 6.7 Crear el formulario de checkout con dirección, pago y envío simulados; verificar éxito, rechazo, conflicto de stock, reintento idempotente y navegación a la orden creada.

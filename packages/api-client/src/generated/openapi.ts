@@ -248,6 +248,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the active cart */
+        get: operations["getCart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a product to the active cart */
+        post: operations["addCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a cart item */
+        delete: operations["removeCartItem"];
+        options?: never;
+        head?: never;
+        /** Change a cart item quantity */
+        patch: operations["updateCartItem"];
+        trace?: never;
+    };
+    "/api/v1/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm the active cart as an idempotent purchase */
+        post: operations["checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -540,6 +609,123 @@ export interface components {
             updatedAt: string;
             /** @enum {string} */
             availability: "IN_STOCK" | "OUT_OF_STOCK";
+        };
+        CartImageDto: {
+            storageKey: string;
+            url: string;
+        };
+        CartProductDto: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            name: string;
+            /** @example 1299990.00 */
+            price: string;
+            /** @example CLP */
+            currency: string;
+            image: components["schemas"]["CartImageDto"];
+            stockAvailable: number;
+            isAvailable: boolean;
+        };
+        CartItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            quantity: number;
+            /** @example 2599980.00 */
+            subtotal: string;
+            product: components["schemas"]["CartProductDto"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ActiveCartResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            customerId: string;
+            /** @enum {string} */
+            status: "ACTIVE";
+            items: components["schemas"]["CartItemDto"][];
+            totalQuantity: number;
+            /** @example CLP */
+            currency: string | null;
+            /** @example 2599980.00 */
+            subtotal: string;
+            /** @example 2599980.00 */
+            total: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AddCartItemRequestDto: {
+            /** Format: uuid */
+            productId: string;
+            quantity: number;
+        };
+        UpdateCartItemRequestDto: {
+            quantity: number;
+        };
+        CheckoutAddressDto: {
+            recipientName: string;
+            line1: string;
+            line2?: string;
+            city: string;
+            region: string;
+            postalCode: string;
+            /** @example CL */
+            countryCode: string;
+        };
+        CheckoutRequestDto: {
+            /** @enum {string} */
+            paymentMethod: "SIMULATED_CARD_APPROVED" | "SIMULATED_CARD_REJECTED";
+            /** @enum {string} */
+            shippingMethod: "PICKUP" | "STANDARD" | "EXPRESS";
+            shippingAddress: components["schemas"]["CheckoutAddressDto"];
+        };
+        CheckoutOrderItemDto: {
+            /** Format: uuid */
+            productId: string;
+            sku: string;
+            name: string;
+            quantity: number;
+            /** @example 100.00 */
+            unitPrice: string;
+            /** @example 0.00 */
+            taxAmount: string;
+            /** @example 200.00 */
+            lineTotal: string;
+            /** @example USD */
+            currency: string;
+        };
+        CheckoutOrderDto: {
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** @enum {string} */
+            status: "PROCESSING";
+            currency: string;
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            items: components["schemas"]["CheckoutOrderItemDto"][];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CheckoutPaymentDto: {
+            /** @enum {string} */
+            status: "APPROVED";
+            /** @enum {string} */
+            method: "SIMULATED_CARD_APPROVED" | "SIMULATED_CARD_REJECTED";
+            providerReference: string;
+        };
+        CheckoutResponseDto: {
+            order: components["schemas"]["CheckoutOrderDto"];
+            payment: components["schemas"]["CheckoutPaymentDto"];
         };
         HealthDatabaseResponseDto: {
             /**
@@ -1455,6 +1641,253 @@ export interface operations {
             };
             /** @description Image not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveCartResponseDto"];
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCartItemRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveCartResponseDto"];
+                };
+            };
+            /** @description Invalid product or quantity */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product unavailable or insufficient stock */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveCartResponseDto"];
+                };
+            };
+            /** @description Invalid item identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cart item not found in the customer's cart */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCartItemRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveCartResponseDto"];
+                };
+            };
+            /** @description Invalid item or quantity */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cart item not found in the customer's cart */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product unavailable or insufficient stock */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique key for this checkout attempt */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutResponseDto"];
+                };
+            };
+            /** @description Invalid request or idempotency key */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cart, catalog, stock, payment, or idempotency conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

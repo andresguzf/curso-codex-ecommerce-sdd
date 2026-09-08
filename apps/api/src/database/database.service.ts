@@ -13,6 +13,10 @@ import { Pool } from "pg";
 import type { EnvironmentVariables } from "../config/environment";
 import * as schema from "./schema";
 
+export type DatabaseTransaction = Parameters<
+  Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]
+>[0];
+
 type DatabaseNameRow = Readonly<{
   databaseName: string;
 }>;

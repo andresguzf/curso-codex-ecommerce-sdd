@@ -1099,6 +1099,256 @@
         ]
       }
     },
+    "/api/v1/cart": {
+      "get": {
+        "operationId": "getCart",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveCartResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER role required"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the active cart",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/api/v1/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCartItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveCartResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product or quantity"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER role required"
+          },
+          "409": {
+            "description": "Product unavailable or insufficient stock"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add a product to the active cart",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/api/v1/cart/items/{itemId}": {
+      "patch": {
+        "operationId": "updateCartItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCartItemRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveCartResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid item or quantity"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER role required"
+          },
+          "404": {
+            "description": "Cart item not found in the customer's cart"
+          },
+          "409": {
+            "description": "Product unavailable or insufficient stock"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Change a cart item quantity",
+        "tags": [
+          "cart"
+        ]
+      },
+      "delete": {
+        "operationId": "removeCartItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveCartResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid item identifier"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER role required"
+          },
+          "404": {
+            "description": "Cart item not found in the customer's cart"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a cart item",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/api/v1/checkout": {
+      "post": {
+        "operationId": "checkout",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Unique key for this checkout attempt",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or idempotency key"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER role required"
+          },
+          "409": {
+            "description": "Cart, catalog, stock, payment, or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Confirm the active cart as an idempotent purchase",
+        "tags": [
+          "checkout"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -1148,6 +1398,14 @@
     {
       "name": "inventory",
       "description": "Inventory balances and auditable movements"
+    },
+    {
+      "name": "cart",
+      "description": "Persistent customer shopping cart"
+    },
+    {
+      "name": "checkout",
+      "description": "Transactional purchase confirmation"
     }
   ],
   "servers": [],
@@ -2028,6 +2286,403 @@
           "createdAt",
           "updatedAt",
           "availability"
+        ]
+      },
+      "CartImageDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "storageKey",
+          "url"
+        ]
+      },
+      "CartProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP"
+          },
+          "image": {
+            "$ref": "#/components/schemas/CartImageDto"
+          },
+          "stockAvailable": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "price",
+          "currency",
+          "image",
+          "stockAvailable",
+          "isAvailable"
+        ]
+      },
+      "CartItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "subtotal": {
+            "type": "string",
+            "example": "2599980.00"
+          },
+          "product": {
+            "$ref": "#/components/schemas/CartProductDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "quantity",
+          "subtotal",
+          "product",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ActiveCartResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItemDto"
+            }
+          },
+          "totalQuantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "example": "CLP",
+            "nullable": true
+          },
+          "subtotal": {
+            "type": "string",
+            "example": "2599980.00"
+          },
+          "total": {
+            "type": "string",
+            "example": "2599980.00"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "status",
+          "items",
+          "totalQuantity",
+          "currency",
+          "subtotal",
+          "total",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AddCartItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "maximum": 2147483647,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "UpdateCartItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "maximum": 2147483647,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "CheckoutAddressDto": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string",
+            "example": "CL",
+            "pattern": "^[A-Z]{2}$"
+          }
+        },
+        "required": [
+          "recipientName",
+          "line1",
+          "city",
+          "region",
+          "postalCode",
+          "countryCode"
+        ]
+      },
+      "CheckoutRequestDto": {
+        "type": "object",
+        "properties": {
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "SIMULATED_CARD_APPROVED",
+              "SIMULATED_CARD_REJECTED"
+            ]
+          },
+          "shippingMethod": {
+            "type": "string",
+            "enum": [
+              "PICKUP",
+              "STANDARD",
+              "EXPRESS"
+            ]
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/CheckoutAddressDto"
+          }
+        },
+        "required": [
+          "paymentMethod",
+          "shippingMethod",
+          "shippingAddress"
+        ]
+      },
+      "CheckoutOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "unitPrice": {
+            "type": "string",
+            "example": "100.00"
+          },
+          "taxAmount": {
+            "type": "string",
+            "example": "0.00"
+          },
+          "lineTotal": {
+            "type": "string",
+            "example": "200.00"
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          }
+        },
+        "required": [
+          "productId",
+          "sku",
+          "name",
+          "quantity",
+          "unitPrice",
+          "taxAmount",
+          "lineTotal",
+          "currency"
+        ]
+      },
+      "CheckoutOrderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROCESSING"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "taxTotal": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckoutOrderItemDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "currency",
+          "subtotal",
+          "shippingTotal",
+          "taxTotal",
+          "total",
+          "items",
+          "createdAt"
+        ]
+      },
+      "CheckoutPaymentDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "SIMULATED_CARD_APPROVED",
+              "SIMULATED_CARD_REJECTED"
+            ]
+          },
+          "providerReference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "method",
+          "providerReference"
+        ]
+      },
+      "CheckoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/CheckoutOrderDto"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/CheckoutPaymentDto"
+          }
+        },
+        "required": [
+          "order",
+          "payment"
         ]
       },
       "HealthDatabaseResponseDto": {

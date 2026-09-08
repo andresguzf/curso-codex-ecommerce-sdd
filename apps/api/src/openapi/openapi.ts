@@ -37,6 +37,8 @@ function createOpenApiConfig() {
     .addTag("catalog-media", "Binary catalog image delivery")
     .addTag("products", "Administrative and public product catalog")
     .addTag("inventory", "Inventory balances and auditable movements")
+    .addTag("cart", "Persistent customer shopping cart")
+    .addTag("checkout", "Transactional purchase confirmation")
     .build();
 }
 

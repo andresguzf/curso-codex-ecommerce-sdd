@@ -5,6 +5,15 @@ const DEVELOPMENT_ACCESS_TOKEN_SECRET =
 const DEVELOPMENT_ALLOWED_ORIGINS =
   "http://localhost:3000,http://localhost:3002";
 
+const fixedMoneySchema = z
+  .string()
+  .trim()
+  .regex(/^\d{1,12}(?:\.\d{1,2})?$/)
+  .transform((value) => {
+    const [majorUnits, decimalUnits = ""] = value.split(".");
+    return `${majorUnits}.${decimalUnits.padEnd(2, "0")}`;
+  });
+
 const allowedOriginsSchema = z
   .string()
   .trim()
@@ -93,6 +102,9 @@ const environmentSchema = z
       .trim()
       .url()
       .default("http://localhost:3001/api/v1/media/images"),
+    SIMULATED_SHIPPING_PICKUP_COST: fixedMoneySchema.default("0.00"),
+    SIMULATED_SHIPPING_STANDARD_COST: fixedMoneySchema.default("5.00"),
+    SIMULATED_SHIPPING_EXPRESS_COST: fixedMoneySchema.default("15.00"),
   })
   .superRefine((environment, context) => {
     if (

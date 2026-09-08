@@ -17,6 +17,9 @@ describe("HTTP security environment", () => {
     ]);
     expect(environment.IMAGE_STORAGE_MAX_BYTES).toBe(5 * 1_024 * 1_024);
     expect(environment.IMAGE_STORAGE_LOCAL_ROOT).toBe(".local-storage/images");
+    expect(environment.SIMULATED_SHIPPING_PICKUP_COST).toBe("0.00");
+    expect(environment.SIMULATED_SHIPPING_STANDARD_COST).toBe("5.00");
+    expect(environment.SIMULATED_SHIPPING_EXPRESS_COST).toBe("15.00");
   });
 
   it("validates image storage limits and public URLs", () => {
@@ -32,6 +35,25 @@ describe("HTTP security environment", () => {
         IMAGE_STORAGE_PUBLIC_BASE_URL: "not-a-url",
       }),
     ).toThrow("IMAGE_STORAGE_PUBLIC_BASE_URL");
+  });
+
+  it("normalizes and validates simulated shipping costs", () => {
+    const environment = validateEnvironment({
+      DATABASE_URL: databaseUrl,
+      SIMULATED_SHIPPING_EXPRESS_COST: "20.5",
+      SIMULATED_SHIPPING_PICKUP_COST: "0",
+      SIMULATED_SHIPPING_STANDARD_COST: "7.25",
+    });
+
+    expect(environment.SIMULATED_SHIPPING_EXPRESS_COST).toBe("20.50");
+    expect(environment.SIMULATED_SHIPPING_PICKUP_COST).toBe("0.00");
+    expect(environment.SIMULATED_SHIPPING_STANDARD_COST).toBe("7.25");
+    expect(() =>
+      validateEnvironment({
+        DATABASE_URL: databaseUrl,
+        SIMULATED_SHIPPING_STANDARD_COST: "7.255",
+      }),
+    ).toThrow("SIMULATED_SHIPPING_STANDARD_COST");
   });
 
   it("defaults to secure cookies and rejects an explicit downgrade in production", () => {

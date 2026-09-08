@@ -19,6 +19,33 @@ export {
   type ApiError,
   type PaginationMetadata,
 } from "./common";
+export {
+  activeCartSchema,
+  addCartItemRequestSchema,
+  cartItemSchema,
+  cartProductSchema,
+  cartQuantitySchema,
+  updateCartItemRequestSchema,
+  type ActiveCart,
+  type AddCartItemRequest,
+  type CartItem,
+  type CartProduct,
+  type UpdateCartItemRequest,
+} from "./cart";
+export {
+  checkoutAddressSchema,
+  checkoutOrderItemSchema,
+  checkoutRequestSchema,
+  checkoutResultSchema,
+  paymentMethodSchema,
+  shippingMethodSchema,
+  type CheckoutAddress,
+  type CheckoutOrderItem,
+  type CheckoutRequest,
+  type CheckoutResult,
+  type PaymentMethod,
+  type ShippingMethod,
+} from "./checkout";
 export { healthResponseSchema, type HealthResponse } from "./health";
 export {
   inventoryAdjustmentMovementSchema,

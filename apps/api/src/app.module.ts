@@ -7,6 +7,7 @@ import { HealthModule } from "./health/health.module";
 import { AuthModule } from "./identity-access/auth.module";
 import { InventoryControlModule } from "./inventory-control/inventory-control.module";
 import { ProductCatalogModule } from "./product-catalog/product-catalog.module";
+import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-cart-checkout.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProductCatalogModule } from "./product-catalog/product-catalog.module";
     AuthModule,
     InventoryControlModule,
     ProductCatalogModule,
+    ShoppingCartCheckoutModule,
     HealthModule,
   ],
   exports: [AuthModule],
