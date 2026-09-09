@@ -102,12 +102,16 @@ export function CartLine({
           </div>
 
           <button
-            className="min-h-11 rounded-lg px-2 text-sm font-bold text-red-700 underline decoration-red-200 underline-offset-4 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
+            aria-label={`Quitar ${item.product.name} del carrito`}
+            title="Quitar del carrito"
+            className="grid size-11 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
             disabled={isUpdating}
             onClick={onRequestRemoval}
             type="button"
           >
-            Quitar del carrito
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7" />
+            </svg>
           </button>
         </div>
       </div>

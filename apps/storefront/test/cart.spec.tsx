@@ -210,7 +210,7 @@ describe("storefront cart", () => {
     renderCart();
 
     await user.click(
-      await screen.findByRole("button", { name: "Quitar del carrito" }),
+      await screen.findByRole("button", { name: /Quitar .+ del carrito/ }),
     );
     const dialog = screen.getByRole("dialog", {
       name: "¿Quitar este producto?",
@@ -229,7 +229,7 @@ describe("storefront cart", () => {
     renderCart();
 
     await user.click(
-      await screen.findByRole("button", { name: "Quitar del carrito" }),
+      await screen.findByRole("button", { name: /Quitar .+ del carrito/ }),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
