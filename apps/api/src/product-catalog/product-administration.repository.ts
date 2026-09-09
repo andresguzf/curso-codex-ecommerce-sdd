@@ -29,6 +29,7 @@ import type {
   ProductStatus,
   UpdateAdministrativeProduct,
 } from "./product-administration.types";
+import { SYSTEM_CURRENCY } from "../shared/system-currency";
 
 const productSelection = {
   id: products.id,
@@ -86,7 +87,6 @@ export class ProductAdministrationRepository {
       );
     }
     if (query.status) conditions.push(eq(products.status, query.status));
-    if (query.currency) conditions.push(eq(products.currency, query.currency));
     if (query.minPrice) conditions.push(gte(products.price, query.minPrice));
     if (query.maxPrice) conditions.push(lte(products.price, query.maxPrice));
     if (query.availability === "IN_STOCK") {
@@ -186,7 +186,7 @@ export class ProductAdministrationRepository {
       const [product] = await transaction
         .insert(products)
         .values({
-          currency: input.currency,
+          currency: SYSTEM_CURRENCY,
           description: input.description,
           name: input.name,
           price: input.price,
@@ -203,7 +203,11 @@ export class ProductAdministrationRepository {
         url: input.image.url,
       });
 
-      const created = { ...product, image: input.image };
+      const created: AdministrativeProduct = {
+        ...product,
+        currency: SYSTEM_CURRENCY,
+        image: input.image,
+      };
       await transaction.insert(auditEntries).values({
         action: "PRODUCT_CREATED",
         actorUserId,
@@ -235,7 +239,6 @@ export class ProductAdministrationRepository {
       const [updated] = await transaction
         .update(products)
         .set({
-          ...(input.currency === undefined ? {} : { currency: input.currency }),
           ...(input.description === undefined
             ? {}
             : { description: input.description }),
@@ -267,7 +270,11 @@ export class ProductAdministrationRepository {
         image = updatedImage;
       }
 
-      const result = { ...updated, image };
+      const result: AdministrativeProduct = {
+        ...updated,
+        currency: SYSTEM_CURRENCY,
+        image,
+      };
       await transaction.insert(auditEntries).values({
         action: "PRODUCT_UPDATED",
         actorUserId,
@@ -304,7 +311,11 @@ export class ProductAdministrationRepository {
         .returning();
       if (!updated) throw new Error("PostgreSQL did not return the updated product status");
 
-      const result = { ...updated, image: current.image };
+      const result: AdministrativeProduct = {
+        ...updated,
+        currency: SYSTEM_CURRENCY,
+        image: current.image,
+      };
       await transaction.insert(auditEntries).values({
         action: status === "ACTIVE" ? "PRODUCT_ACTIVATED" : "PRODUCT_DEACTIVATED",
         actorUserId,
@@ -360,7 +371,7 @@ export class ProductAdministrationRepository {
       name: row.name,
       description: row.description,
       price: row.price,
-      currency: row.currency,
+      currency: SYSTEM_CURRENCY,
       image: { storageKey: row.imageStorageKey, url: row.imageUrl },
       status: row.status,
       createdAt: row.createdAt,

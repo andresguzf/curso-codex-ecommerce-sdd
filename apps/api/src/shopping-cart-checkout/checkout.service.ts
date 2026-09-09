@@ -1,9 +1,10 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import {
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
 } from "@nestjs/common";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
@@ -12,8 +13,6 @@ import {
   cartItems,
   carts,
   idempotencyRecords,
-  orderItems,
-  orders,
   payments,
   products,
 } from "../database/schema";
@@ -21,6 +20,8 @@ import {
   InventoryStockUnavailableError,
 } from "../inventory-control/inventory-stock.repository";
 import { InventoryStockService } from "../inventory-control/inventory-stock.service";
+import { OrderService } from "../order-management/order.service";
+import { SYSTEM_CURRENCY } from "../shared/system-currency";
 import { addMoneyAmounts, calculateCartTotals } from "./cart-totals";
 import type {
   CheckoutCustomer,
@@ -45,7 +46,6 @@ type CheckoutLine = Readonly<{
   name: string;
   quantity: number;
   unitPrice: string;
-  currency: string;
 }>;
 
 function hash(value: string): string {
@@ -77,7 +77,23 @@ export class CheckoutService {
     @Inject(PaymentProcessor) private readonly payment: PaymentProcessor,
     @Inject(ShippingQuoteProvider)
     private readonly shipping: ShippingQuoteProvider,
+    @Inject(OrderService) private readonly orderService: OrderService,
   ) {}
+
+  async getReceipt(customerId: string, orderId: string): Promise<CheckoutResult> {
+    const [record] = await this.database.client.select({ response: idempotencyRecords.responseSnapshot })
+      .from(idempotencyRecords).where(and(
+        eq(idempotencyRecords.customerId, customerId),
+        eq(idempotencyRecords.orderId, orderId),
+        eq(idempotencyRecords.scope, CHECKOUT_SCOPE),
+        eq(idempotencyRecords.status, "COMPLETED"),
+      )).limit(1);
+    const snapshot = record?.response as CheckoutTransactionResult | undefined;
+    if (!snapshot || snapshot.outcome !== "APPROVED") throw new NotFoundException({
+      code: "CHECKOUT_RECEIPT_NOT_FOUND", message: "Checkout receipt not found",
+    });
+    return snapshot.response;
+  }
 
   async checkout(
     customer: CheckoutCustomer,
@@ -170,7 +186,6 @@ export class CheckoutService {
       for (const cartLine of cartLines) {
         const [product] = await transaction
           .select({
-            currency: products.currency,
             id: products.id,
             name: products.name,
             price: products.price,
@@ -201,15 +216,7 @@ export class CheckoutService {
         });
       }
 
-      const currencies = new Set(lines.map((line) => line.currency));
-      if (currencies.size !== 1) {
-        throw new ConflictException({
-          code: "CHECKOUT_CURRENCY_MISMATCH",
-          message: "The cart contains products in different currencies",
-        });
-      }
-      const currency = lines[0]?.currency;
-      if (!currency) throw new Error("Checkout currency could not be resolved");
+      const currency = SYSTEM_CURRENCY;
 
       const cartTotals = calculateCartTotals(lines);
       const shipping = await this.shipping.quote({
@@ -247,8 +254,6 @@ export class CheckoutService {
         return snapshot;
       }
 
-      const orderId = randomUUID();
-      const orderNumber = `ORD-${orderId.toUpperCase()}`;
       const orderLines: CheckoutOrderItem[] = lines.map((line, index) => ({
         currency,
         lineTotal: cartTotals.lineSubtotals[index] ?? "0.00",
@@ -259,9 +264,7 @@ export class CheckoutService {
         taxAmount: "0.00",
         unitPrice: line.unitPrice,
       }));
-      const [order] = await transaction
-        .insert(orders)
-        .values({
+      const aggregate = await this.orderService.createInTransaction(transaction, {
           currency,
           customerId: customer.id,
           customerSnapshot: {
@@ -269,8 +272,7 @@ export class CheckoutService {
             email: customer.email,
             id: customer.id,
           },
-          id: orderId,
-          number: orderNumber,
+          items: orderLines,
           paymentSnapshot: {
             ...payment.snapshot,
             providerReference: payment.providerReference,
@@ -282,23 +284,9 @@ export class CheckoutService {
           subtotal: cartTotals.subtotal,
           taxTotal: "0.00",
           total,
-        })
-        .returning({ createdAt: orders.createdAt });
-      if (!order) throw new Error("PostgreSQL did not create the order");
-
-      await transaction.insert(orderItems).values(
-        orderLines.map((line) => ({
-          currency: line.currency,
-          lineTotal: line.lineTotal,
-          nameSnapshot: line.name,
-          orderId,
-          productId: line.productId,
-          quantity: line.quantity,
-          skuSnapshot: line.sku,
-          taxAmount: line.taxAmount,
-          unitPrice: line.unitPrice,
-        })),
-      );
+        }, now);
+      const order = aggregate.snapshot;
+      const orderId = order.id;
       await transaction.insert(payments).values({
         amount: total,
         currency,
@@ -342,11 +330,11 @@ export class CheckoutService {
 
       const response: CheckoutResult = {
         order: {
-          createdAt: order.createdAt.toISOString(),
+          createdAt: order.createdAt,
           currency,
           id: orderId,
-          items: orderLines,
-          number: orderNumber,
+          items: order.items,
+          number: order.number,
           shippingTotal: shipping.cost,
           status: "PROCESSING",
           subtotal: cartTotals.subtotal,

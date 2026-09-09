@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { systemCurrencySchema } from "./products";
+
 const calculatedMoneySchema = z.string().regex(/^\d+\.\d{2}$/);
 
 export const paymentMethodSchema = z.enum([
@@ -11,6 +13,13 @@ export const shippingMethodSchema = z.enum([
   "STANDARD",
   "EXPRESS",
 ]);
+
+export const checkoutShippingOptionsSchema = z.array(z.object({
+  method: shippingMethodSchema,
+  cost: calculatedMoneySchema,
+  currency: systemCurrencySchema,
+})).min(1);
+export type CheckoutShippingOptions = z.infer<typeof checkoutShippingOptionsSchema>;
 
 export const checkoutAddressSchema = z
   .object({
@@ -40,7 +49,7 @@ export const checkoutOrderItemSchema = z.object({
   unitPrice: calculatedMoneySchema,
   taxAmount: calculatedMoneySchema,
   lineTotal: calculatedMoneySchema,
-  currency: z.string().regex(/^[A-Z]{3}$/),
+  currency: systemCurrencySchema,
 });
 
 export const checkoutResultSchema = z.object({
@@ -48,7 +57,7 @@ export const checkoutResultSchema = z.object({
     id: z.uuid(),
     number: z.string().trim().min(1),
     status: z.literal("PROCESSING"),
-    currency: z.string().regex(/^[A-Z]{3}$/),
+    currency: systemCurrencySchema,
     subtotal: calculatedMoneySchema,
     shippingTotal: calculatedMoneySchema,
     taxTotal: calculatedMoneySchema,

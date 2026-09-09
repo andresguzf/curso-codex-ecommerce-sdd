@@ -4,33 +4,49 @@ import {
   AuthApiError,
   createAuthSessionCoordinator,
 } from "@technology-ecommerce/api-client";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { authClient, useSessionStore } from "./session";
+import { claimAnonymousCart } from "../cart/cart-api";
 
 const CHANNEL_NAME = "technology-ecommerce-storefront-auth";
 
 export function SessionProvider({ children }: Readonly<{ children: ReactNode }>) {
   const clear = useSessionStore((state) => state.clear);
   const setSession = useSessionStore((state) => state.setSession);
-  const restoreInFlight = useRef<Promise<void> | undefined>(undefined);
-  const syncInFlight = useRef<Promise<void> | undefined>(undefined);
-  const restoreGeneration = useRef(0);
+  const setNotice = useSessionStore((state) => state.setNotice);
 
   useEffect(() => {
     let active = true;
+    // Each effect setup must own its callbacks. Strict Mode replays setup and
+    // cleanup; reusing the previous setup's promise would discard its result.
+    let restoreInFlight: Promise<void> | undefined;
+    let syncInFlight: Promise<void> | undefined;
+    let restoreGeneration = 0;
     const coordinator = createAuthSessionCoordinator(CHANNEL_NAME);
 
     function restore(preserveAuthenticatedState = false): Promise<void> {
-      if (restoreInFlight.current) return restoreInFlight.current;
+      if (restoreInFlight) return restoreInFlight;
 
-      const generation = restoreGeneration.current;
+      const generation = restoreGeneration;
       const request = authClient
         .refresh({ retryOnInvalidSession: true })
-        .then((session) => {
+        .then(async (session) => {
+          if (!active || generation !== restoreGeneration) return;
+          if (session.user.role === "CUSTOMER") {
+            try {
+              const claim = await claimAnonymousCart(session.accessToken);
+              if (claim.adjustedProductIds.length) {
+                setNotice("Ajustamos algunas cantidades del carrito al stock disponible.");
+              }
+            } catch {
+              // Restoring the authenticated session remains useful. A later
+              // refresh can retry adoption of the anonymous cart.
+            }
+          }
           if (
             active &&
-            generation === restoreGeneration.current &&
+            generation === restoreGeneration &&
             (!preserveAuthenticatedState ||
               useSessionStore.getState().status !== "authenticated")
           ) {
@@ -38,7 +54,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
           }
         })
         .catch(() => {
-          if (!active || generation !== restoreGeneration.current) return;
+          if (!active || generation !== restoreGeneration) return;
 
           // A first restore can overlap a login submitted in this tab. Keep
           // that newer in-memory session, but clear it for later sync checks
@@ -51,17 +67,17 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
           }
         })
         .finally(() => {
-          restoreInFlight.current = undefined;
+          restoreInFlight = undefined;
         });
 
-      restoreInFlight.current = request;
+      restoreInFlight = request;
       return request;
     }
 
     function synchronizeSession(): Promise<void> {
-      if (syncInFlight.current) return syncInFlight.current;
+      if (syncInFlight) return syncInFlight;
 
-      const generation = restoreGeneration.current;
+      const generation = restoreGeneration;
       const request = (async (): Promise<void> => {
         const currentSession = useSessionStore.getState().session;
         if (useSessionStore.getState().status !== "authenticated" || !currentSession) {
@@ -73,7 +89,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
           const user = await authClient.getCurrentUser(currentSession.accessToken);
           if (
             active &&
-            generation === restoreGeneration.current &&
+            generation === restoreGeneration &&
             useSessionStore.getState().session?.accessToken === currentSession.accessToken
           ) {
             setSession({ ...currentSession, user });
@@ -84,17 +100,17 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
           }
         }
       })().finally(() => {
-        syncInFlight.current = undefined;
+        syncInFlight = undefined;
       });
 
-      syncInFlight.current = request;
+      syncInFlight = request;
       return request;
     }
 
     void restore(true);
     const unsubscribe = coordinator.subscribe((message) => {
       if (message === "logout") {
-        restoreGeneration.current += 1;
+        restoreGeneration += 1;
         clear();
         return;
       }
@@ -116,7 +132,7 @@ export function SessionProvider({ children }: Readonly<{ children: ReactNode }>)
       window.removeEventListener("focus", synchronizeWhenVisible);
       document.removeEventListener("visibilitychange", synchronizeWhenVisible);
     };
-  }, [clear, setSession]);
+  }, [clear, setNotice, setSession]);
 
   return children;
 }

@@ -4,11 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
 import Link from "next/link";
 
+import { CartActionFeedback } from "../cart/cart-action-feedback";
+import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
 import { ProductImage } from "./product-image";
 
 export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
+  const { addProduct, feedback, isAdding } = useAddToCart();
   const productQuery = useQuery({
     queryFn: () => getPublicProduct(productId),
     queryKey: ["catalog", "public", "product", productId],
@@ -81,7 +84,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
 
             <div className="mt-9 border-y border-slate-200 py-7">
               <p className="m-0 text-4xl font-black tracking-tight text-slate-950">
-                {formatProductPrice(product.price, product.currency)}
+                {formatProductPrice(product.price)}
               </p>
               <p className={isOutOfStock ? "mb-0 mt-3 font-bold text-red-700" : "mb-0 mt-3 font-bold text-emerald-700"}>
                 {isOutOfStock ? "Agotado" : `${product.stockAvailable} unidades disponibles`}
@@ -91,11 +94,19 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
             <button
               aria-label={`Agregar ${product.name} al carrito`}
               className="mt-8 min-h-12 rounded-xl bg-blue-700 px-6 py-3 font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || isAdding}
+              onClick={() => void addProduct(product)}
               type="button"
             >
-              {isOutOfStock ? "Producto sin stock" : "Agregar al carrito"}
+              {isOutOfStock
+                ? "Producto sin stock"
+                : isAdding
+                  ? "Agregando al carrito…"
+                  : "Agregar al carrito"}
             </button>
+            <div className="mt-4">
+              <CartActionFeedback feedback={feedback} />
+            </div>
             <p className="mb-0 mt-4 text-center text-xs leading-5 text-slate-500">
               La disponibilidad se volverá a validar al agregar y al finalizar la compra.
             </p>

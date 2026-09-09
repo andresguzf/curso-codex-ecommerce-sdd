@@ -4,16 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { registerRequestSchema, type RegisterRequest } from "@technology-ecommerce/api-schemas";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthField } from "./field";
 import { broadcastSessionChange } from "./session-provider";
-import { authClient, useSessionStore } from "./session";
+import { claimAnonymousCart } from "../cart/cart-api";
+import { authClient, safeStorefrontReturnTo, useSessionStore } from "./session";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setSession = useSessionStore((state) => state.setSession);
   const setNotice = useSessionStore((state) => state.setNotice);
   const [formMessage, setFormMessage] = useState<string>();
@@ -27,10 +29,15 @@ export function RegisterForm() {
     try {
       await authClient.register(input);
       const session = await authClient.login({ email: input.email, password: input.password });
+      const claim = await claimAnonymousCart(session.accessToken);
       setSession(session);
-      setNotice("Cuenta creada y sesión iniciada correctamente.");
+      setNotice(
+        claim.adjustedProductIds.length
+          ? "Cuenta creada. Ajustamos algunas cantidades del carrito al stock disponible."
+          : "Cuenta creada y sesión iniciada correctamente.",
+      );
       broadcastSessionChange("session-changed");
-      router.replace("/account");
+      router.replace(safeStorefrontReturnTo(searchParams.get("returnTo")));
     } catch (error) {
       setFormMessage(error instanceof AuthApiError ? error.message : "No pudimos crear la cuenta.");
     }
@@ -46,7 +53,7 @@ export function RegisterForm() {
       <button disabled={formState.isSubmitting} className="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-bold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600 disabled:cursor-wait disabled:opacity-60">
         {formState.isSubmitting ? "Creando cuenta…" : "Crear cuenta"}
       </button>
-      <p className="text-center text-sm text-slate-600">¿Ya tienes cuenta? <Link href="/login" className="font-bold text-indigo-700 underline-offset-4 hover:underline">Inicia sesión</Link></p>
+      <p className="text-center text-sm text-slate-600">¿Ya tienes cuenta? <Link href={searchParams.get("returnTo") ? `/login?returnTo=${encodeURIComponent(searchParams.get("returnTo")!)}` : "/login"} className="font-bold text-indigo-700 underline-offset-4 hover:underline">Inicia sesión</Link></p>
     </form>
   );
 }

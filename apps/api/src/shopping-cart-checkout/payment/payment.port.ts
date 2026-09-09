@@ -9,13 +9,13 @@ export type PaymentStatus = "APPROVED" | "REJECTED";
 export type PaymentRequest = Readonly<{
   amount: string;
   attemptReference: string;
-  currency: string;
+  currency: SystemCurrency;
   method: PaymentMethod;
 }>;
 
 export type PaymentResult = Readonly<{
   amount: string;
-  currency: string;
+  currency: SystemCurrency;
   method: PaymentMethod;
   providerReference: string;
   status: PaymentStatus;
@@ -36,3 +36,4 @@ export class UnsupportedPaymentMethodError extends Error {
     this.name = "UnsupportedPaymentMethodError";
   }
 }
+import type { SystemCurrency } from "../../shared/system-currency";

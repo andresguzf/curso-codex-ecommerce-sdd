@@ -16,7 +16,7 @@ El sistema SHALL generar una representación PDF de una orden que incluya númer
 - **THEN** el sistema deniega la descarga sin exponer el contenido del documento
 
 ### Requirement: Exportación PDF de facturas
-El sistema SHALL generar una representación PDF de factura con número, emisor, cliente, origen, líneas, impuestos, moneda, totales, fechas y estado.
+El sistema SHALL generar una representación PDF de factura con número, emisor, cliente, origen, líneas, impuestos, código de moneda `USD`, totales, fechas y estado, sin aplicar conversiones de divisa.
 
 #### Scenario: Factura emitida
 - **WHEN** un usuario autorizado solicita una factura emitida en PDF

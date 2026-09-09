@@ -10,8 +10,7 @@ import {
   updateProductRequestSchema,
 } from "../src/products";
 
-const validProduct = {
-  currency: "CLP",
+const validInput = {
   description: "A professional notebook",
   image: {
     storageKey: "products/notebook/cover.webp",
@@ -21,10 +20,11 @@ const validProduct = {
   price: "1299990.00",
   sku: "NOTEBOOK-001",
 };
+const validProduct = { ...validInput, currency: "USD" as const };
 
 describe("product HTTP schemas", () => {
   it("accepts fixed-precision product input and rejects stock or float values", () => {
-    expect(createProductRequestSchema.safeParse(validProduct).success).toBe(true);
+    expect(createProductRequestSchema.safeParse(validInput).success).toBe(true);
     expect(
       productImageReferenceSchema.safeParse({
         storageKey: "defaults/products/monitor/placeholder.svg",
@@ -32,10 +32,13 @@ describe("product HTTP schemas", () => {
       }).success,
     ).toBe(true);
     expect(
-      createProductRequestSchema.safeParse({ ...validProduct, price: 1299990 }),
+      createProductRequestSchema.safeParse({ ...validInput, price: 1299990 }),
     ).toMatchObject({ success: false });
     expect(
-      createProductRequestSchema.safeParse({ ...validProduct, stock: 12 }),
+      createProductRequestSchema.safeParse({ ...validInput, stock: 12 }),
+    ).toMatchObject({ success: false });
+    expect(
+      createProductRequestSchema.safeParse({ ...validInput, currency: "EUR" }),
     ).toMatchObject({ success: false });
   });
 

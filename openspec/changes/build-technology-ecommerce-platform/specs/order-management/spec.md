@@ -5,7 +5,7 @@ Define el ciclo de vida de las órdenes de compra, su historial, estados operati
 ## ADDED Requirements
 
 ### Requirement: Creación de orden confirmada
-El sistema SHALL crear una orden con número único, cliente, líneas, precios, moneda, totales, dirección, envío y pago como snapshots inmutables cuando un checkout sea exitoso.
+El sistema SHALL crear una orden con número único, cliente, líneas, precios, código de moneda fijo `USD`, totales, dirección, envío y pago como snapshots inmutables cuando un checkout sea exitoso, sin admitir una moneda seleccionable por orden.
 
 #### Scenario: Orden creada desde checkout
 - **WHEN** un checkout concluye exitosamente

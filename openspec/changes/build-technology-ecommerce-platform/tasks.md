@@ -12,7 +12,7 @@
 - [x] 2.1 Configurar el ORM, migraciones y cliente PostgreSQL exclusivo del API; verificar que una base vacía puede migrarse hacia adelante desde cero.
 - [x] 2.2 Crear las tablas y restricciones de usuarios, sesiones, roles y auditoría; verificar integridad de correos únicos, roles admitidos y referencias mediante pruebas de integración.
 - [x] 2.3 Crear las tablas de productos, imágenes, balances y movimientos de inventario; verificar SKU único, precio no negativo y balance no negativo en la base de datos.
-- [x] 2.4 Crear las tablas de carritos, líneas, órdenes, líneas de orden, pagos e idempotencia; verificar relaciones, unicidad y snapshots mediante una migración y pruebas de repositorio.
+- [x] 2.4 Crear y extender las tablas de carritos, líneas, órdenes, líneas de orden, pagos e idempotencia para admitir exactamente un propietario cliente o anónimo, hash del identificador y expiración; verificar relaciones, exclusión de propietarios, unicidad y snapshots mediante migraciones y pruebas de repositorio.
 - [x] 2.5 Crear las tablas de facturas y líneas con origen, estados, numeración y referencia opcional a orden; verificar unicidad de número y de factura activa por orden.
 - [x] 2.6 Crear seed reproducible para los tres roles, un administrador inicial y datos de catálogo de desarrollo; verificar que puede ejecutarse dos veces sin duplicar registros.
 - [x] 2.7 Publicar OpenAPI versionado bajo `/api/v1`, generar `packages/api-client` y definir esquemas Zod para fronteras HTTP; verificar que el cliente se regenera sin cambios inesperados y compila en ambos frontends.
@@ -26,15 +26,17 @@
 - [x] 3.4 Implementar CRUD administrativo de usuarios con activación, desactivación y cambio de rol; verificar auditoría y rechazo de la desactivación del último administrador activo.
 - [x] 3.5 Configurar cookies, CORS, CSRF, orígenes permitidos y límites de intentos de autenticación; verificar cabeceras, cookies seguras y bloqueo de solicitudes desde orígenes no autorizados.
 - [x] 3.6 Crear formularios de registro y login con React Hook Form y Zod, estado de sesión y logout en storefront y back office; verificar errores accesibles, redirecciones por rol y ausencia de Server Actions.
+- [x] 3.7 Vincular o fusionar transaccionalmente el carrito anónimo al registrar o autenticar un `CUSTOMER` y conservar el destino de checkout; verificar cliente sin carrito, cliente con carrito, líneas repetidas, ajuste por stock e invalidación del identificador anónimo.
 
 ## 4. Catálogo e inventario en el API
 
 - [x] 4.1 Implementar almacenamiento de imágenes mediante un adaptador con proveedor local de desarrollo; verificar carga, lectura, validación de tipo/tamaño y eliminación segura de una imagen no referenciada.
-- [x] 4.2 Implementar CRUD REST de productos con SKU, precio, moneda, imagen, fechas, estado y eliminación lógica; verificar validaciones y que solo `ADMIN` puede mutar productos.
+- [x] 4.2 Implementar CRUD REST de productos con SKU, precio, código de moneda, imagen, fechas, estado y eliminación lógica; verificar validaciones y que solo `ADMIN` puede mutar productos.
 - [x] 4.3 Implementar listado público y administrativo con búsqueda, filtros, campos de orden permitidos y paginación con totales; verificar combinaciones de criterios y límites de página mediante pruebas del API.
 - [x] 4.4 Implementar detalle público que excluya productos inactivos o eliminados y proyecte disponibilidad; verificar respuestas para producto activo, inactivo, inexistente y agotado.
 - [x] 4.5 Implementar ajustes de inventario como movimientos auditables separados del CRUD de productos; verificar aumentos, reducciones, motivo obligatorio y rechazo de balance negativo.
 - [x] 4.6 Implementar operaciones atómicas de descuento y restitución con bloqueo en orden estable; verificar mediante una prueba concurrente que dos compras no pueden consumir la misma última unidad.
+- [x] 4.7 Establecer `USD` como moneda global única, migrar los datos existentes sin convertir importes arbitrariamente, restringir persistencia y contratos a `USD`, retirar la moneda editable del CRUD de productos y restaurar precios seed expresados en dólares; verificar rechazo de monedas distintas, formularios sin selector y coherencia de catálogo, carrito y checkout.
 
 ## 5. Experiencia de catálogo y back office
 
@@ -48,17 +50,18 @@
 
 ## 6. Carrito, pago simulado y checkout
 
-- [x] 6.1 Implementar el carrito persistente único por cliente con endpoints para consultar, agregar, cambiar cantidad y eliminar líneas; verificar propiedad, cantidades positivas y rechazo de stock insuficiente.
+- [x] 6.1 Implementar el carrito persistente público por cliente o visitante anónimo con endpoints para consultar, agregar, cambiar cantidad y eliminar líneas, cookie opaca y contrato OpenAPI actualizado; verificar aislamiento, persistencia, cantidades positivas y rechazo de stock insuficiente sin exigir login.
 - [x] 6.2 Implementar el cálculo autoritativo de subtotales y total desde precios vigentes; verificar redondeo monetario y recálculo después de cada mutación.
 - [x] 6.3 Implementar puertos y adaptadores configurables de pago y envío simulados con resultados aprobado/rechazado y costos de envío; verificar escenarios deterministas de cada método.
 - [x] 6.4 Implementar checkout transaccional e idempotente que revalide catálogo, precios y stock, cree orden y pago, descuente inventario y cierre el carrito; verificar repetición de la misma clave sin duplicados.
-- [ ] 6.5 Añadir pruebas de integración para stock cambiado, producto inactivo, pago rechazado, conflicto concurrente y rollback por error; verificar que ningún fallo parcial crea orden o movimiento inconsistente.
-- [ ] 6.6 Crear la interfaz del carrito con cambio de cantidades, eliminación, disponibilidad y totales automáticos, usando TanStack Query para datos remotos y Zustand solo para estado visual; verificar límites de cantidad y actualización inmediata.
-- [ ] 6.7 Crear el formulario de checkout con dirección, pago y envío simulados; verificar éxito, rechazo, conflicto de stock, reintento idempotente y navegación a la orden creada.
+- [x] 6.5 Añadir pruebas de integración para stock cambiado, producto inactivo, pago rechazado, conflicto concurrente y rollback por error; verificar que ningún fallo parcial crea orden o movimiento inconsistente.
+- [x] 6.6 Crear la interfaz pública del carrito y conectar “Agregar al carrito” en landing, catálogo y detalle sin exigir login, con cambio de cantidades, eliminación, disponibilidad y totales automáticos mediante TanStack Query y Zustand solo visual; verificar visitante, cliente, límites, acceso visible al carrito y navegación posterior a una adición exitosa.
+- [x] 6.7 Crear el formulario de checkout con dirección, pago y envío simulados, exigiendo registro o login solo al entrar y recuperando el carrito después de autenticarse; verificar conservación, éxito, rechazo, conflicto de stock, reintento idempotente y navegación a la orden creada.
+- [x] 6.8 Implementar expiración configurable y limpieza segura de carritos anónimos abandonados; verificar que un carrito vigente se conserva, uno vencido no se expone y la limpieza no modifica inventario ni carritos autenticados.
 
 ## 7. Gestión de órdenes
 
-- [ ] 7.1 Implementar el agregado y máquina de estados de orden con snapshots, número único y transiciones válidas; verificar que cambios posteriores de producto o usuario no alteran la orden.
+- [x] 7.1 Implementar el agregado y máquina de estados de orden con snapshots, número único y transiciones válidas; verificar que cambios posteriores de producto o usuario no alteran la orden.
 - [ ] 7.2 Implementar endpoints de historial y detalle propios para `CUSTOMER`; verificar orden descendente, paginación y denegación de órdenes ajenas.
 - [ ] 7.3 Implementar listado, filtros, detalle y transiciones administrativas para `ADMIN`, y acceso de solo lectura/facturación para `BILLING`; verificar la matriz de permisos y transiciones inválidas.
 - [ ] 7.4 Implementar cancelación con motivo y restitución idempotente de inventario; verificar que reintentar la cancelación no duplica el movimiento compensatorio.
@@ -86,7 +89,7 @@
 - [ ] 10.1 Implementar auditoría para usuarios, roles, productos, inventario, órdenes y facturas sin registrar secretos; verificar actor, acción, referencia, fecha y cambios relevantes en cada operación sensible.
 - [ ] 10.2 Implementar correlation IDs, logs estructurados, manejo uniforme de errores y métricas básicas; verificar propagación del identificador y ausencia de contraseñas, tokens o datos sensibles en logs.
 - [ ] 10.3 Añadir pruebas de contrato que comparen OpenAPI, cliente generado y respuestas reales; verificar que CI falla cuando el contrato cambia sin regenerar el cliente.
-- [ ] 10.4 Añadir pruebas end-to-end de registro, login, catálogo, carrito, checkout, historial, administración, facturación desde orden y factura manual; verificar el flujo completo en una base aislada.
+- [ ] 10.4 Añadir pruebas end-to-end de registro, login, catálogo, carrito anónimo persistente, fusión al autenticar, checkout protegido, historial, administración, facturación desde orden y factura manual; verificar el flujo completo en una base aislada.
 - [ ] 10.5 Añadir pruebas end-to-end negativas para escalamiento de rol, acceso cruzado entre clientes y operaciones prohibidas de Billing; verificar respuestas de autorización sin fuga de datos.
 - [ ] 10.6 Ejecutar lint, typecheck, pruebas unitarias, integración, componentes, end-to-end y builds de producción; corregir fallos hasta que la suite completa sea exitosa.
 
@@ -101,7 +104,7 @@
 ## 12. Layouts, navegación y retroalimentación compartida
 
 - [ ] 12.1 Implementar `StorefrontShell` con header, navbar superior, área principal, footer, nombre de tienda y logo SVG; verificar persistencia del layout, regiones semánticas y navegación responsive mediante pruebas de componentes.
-- [ ] 12.2 Integrar en el navbar del storefront inicio, acciones de cuenta y login/logout según sesión y badge con la suma de unidades del carrito; verificar estados visitante, cliente autenticado, carrito vacío y carrito con múltiples cantidades.
+- [ ] 12.2 Integrar en el navbar del storefront inicio, acciones de cuenta y login/logout según sesión y badge con la suma de unidades del carrito público; verificar persistencia y actualización en estados visitante, cliente autenticado, carrito vacío y carrito con múltiples cantidades.
 - [ ] 12.3 Implementar `BackofficeShell` con navegación lateral izquierda colapsable y opciones condicionadas por `ADMIN` y `BILLING`; verificar expansión, colapso, teclado, pantalla pequeña y ausencia de enlaces no autorizados.
 - [ ] 12.4 Implementar el hero del storefront con imagen tecnológica semitransparente, contenido legible y buscador conectado al catálogo; verificar contraste, adaptación responsive y navegación a la primera página de resultados con la URL correcta.
 - [ ] 12.5 Implementar un sistema compartido de mensajes flash accesibles para éxito, error, advertencia e información; verificar región `aria-live`, deduplicación y mensajes de login, logout y mutaciones sin usar `useEffect` para inferir eventos.

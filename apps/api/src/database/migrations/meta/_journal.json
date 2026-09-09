@@ -36,6 +36,20 @@
       "when": 1788304555837,
       "tag": "0004_vengeful_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788900018220,
+      "tag": "0005_icy_moira_mactaggert",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788903106996,
+      "tag": "0006_demonic_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

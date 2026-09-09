@@ -3,7 +3,7 @@ export const SHIPPING_METHODS = ["PICKUP", "STANDARD", "EXPRESS"] as const;
 export type ShippingMethod = (typeof SHIPPING_METHODS)[number];
 
 export type ShippingQuoteRequest = Readonly<{
-  currency: string;
+  currency: SystemCurrency;
   destination: Readonly<{
     countryCode: string;
     postalCode: string;
@@ -13,7 +13,7 @@ export type ShippingQuoteRequest = Readonly<{
 
 export type ShippingQuote = Readonly<{
   cost: string;
-  currency: string;
+  currency: SystemCurrency;
   estimatedDeliveryDays: Readonly<{
     maximum: number;
     minimum: number;
@@ -23,7 +23,7 @@ export type ShippingQuote = Readonly<{
   snapshot: Readonly<{
     adapter: "SIMULATED";
     cost: string;
-    currency: string;
+    currency: SystemCurrency;
     estimatedDeliveryDays: Readonly<{
       maximum: number;
       minimum: number;
@@ -43,3 +43,4 @@ export class UnsupportedShippingMethodError extends Error {
     this.name = "UnsupportedShippingMethodError";
   }
 }
+import type { SystemCurrency } from "../../shared/system-currency";

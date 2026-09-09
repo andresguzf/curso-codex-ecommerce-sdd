@@ -45,7 +45,7 @@ export const invoices = pgTable(
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
     shippingTotal: numeric("shipping_total", { precision: 14, scale: 2 })
       .notNull()
@@ -119,7 +119,7 @@ export const invoices = pgTable(
       "invoices_paid_after_issue",
       sql`${table.paidAt} is null or (${table.issuedAt} is not null and ${table.paidAt} >= ${table.issuedAt})`,
     ),
-    check("invoices_currency_iso_format", sql`${table.currency} ~ '^[A-Z]{3}$'`),
+    check("invoices_currency_usd_only", sql`${table.currency} = 'USD'`),
     check("invoices_subtotal_non_negative", sql`${table.subtotal} >= 0`),
     check(
       "invoices_shipping_total_non_negative",
@@ -167,7 +167,7 @@ export const invoiceLines = pgTable(
     lineSubtotal: numeric("line_subtotal", { precision: 14, scale: 2 })
       .notNull(),
     lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -216,8 +216,8 @@ export const invoiceLines = pgTable(
       sql`${table.lineTotal} = ${table.lineSubtotal} + ${table.taxAmount}`,
     ),
     check(
-      "invoice_lines_currency_iso_format",
-      sql`${table.currency} ~ '^[A-Z]{3}$'`,
+      "invoice_lines_currency_usd_only",
+      sql`${table.currency} = 'USD'`,
     ),
   ],
 );

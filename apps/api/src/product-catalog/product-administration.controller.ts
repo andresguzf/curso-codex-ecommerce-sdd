@@ -63,7 +63,6 @@ const createImageReferenceSchema = z
   .strict();
 const createProductSchema = z
   .object({
-    currency: z.string().trim().regex(/^[A-Za-z]{3}$/),
     description: z.string().trim().min(1).max(10_000),
     image: createImageReferenceSchema.optional(),
     name: z.string().trim().min(1).max(200),
@@ -74,7 +73,6 @@ const createProductSchema = z
   .strict();
 const updateProductSchema = z
   .object({
-    currency: z.string().trim().regex(/^[A-Za-z]{3}$/).optional(),
     description: z.string().trim().min(1).max(10_000).optional(),
     image: imageReferenceSchema.optional(),
     name: z.string().trim().min(1).max(200).optional(),
@@ -108,9 +106,6 @@ class CreateProductRequestDto {
   @ApiProperty({ example: "1299990.00", pattern: "^\\d{1,10}(?:\\.\\d{1,2})?$", type: String })
   price!: string;
 
-  @ApiProperty({ example: "CLP", pattern: "^[A-Za-z]{3}$" })
-  currency!: string;
-
   @ApiPropertyOptional({ type: ProductImageReferenceDto })
   image?: ProductImageReferenceDto;
 
@@ -131,9 +126,6 @@ class UpdateProductRequestDto {
   @ApiPropertyOptional({ pattern: "^\\d{1,10}(?:\\.\\d{1,2})?$", type: String })
   price?: string;
 
-  @ApiPropertyOptional({ pattern: "^[A-Za-z]{3}$" })
-  currency?: string;
-
   @ApiPropertyOptional({ type: ProductImageReferenceDto })
   image?: ProductImageReferenceDto;
 }
@@ -149,7 +141,7 @@ class AdministrativeProductResponseDto {
   @ApiProperty() name!: string;
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;
-  @ApiProperty({ example: "CLP" }) currency!: string;
+  @ApiProperty({ enum: ["USD"], example: "USD" }) currency!: "USD";
   @ApiProperty({ type: ProductImageReferenceDto }) image!: ProductImageReferenceDto;
   @ApiProperty({ enum: PRODUCT_STATUSES }) status!: (typeof PRODUCT_STATUSES)[number];
   @ApiProperty({ format: "date-time" }) createdAt!: string;

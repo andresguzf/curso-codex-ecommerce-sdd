@@ -6,13 +6,17 @@ import {
 } from "@nestjs/common";
 
 import {
-  CartCurrencyMismatchError,
   CartInsufficientStockError,
   CartItemNotFoundError,
   CartProductUnavailableError,
   CartRepository,
 } from "./cart.repository";
-import type { ActiveCart, AddCartItem } from "./cart.types";
+import type {
+  ActiveCart,
+  AddCartItem,
+  CartClaimResult,
+  CartOwner,
+} from "./cart.types";
 
 @Injectable()
 export class CartService {
@@ -20,14 +24,14 @@ export class CartService {
     @Inject(CartRepository) private readonly repository: CartRepository,
   ) {}
 
-  get(customerId: string): Promise<ActiveCart> {
-    return this.mapErrors(() => this.repository.getOrCreateActive(customerId));
+  get(owner: CartOwner): Promise<ActiveCart> {
+    return this.mapErrors(() => this.repository.getOrCreateActive(owner));
   }
 
-  async addItem(customerId: string, input: AddCartItem): Promise<ActiveCart> {
+  async addItem(owner: CartOwner, input: AddCartItem): Promise<ActiveCart> {
     return this.mapErrors(() =>
       this.repository.addItem(
-        customerId,
+        owner,
         input.productId,
         input.quantity,
       ),
@@ -35,17 +39,30 @@ export class CartService {
   }
 
   async updateItem(
-    customerId: string,
+    owner: CartOwner,
     itemId: string,
     quantity: number,
   ): Promise<ActiveCart> {
     return this.mapErrors(() =>
-      this.repository.updateItem(customerId, itemId, quantity),
+      this.repository.updateItem(owner, itemId, quantity),
     );
   }
 
-  async removeItem(customerId: string, itemId: string): Promise<ActiveCart> {
-    return this.mapErrors(() => this.repository.removeItem(customerId, itemId));
+  async removeItem(owner: CartOwner, itemId: string): Promise<ActiveCart> {
+    return this.mapErrors(() => this.repository.removeItem(owner, itemId));
+  }
+
+  async claimAnonymousCart(
+    customerId: string,
+    anonymousTokenHash: string | undefined,
+  ): Promise<CartClaimResult> {
+    if (!anonymousTokenHash) {
+      return {
+        adjustedProductIds: [],
+        cart: await this.get({ customerId, kind: "customer" }),
+      };
+    }
+    return this.repository.claimAnonymousCart(customerId, anonymousTokenHash);
   }
 
   private async mapErrors(operation: () => Promise<ActiveCart>): Promise<ActiveCart> {
@@ -74,16 +91,6 @@ export class CartService {
             requestedQuantity: error.requestedQuantity,
           },
           message: "The requested quantity exceeds available inventory",
-        });
-      }
-      if (error instanceof CartCurrencyMismatchError) {
-        throw new ConflictException({
-          code: "CART_CURRENCY_MISMATCH",
-          details: {
-            cartCurrency: error.cartCurrency,
-            productCurrency: error.productCurrency,
-          },
-          message: "The cart cannot contain products in different currencies",
         });
       }
       throw error;

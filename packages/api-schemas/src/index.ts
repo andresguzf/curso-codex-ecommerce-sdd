@@ -22,6 +22,8 @@ export {
 export {
   activeCartSchema,
   addCartItemRequestSchema,
+  cartClaimResultSchema,
+  cartOperationErrorSchema,
   cartItemSchema,
   cartProductSchema,
   cartQuantitySchema,
@@ -29,6 +31,8 @@ export {
   type ActiveCart,
   type AddCartItemRequest,
   type CartItem,
+  type CartClaimResult,
+  type CartOperationError,
   type CartProduct,
   type UpdateCartItemRequest,
 } from "./cart";
@@ -41,6 +45,8 @@ export {
   shippingMethodSchema,
   type CheckoutAddress,
   type CheckoutOrderItem,
+  checkoutShippingOptionsSchema,
+  type CheckoutShippingOptions,
   type CheckoutRequest,
   type CheckoutResult,
   type PaymentMethod,

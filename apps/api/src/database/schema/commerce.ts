@@ -48,8 +48,8 @@ export const carts = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     customerId: uuid("customer_id")
-      .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    anonymousTokenHash: varchar("anonymous_token_hash", { length: 64 }),
     status: cartStatus("status").notNull().default("ACTIVE"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -58,12 +58,22 @@ export const carts = pgTable(
       .notNull()
       .defaultNow(),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("carts_customer_active_unique")
       .on(table.customerId)
-      .where(sql`${table.status} = 'ACTIVE'`),
+      .where(sql`${table.status} = 'ACTIVE' and ${table.customerId} is not null`),
+    uniqueIndex("carts_anonymous_active_unique")
+      .on(table.anonymousTokenHash)
+      .where(sql`${table.status} = 'ACTIVE' and ${table.anonymousTokenHash} is not null`),
     index("carts_customer_status_idx").on(table.customerId, table.status),
+    index("carts_expires_at_idx").on(table.expiresAt),
+    check(
+      "carts_owner_consistent",
+      sql`(${table.customerId} is not null and ${table.anonymousTokenHash} is null and ${table.expiresAt} is null)
+        or (${table.customerId} is null and ${table.anonymousTokenHash} is not null and ${table.expiresAt} is not null)`,
+    ),
     check(
       "carts_closed_at_consistent",
       sql`(${table.status} = 'ACTIVE' and ${table.closedAt} is null)
@@ -109,7 +119,7 @@ export const orders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     status: orderStatus("status").notNull().default("PROCESSING"),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
     shippingTotal: numeric("shipping_total", { precision: 14, scale: 2 })
       .notNull()
@@ -139,7 +149,7 @@ export const orders = pgTable(
     index("orders_customer_created_idx").on(table.customerId, table.createdAt),
     index("orders_status_created_idx").on(table.status, table.createdAt),
     check("orders_number_not_blank", sql`btrim(${table.number}) <> ''`),
-    check("orders_currency_iso_format", sql`${table.currency} ~ '^[A-Z]{3}$'`),
+    check("orders_currency_usd_only", sql`${table.currency} = 'USD'`),
     check("orders_subtotal_non_negative", sql`${table.subtotal} >= 0`),
     check(
       "orders_shipping_total_non_negative",
@@ -192,7 +202,7 @@ export const orderItems = pgTable(
       .notNull()
       .default("0.00"),
     lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -220,8 +230,8 @@ export const orderItems = pgTable(
       sql`${table.lineTotal} = (${table.unitPrice} * ${table.quantity}) + ${table.taxAmount}`,
     ),
     check(
-      "order_items_currency_iso_format",
-      sql`${table.currency} ~ '^[A-Z]{3}$'`,
+      "order_items_currency_usd_only",
+      sql`${table.currency} = 'USD'`,
     ),
   ],
 );
@@ -236,7 +246,7 @@ export const payments = pgTable(
     status: paymentStatus("status").notNull().default("PENDING"),
     method: varchar("method", { length: 100 }).notNull(),
     amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     providerReference: varchar("provider_reference", { length: 255 }),
     resultSnapshot: jsonb("result_snapshot").$type<JsonObject>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -253,8 +263,8 @@ export const payments = pgTable(
     check("payments_method_not_blank", sql`btrim(${table.method}) <> ''`),
     check("payments_amount_non_negative", sql`${table.amount} >= 0`),
     check(
-      "payments_currency_iso_format",
-      sql`${table.currency} ~ '^[A-Z]{3}$'`,
+      "payments_currency_usd_only",
+      sql`${table.currency} = 'USD'`,
     ),
     check(
       "payments_result_snapshot_is_object",

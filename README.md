@@ -176,7 +176,7 @@ Los Server Components pueden consultar endpoints REST para renderizado inicial y
 ### Datos e infraestructura
 
 - PostgreSQL como autoridad transaccional.
-- Importes decimales de precisión fija junto con código de moneda.
+- Importes decimales de precisión fija y código técnico de moneda fijo `USD`; no existe selección de moneda por producto u operación.
 - Fechas con zona horaria.
 - Imágenes almacenadas fuera de PostgreSQL; la base guarda la clave, URL y metadatos.
 - Aplicaciones empaquetables y desplegables por separado.
@@ -398,7 +398,7 @@ Una orden contiene:
 - Número único.
 - Cliente.
 - Líneas con snapshots de producto y SKU.
-- Cantidades, precios, impuestos, moneda y totales históricos.
+- Cantidades, precios, impuestos, código de moneda histórico `USD` y totales históricos.
 - Snapshot de dirección.
 - Snapshot de la empresa emisora.
 - Método y costo de envío.
@@ -505,7 +505,7 @@ DRAFT --> PENDING_PAYMENT --> PAID
    +--> VOID, cuando la transición sea válida
 ```
 
-Las facturas emitidas tienen numeración única y snapshots del emisor, cliente, líneas, precios, impuestos, moneda y totales. El perfil empresarial incluye al menos nombre comercial, razón social, identificador fiscal, dirección física y logo; solo `ADMIN` lo modifica y `BILLING` puede consultarlo para facturación.
+Las facturas emitidas tienen numeración única y snapshots del emisor, cliente, líneas, precios, impuestos, código de moneda fijo `USD` y totales. El perfil empresarial incluye al menos nombre comercial, razón social, identificador fiscal, dirección física y logo; solo `ADMIN` lo modifica y `BILLING` puede consultarlo para facturación. La aplicación no convierte divisas ni configura monedas por producto; una futura multimoneda sería una configuración global y requeriría una revisión explícita.
 
 ### 10. Exportación documental
 
@@ -714,6 +714,10 @@ Los listados devuelven `coverImage`; el detalle devuelve `images` ordenadas. El 
 - `PATCH /cart/items/:itemId`
 - `DELETE /cart/items/:itemId`
 - `POST /checkout`, con cabecera `Idempotency-Key`
+- `GET /checkout/shipping-methods`: costos configurados de envío simulado en USD para clientes autenticados.
+- `GET /checkout/orders/:orderId`: confirmación inmutable de una compra propia, recuperable al recargar la página; no sustituye el historial ni los estados operativos de órdenes.
+
+El formulario `/checkout` permite introducir dirección y seleccionar envío y pago ficticios. Solicita login o registro al visitante conservando el carrito. Un fallo de red mantiene el mismo intento de compra y bloquea cambios hasta recuperar su resultado; un rechazo confirmado permite corregir y volver a intentar. Una compra aprobada navega a `/checkout/orders/:orderId`, limpia el carrito visible y muestra importes en USD desde el resultado del API.
 
 ### Inventario
 

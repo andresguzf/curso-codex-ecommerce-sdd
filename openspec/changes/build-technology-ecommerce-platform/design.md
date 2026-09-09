@@ -18,6 +18,7 @@ El sistema tendrá un storefront y un back office, tres roles (`CUSTOMER`, `ADMI
 
 - Integrar proveedores reales de pago, despacho, correo o facturación tributaria.
 - Soportar variantes de producto, múltiples almacenes, promociones, cupones o múltiples listas de precios.
+- Soportar conversión de divisas o monedas distintas por producto; una eventual multimoneda se diseñará como configuración global mediante un cambio separado.
 - Hacer que una factura manual represente una salida de inventario; una venta física administrativa deberá originarse como orden.
 - Usar Server Actions, Route Handlers de Next.js como backend de negocio, acceso frontend a PostgreSQL o compartir entidades de persistencia con el frontend.
 - Dividir el backend en microservicios durante esta entrega.
@@ -97,23 +98,35 @@ Invoice, InvoiceLine
 AuditEntry, IdempotencyRecord
 ```
 
-Los importes se guardarán como valores decimales de precisión fija junto con código de moneda. Fechas usarán zona horaria. Productos y usuarios se desactivarán o eliminarán lógicamente para conservar referencias.
+Los importes se guardarán como valores decimales de precisión fija junto con el código de moneda fijo `USD`. Las restricciones de persistencia y los contratos rechazarán cualquier otro código. Fechas usarán zona horaria. Productos y usuarios se desactivarán o eliminarán lógicamente para conservar referencias.
 
 `OrderItem` y `InvoiceLine` almacenarán snapshots de nombres, SKU, cantidades, precios, impuestos y moneda. La orden también conservará snapshots de cliente, dirección, envío y pago relevantes. Las modificaciones posteriores de datos maestros no reescribirán documentos históricos.
 
-### 7. Producto simple con inventario separado
+### 7. Producto simple, moneda única e inventario separado
 
-La primera versión tendrá un SKU por producto y un único balance de inventario. El API podrá proyectar `stockAvailable` junto al producto, pero el stock no será una columna editable mediante el CRUD comercial. Los cambios se ejecutarán como movimientos de inventario con cantidad, motivo, referencia y autor.
+La primera versión tendrá un SKU por producto, precios exclusivamente en `USD` y un único balance de inventario. El API asignará la moneda del sistema al crear productos, rechazará cualquier moneda diferente y no expondrá un selector de moneda en el CRUD comercial. El API podrá proyectar `stockAvailable` junto al producto, pero el stock no será una columna editable mediante el CRUD comercial. Los cambios se ejecutarán como movimientos de inventario con cantidad, motivo, referencia y autor.
+
+El código de moneda continuará presente en respuestas y snapshots monetarios para que cada importe sea inequívoco, pero tendrá el valor literal `USD`. No se implementarán conversiones ni configuración por producto; una futura multimoneda deberá ser global y revisar de forma explícita precios, redondeos, checkout, documentos y datos históricos.
 
 Las imágenes se almacenarán fuera de PostgreSQL; la base conservará la clave, URL y metadatos. En desarrollo podrá usarse almacenamiento local compatible con el adaptador y en despliegue un servicio de objetos.
 
 Alternativa considerada: guardar la cantidad directamente en `Product`. Se descarta porque impide explicar ajustes, ventas y cancelaciones y facilita sobrescrituras no auditadas.
 
-### 8. Checkout transaccional e idempotente
+### 8. Carrito público persistente y checkout autenticado
+
+`Cart` admitirá exactamente uno de dos propietarios: un `customerId` para clientes autenticados o el hash de un identificador anónimo para visitantes. Una restricción comprobará que nunca existan ambos ni falten ambos, y los índices parciales mantendrán como máximo un carrito activo por cliente o por identificador anónimo. Los carritos anónimos incluirán `expiresAt` y se eliminarán mediante una limpieza periódica; nunca reservarán inventario.
+
+El API entregará al visitante un identificador aleatorio y no adivinable mediante una cookie `HttpOnly`, `SameSite=Lax`, con `Secure` en producción y vigencia alineada con la retención del carrito. PostgreSQL almacenará únicamente su hash. Las rutas `GET /cart`, `POST /cart/items`, `PATCH /cart/items/:itemId` y `DELETE /cart/items/:itemId` aceptarán tanto la cookie anónima como la sesión `CUSTOMER`; CORS permitirá credenciales solo desde los orígenes configurados y las mutaciones basadas en cookie mantendrán las comprobaciones de origen y protección CSRF. La cookie identifica un carrito, pero no autoriza checkout, órdenes, facturas, wishlist ni datos personales.
+
+Al iniciar sesión, el backend reclamará el carrito anónimo cuando el cliente no tenga otro activo o fusionará ambos dentro de una transacción. Las líneas coincidentes sumarán cantidades hasta el stock vigente y la respuesta señalará ajustes por disponibilidad. La operación dejará un único carrito activo del cliente e invalidará el identificador anónimo anterior. El storefront conservará el destino solicitado para que registro o login puedan devolver al cliente al checkout.
+
+`POST /checkout` continuará protegido y rechazará una sesión ausente o un rol distinto de `CUSTOMER`. La interfaz permitirá navegar, agregar y administrar el carrito sin autenticación, y solicitará registro o login únicamente al continuar a checkout.
+
+El formulario consulta `GET /checkout/shipping-methods` para mostrar los costos fijos configurados del simulador. Ante una respuesta incierta mantiene la petición y clave de idempotencia del intento, bloqueando su edición hasta recuperarlo. Al confirmar navega a `/checkout/orders/:orderId`; `GET /checkout/orders/:orderId` devuelve exclusivamente el resultado histórico del checkout del cliente autenticado, permitiendo recargar la confirmación sin adelantar el historial ni la gestión operativa de órdenes.
 
 El pago simulado se resolverá sin llamadas externas. Para un resultado aprobado, una transacción PostgreSQL realizará:
 
-1. Reclamar o recuperar la clave de idempotencia.
+1. Verificar la sesión `CUSTOMER`, reclamar o recuperar la clave de idempotencia y resolver su único carrito activo.
 2. Bloquear balances de inventario en un orden estable por identificador.
 3. Revalidar productos activos, precios y cantidades.
 4. Crear orden, líneas y pago aprobado.
@@ -123,6 +136,8 @@ El pago simulado se resolverá sin llamadas externas. Para un resultado aprobado
 Si el pago simulado es rechazado no se confirmará la orden ni se modificará inventario. Errores de concurrencia o deadlocks recuperables tendrán reintentos limitados en la capa de aplicación; una disponibilidad insuficiente se devolverá como conflicto de negocio.
 
 Alternativa considerada: reservar stock al agregar al carrito. Se descarta para el MVP porque permitiría que carritos abandonados bloqueen ventas y requeriría expiraciones. Si posteriormente se incorporan pagos pendientes reales, se añadirá una reserva con vencimiento como cambio separado.
+
+Alternativa considerada: mantener el carrito anónimo únicamente en `localStorage`. Se descarta porque duplicaría reglas y totales autoritativos en el navegador, dificultaría su recuperación y permitiría manipular la propiedad enviada al API. La cookie opaca y el registro persistido conservan el carrito sin exponer su identificador a JavaScript.
 
 ### 9. Estados independientes y facturación sin stock
 
@@ -395,6 +410,9 @@ Alternativa considerada: ejecutar una consulta REST independiente para destacado
 - [Un monolito modular puede degradarse en acoplamiento] → Aplicar reglas de dependencias, contratos de módulo y pruebas de arquitectura.
 - [Los PDFs pueden consumir CPU o memoria] → Usar un adaptador, límites de tamaño y posibilidad futura de generación asíncrona.
 - [Los pagos simulados no representan fallos reales] → Aislarlos detrás de un puerto de pago para reemplazarlos posteriormente sin alterar checkout.
+- [El identificador de un carrito anónimo puede ser robado o fijado] → Usar alta entropía, cookie `HttpOnly` y `Secure`, guardar solo el hash, rotarlo al autenticar, aplicar expiración y no tratarlo como autorización para ningún recurso protegido.
+- [Los carritos abandonados pueden crecer sin límite] → Configurar retención, actualizar actividad de forma acotada y ejecutar limpieza periódica indexada por `expiresAt`.
+- [La fusión al iniciar sesión puede superar el stock] → Fusionar transaccionalmente, limitar la suma a la disponibilidad vigente e informar cada ajuste antes de checkout.
 - [La facturación no cumple normativa tributaria real] → Etiquetarla como facturación interna y tratar cualquier integración fiscal como cambio posterior.
 - [Dos sidebars y múltiples estados responsive pueden degradar la usabilidad] → Separar navegación izquierda de filtros derechos, usar drawers en pantallas pequeñas y validar accesibilidad y navegación por teclado.
 - [Mensajes flash excesivos pueden producir ruido o anuncios repetidos] → Deduplicar eventos, limitar duración, conservar errores accionables y probar regiones `aria-live`.
@@ -423,7 +441,7 @@ Alternativa considerada: ejecutar una consulta REST independiente para destacado
 2. Incorporar esquema inicial, migraciones, seed mínimo y módulos base del API.
 3. Implementar identidad y autorización antes de exponer back office.
 4. Entregar catálogo e inventario con interfaces públicas y administrativas.
-5. Entregar carrito, checkout, pagos/envíos simulados y órdenes bajo pruebas transaccionales.
+5. Entregar carrito público persistente para visitantes y clientes, vinculación al autenticar, checkout protegido, pagos/envíos simulados y órdenes bajo pruebas transaccionales.
 6. Entregar facturación, PDF, auditoría y flujos end-to-end.
 7. Desplegar cada aplicación de manera independiente, ejecutar migraciones antes del API y habilitar storefront/backoffice después de verificaciones de salud.
 

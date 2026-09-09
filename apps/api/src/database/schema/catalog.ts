@@ -22,7 +22,7 @@ export const products = pgTable(
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description").notNull(),
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     status: productStatus("status").notNull().default("INACTIVE"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -44,8 +44,8 @@ export const products = pgTable(
     ),
     check("products_price_non_negative", sql`${table.price} >= 0`),
     check(
-      "products_currency_iso_format",
-      sql`${table.currency} ~ '^[A-Z]{3}$'`,
+      "products_currency_usd_only",
+      sql`${table.currency} = 'USD'`,
     ),
     check(
       "products_deleted_status_consistent",

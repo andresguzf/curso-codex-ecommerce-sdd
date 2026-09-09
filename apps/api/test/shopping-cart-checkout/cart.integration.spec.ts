@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -14,11 +14,13 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 
 import { configureApplication } from "../../src/application";
@@ -38,6 +40,8 @@ import {
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
+import { InventoryStockService } from "../../src/inventory-control/inventory-stock.service";
+import { AnonymousCartCleanupService } from "../../src/shopping-cart-checkout/anonymous-cart-cleanup.service";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -66,7 +70,7 @@ type FixtureRole = "ADMIN" | "BILLING" | "CUSTOMER";
 type FixtureKey = "admin" | "billing" | "customerA" | "customerB";
 type CartResponse = Readonly<{
   id: string;
-  customerId: string;
+  customerId: string | null;
   status: "ACTIVE";
   currency: string | null;
   subtotal: string;
@@ -95,12 +99,68 @@ let isolatedDatabaseCreated = false;
 let accessTokens: Record<FixtureKey, string>;
 let userIds: Record<FixtureKey, string>;
 let productIds: Record<
-  "available" | "differentCurrency" | "inactive" | "outOfStock" | "precise",
+  "available" | "inactive" | "outOfStock" | "precise",
   string
 >;
 
 function authorization(accessToken: string): { authorization: string } {
   return { authorization: `Bearer ${accessToken}` };
+}
+
+function responseCookie(response: Readonly<{ headers: Record<string, unknown> }>): string {
+  const header = response.headers["set-cookie"];
+  const value = Array.isArray(header) ? header[0] : header;
+  if (typeof value !== "string") throw new Error("Expected anonymous cart cookie");
+  return value.split(";", 1)[0] ?? "";
+}
+
+function checkoutPayload(
+  paymentMethod:
+    | "SIMULATED_CARD_APPROVED"
+    | "SIMULATED_CARD_REJECTED" = "SIMULATED_CARD_APPROVED",
+) {
+  return {
+    paymentMethod,
+    shippingMethod: "STANDARD",
+    shippingAddress: {
+      city: "Santiago",
+      countryCode: "CL",
+      line1: "Avenida Tecnología 123",
+      postalCode: "8320000",
+      recipientName: "Cliente de integración",
+      region: "Región Metropolitana",
+    },
+  } as const;
+}
+
+function checkoutRequest(
+  customer: "customerA" | "customerB",
+  idempotencyKey: string,
+  paymentMethod?: "SIMULATED_CARD_APPROVED" | "SIMULATED_CARD_REJECTED",
+) {
+  return server.inject({
+    method: "POST",
+    url: "/api/v1/checkout",
+    headers: {
+      ...authorization(accessTokens[customer]),
+      "idempotency-key": idempotencyKey,
+    },
+    payload: checkoutPayload(paymentMethod),
+  });
+}
+
+async function addToCart(
+  customer: "customerA" | "customerB",
+  productId: string,
+  quantity: number,
+): Promise<void> {
+  const response = await server.inject({
+    method: "POST",
+    url: "/api/v1/cart/items",
+    headers: authorization(accessTokens[customer]),
+    payload: { productId, quantity },
+  });
+  expect(response.statusCode).toBe(201);
 }
 
 function restoreEnvironment(): void {
@@ -126,7 +186,6 @@ async function login(email: string): Promise<string> {
 }
 
 async function createProduct(input: {
-  currency?: string;
   price?: string;
   sku: string;
   status: "ACTIVE" | "INACTIVE";
@@ -135,7 +194,7 @@ async function createProduct(input: {
   const [product] = await database
     .insert(products)
     .values({
-      currency: input.currency ?? "USD",
+      currency: "USD",
       description: `Cart fixture ${input.sku}`,
       name: `Cart product ${input.sku}`,
       price: input.price ?? "100.00",
@@ -158,7 +217,7 @@ async function createProduct(input: {
   return product.id;
 }
 
-describe("persistent customer cart", () => {
+describe("persistent public cart", () => {
   beforeAll(async () => {
     maintenancePool = new Pool({
       application_name: "technology-ecommerce-cart-test-admin",
@@ -235,13 +294,6 @@ describe("persistent customer cart", () => {
         status: "ACTIVE",
         stock: 5,
       }),
-      differentCurrency: await createProduct({
-        currency: "EUR",
-        price: "20.00",
-        sku: "CART-EUR",
-        status: "ACTIVE",
-        stock: 5,
-      }),
       inactive: await createProduct({
         sku: "CART-INACTIVE",
         status: "INACTIVE",
@@ -262,11 +314,31 @@ describe("persistent customer cart", () => {
   }, 30_000);
 
   beforeEach(async () => {
+    await database.delete(idempotencyRecords);
+    await database.delete(payments);
+    await database.delete(orderItems);
+    await database.delete(orders);
     await database.delete(carts);
     await database
+      .delete(inventoryMovements)
+      .where(eq(inventoryMovements.type, "SALE"));
+    await database
       .update(products)
-      .set({ price: "100.00", updatedAt: new Date() })
+      .set({
+        deletedAt: null,
+        price: "100.00",
+        status: "ACTIVE",
+        updatedAt: new Date(),
+      })
       .where(eq(products.id, productIds.available));
+    await database
+      .update(inventoryBalances)
+      .set({ availableQuantity: 5, version: 0 })
+      .where(eq(inventoryBalances.productId, productIds.available));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -282,7 +354,7 @@ describe("persistent customer cart", () => {
     await maintenancePool?.end();
   }, 30_000);
 
-  it("allows only CUSTOMER to read a cart", async () => {
+  it("allows visitors and CUSTOMER to read a cart", async () => {
     const responses = await Promise.all([
       server.inject({ method: "GET", url: "/api/v1/cart" }),
       server.inject({ method: "GET", url: "/api/v1/cart", headers: authorization(accessTokens.admin) }),
@@ -291,8 +363,14 @@ describe("persistent customer cart", () => {
     ]);
 
     expect(responses.map((response) => response.statusCode)).toEqual([
-      401, 403, 403, 200,
+      200, 403, 403, 200,
     ]);
+    expect(responses[0]?.json<CartResponse>()).toMatchObject({
+      customerId: null,
+      items: [],
+      status: "ACTIVE",
+    });
+    expect(responseCookie(responses[0]!)).toContain("technology_ecommerce_cart=");
     expect(responses[3]?.json<CartResponse>()).toMatchObject({
       customerId: userIds.customerA,
       currency: null,
@@ -302,6 +380,180 @@ describe("persistent customer cart", () => {
       total: "0.00",
       totalQuantity: 0,
     });
+  });
+
+  it("persists and isolates an anonymous cart by its opaque cookie", async () => {
+    const created = await server.inject({
+      method: "POST",
+      url: "/api/v1/cart/items",
+      payload: { productId: productIds.available, quantity: 2 },
+    });
+    expect(created.statusCode).toBe(201);
+    const cookie = responseCookie(created);
+    const rawToken = cookie.split("=", 2)[1]!;
+    const anonymousCart = created.json<CartResponse>();
+    expect(anonymousCart).toMatchObject({
+      customerId: null,
+      items: [{ productId: productIds.available, quantity: 2 }],
+      totalQuantity: 2,
+    });
+    const [storedOwner] = await database
+      .select({ anonymousTokenHash: carts.anonymousTokenHash })
+      .from(carts)
+      .where(eq(carts.id, anonymousCart.id));
+    expect(storedOwner?.anonymousTokenHash).toBe(
+      createHash("sha256").update(rawToken).digest("hex"),
+    );
+    expect(storedOwner?.anonymousTokenHash).not.toBe(rawToken);
+    expect(JSON.stringify(anonymousCart)).not.toContain(rawToken);
+
+    const restored = await server.inject({
+      method: "GET",
+      url: "/api/v1/cart",
+      headers: { cookie },
+    });
+    expect(restored.statusCode).toBe(200);
+    expect(restored.json<CartResponse>().id).toBe(anonymousCart.id);
+    expect(restored.json<CartResponse>().items).toHaveLength(1);
+
+    const isolated = await server.inject({ method: "GET", url: "/api/v1/cart" });
+    expect(isolated.json<CartResponse>()).toMatchObject({
+      customerId: null,
+      items: [],
+    });
+    expect(isolated.json<CartResponse>().id).not.toBe(anonymousCart.id);
+
+    const foreignUpdate = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/cart/items/${anonymousCart.items[0]?.id}`,
+      headers: { cookie: responseCookie(isolated) },
+      payload: { quantity: 1 },
+    });
+    expect(foreignUpdate.statusCode).toBe(404);
+  });
+
+  it("removes only expired anonymous carts during scheduled cleanup", async () => {
+    const now = new Date("2026-09-08T18:00:00.000Z");
+    const [expiredGuest, currentGuest, customerCart] = await database
+      .insert(carts)
+      .values([
+        {
+          anonymousTokenHash: "a".repeat(64),
+          expiresAt: new Date("2026-09-08T17:59:59.000Z"),
+        },
+        {
+          anonymousTokenHash: "b".repeat(64),
+          expiresAt: new Date("2026-09-08T18:00:01.000Z"),
+        },
+        { customerId: userIds.customerA },
+      ])
+      .returning({ id: carts.id });
+
+    const inventoryBefore = await database
+      .select()
+      .from(inventoryBalances);
+    const cleanup = app.get(AnonymousCartCleanupService);
+    expect(await cleanup.run(now)).toBe(1);
+
+    const remaining = await database
+      .select({ id: carts.id })
+      .from(carts);
+    expect(remaining.map(({ id }) => id)).toEqual(expect.arrayContaining([
+      currentGuest!.id,
+      customerCart!.id,
+    ]));
+    expect(remaining.map(({ id }) => id)).not.toContain(expiredGuest!.id);
+    expect(await database.select().from(inventoryBalances)).toEqual(inventoryBefore);
+  });
+
+  it("does not expose an expired anonymous cart", async () => {
+    const rawToken = randomBytes(32).toString("base64url");
+    const [expired] = await database
+      .insert(carts)
+      .values({
+        anonymousTokenHash: createHash("sha256").update(rawToken).digest("hex"),
+        expiresAt: new Date(Date.now() - 1_000),
+      })
+      .returning({ id: carts.id });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/api/v1/cart",
+      headers: { cookie: `technology_ecommerce_cart=${rawToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<CartResponse>().id).not.toBe(expired!.id);
+    const [oldCart] = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(eq(carts.id, expired!.id));
+    expect(oldCart?.status).toBe("ABANDONED");
+  });
+
+  it("claims an anonymous cart for a customer without losing its lines", async () => {
+    const anonymousAddition = await server.inject({
+      method: "POST",
+      url: "/api/v1/cart/items",
+      payload: { productId: productIds.available, quantity: 2 },
+    });
+    const cookie = responseCookie(anonymousAddition);
+    const anonymousCart = anonymousAddition.json<CartResponse>();
+
+    const claimed = await server.inject({
+      method: "POST",
+      url: "/api/v1/cart/claim",
+      headers: {
+        ...authorization(accessTokens.customerA),
+        cookie,
+      },
+    });
+
+    expect(claimed.statusCode).toBe(200);
+    expect(claimed.json()).toMatchObject({
+      adjustedProductIds: [],
+      cart: {
+        customerId: userIds.customerA,
+        id: anonymousCart.id,
+        items: [{ productId: productIds.available, quantity: 2 }],
+      },
+    });
+    expect(String(claimed.headers["set-cookie"])).toContain(
+      "technology_ecommerce_cart=;",
+    );
+  });
+
+  it("merges duplicate anonymous lines into the customer cart and reports stock adjustments", async () => {
+    await addToCart("customerA", productIds.available, 4);
+    const anonymousAddition = await server.inject({
+      method: "POST",
+      url: "/api/v1/cart/items",
+      payload: { productId: productIds.available, quantity: 3 },
+    });
+
+    const merged = await server.inject({
+      method: "POST",
+      url: "/api/v1/cart/claim",
+      headers: {
+        ...authorization(accessTokens.customerA),
+        cookie: responseCookie(anonymousAddition),
+      },
+    });
+
+    expect(merged.statusCode).toBe(200);
+    expect(merged.json()).toMatchObject({
+      adjustedProductIds: [productIds.available],
+      cart: {
+        customerId: userIds.customerA,
+        items: [{ productId: productIds.available, quantity: 5 }],
+        totalQuantity: 5,
+      },
+    });
+    const activeCarts = await database
+      .select({ customerId: carts.customerId })
+      .from(carts)
+      .where(eq(carts.status, "ACTIVE"));
+    expect(activeCarts).toEqual([{ customerId: userIds.customerA }]);
   });
 
   it("returns the same single persistent active cart for a customer", async () => {
@@ -476,39 +728,6 @@ describe("persistent customer cart", () => {
     });
   });
 
-  it("rejects products in a different currency without changing the cart", async () => {
-    await server.inject({
-      method: "POST",
-      url: "/api/v1/cart/items",
-      headers: authorization(accessTokens.customerA),
-      payload: { productId: productIds.available, quantity: 1 },
-    });
-
-    const rejected = await server.inject({
-      method: "POST",
-      url: "/api/v1/cart/items",
-      headers: authorization(accessTokens.customerA),
-      payload: { productId: productIds.differentCurrency, quantity: 1 },
-    });
-    expect(rejected.statusCode).toBe(409);
-    expect(rejected.json()).toMatchObject({
-      code: "CART_CURRENCY_MISMATCH",
-      details: { cartCurrency: "USD", productCurrency: "EUR" },
-    });
-
-    const current = await server.inject({
-      method: "GET",
-      url: "/api/v1/cart",
-      headers: authorization(accessTokens.customerA),
-    });
-    expect(current.json<CartResponse>()).toMatchObject({
-      currency: "USD",
-      items: [{ productId: productIds.available }],
-      subtotal: "100.00",
-      total: "100.00",
-    });
-  });
-
   it("rejects non-positive or non-integer quantities", async () => {
     const responses = await Promise.all([
       server.inject({
@@ -615,6 +834,13 @@ describe("persistent customer cart", () => {
   });
 
   it("confirms checkout once and replays the same idempotent result without duplicates", async () => {
+    const shippingOptions = await server.inject({ method: "GET", url: "/api/v1/checkout/shipping-methods", headers: authorization(accessTokens.customerA) });
+    expect(shippingOptions.statusCode).toBe(200);
+    expect(shippingOptions.json()).toEqual(expect.arrayContaining([
+      { method: "STANDARD", currency: "USD", cost: "5.00" },
+    ]));
+    const forbiddenShipping = await server.inject({ method: "GET", url: "/api/v1/checkout/shipping-methods", headers: authorization(accessTokens.billing) });
+    expect(forbiddenShipping.statusCode).toBe(403);
     const addition = await server.inject({
       method: "POST",
       url: "/api/v1/cart/items",
@@ -623,31 +849,25 @@ describe("persistent customer cart", () => {
     });
     expect(addition.statusCode).toBe(201);
 
-    const request = {
-      method: "POST" as const,
-      url: "/api/v1/checkout",
-      headers: {
-        ...authorization(accessTokens.customerA),
-        "idempotency-key": "checkout-customer-a-0001",
-      },
-      payload: {
-        paymentMethod: "SIMULATED_CARD_APPROVED",
-        shippingMethod: "STANDARD",
-        shippingAddress: {
-          city: "Santiago",
-          countryCode: "CL",
-          line1: "Avenida Tecnología 123",
-          postalCode: "8320000",
-          recipientName: "customerA",
-          region: "Región Metropolitana",
-        },
-      },
-    };
-    const first = await server.inject(request);
-    const repeated = await server.inject(request);
+    const first = await checkoutRequest(
+      "customerA",
+      "checkout-customer-a-0001",
+    );
+    const repeated = await checkoutRequest(
+      "customerA",
+      "checkout-customer-a-0001",
+    );
 
     expect([first.statusCode, repeated.statusCode]).toEqual([201, 201]);
     expect(repeated.json()).toEqual(first.json());
+    const receiptUrl = `/api/v1/checkout/orders/${first.json<{ order: { id: string } }>().order.id}`;
+    const receipt = await server.inject({ method: "GET", url: receiptUrl, headers: authorization(accessTokens.customerA) });
+    expect(receipt.statusCode).toBe(200);
+    expect(receipt.json()).toEqual(first.json());
+    const foreignReceipt = await server.inject({ method: "GET", url: receiptUrl, headers: authorization(accessTokens.customerB) });
+    expect(foreignReceipt.statusCode).toBe(404);
+    const anonymousReceipt = await server.inject({ method: "GET", url: receiptUrl });
+    expect(anonymousReceipt.statusCode).toBe(401);
     expect(first.json()).toMatchObject({
       order: {
         currency: "USD",
@@ -709,5 +929,245 @@ describe("persistent customer cart", () => {
     expect(balance?.availableQuantity).toBe(3);
     expect(closedCart?.status).toBe("CHECKED_OUT");
     expect(closedCart?.closedAt).toBeInstanceOf(Date);
+  });
+
+  it("preserves the actual checkout order snapshots after product and customer edits", async () => {
+    await addToCart("customerA", productIds.available, 2);
+    const response = await checkoutRequest("customerA", "checkout-historical-order-0001");
+    expect(response.statusCode).toBe(201);
+    const orderId = response.json<{ order: { id: string } }>().order.id;
+    const beforeOrders = await database.select().from(orders).where(eq(orders.id, orderId));
+    const beforeItems = await database.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+    const beforePayments = await database.select().from(payments).where(eq(payments.orderId, orderId));
+    expect(beforeOrders[0]?.customerSnapshot).toMatchObject({ id: userIds.customerA });
+    expect(beforeItems[0]?.unitPrice).toBe("100.00");
+
+    await database.update(products).set({ name: "Renamed product", sku: "CHANGED-SKU", price: "999.00", status: "INACTIVE" })
+      .where(eq(products.id, productIds.available));
+    await database.update(users).set({ displayName: "Renamed customer", email: "renamed@example.com" })
+      .where(eq(users.id, userIds.customerA));
+
+    expect(await database.select().from(orders).where(eq(orders.id, orderId))).toEqual(beforeOrders);
+    expect(await database.select().from(orderItems).where(eq(orderItems.orderId, orderId))).toEqual(beforeItems);
+    expect(await database.select().from(payments).where(eq(payments.orderId, orderId))).toEqual(beforePayments);
+    const repeated = await checkoutRequest("customerA", "checkout-historical-order-0001");
+    expect(repeated.statusCode).toBe(201);
+    expect(repeated.json()).toEqual(response.json());
+  });
+
+  it("rejects stock changed after cart validation without partial checkout writes", async () => {
+    await addToCart("customerA", productIds.available, 2);
+    await database
+      .update(inventoryBalances)
+      .set({ availableQuantity: 1, version: 1 })
+      .where(eq(inventoryBalances.productId, productIds.available));
+
+    const response = await checkoutRequest(
+      "customerA",
+      "checkout-stock-changed-0001",
+    );
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      code: "CHECKOUT_INSUFFICIENT_STOCK",
+      details: {
+        shortages: [
+          {
+            availableQuantity: 1,
+            productId: productIds.available,
+            requestedQuantity: 2,
+          },
+        ],
+      },
+    });
+    expect(await database.select().from(orders)).toHaveLength(0);
+    expect(await database.select().from(payments)).toHaveLength(0);
+    expect(await database.select().from(idempotencyRecords)).toHaveLength(0);
+    expect(
+      await database
+        .select()
+        .from(inventoryMovements)
+        .where(eq(inventoryMovements.type, "SALE")),
+    ).toHaveLength(0);
+
+    const [cart] = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(eq(carts.customerId, userIds.customerA));
+    const [balance] = await database
+      .select({ availableQuantity: inventoryBalances.availableQuantity })
+      .from(inventoryBalances)
+      .where(eq(inventoryBalances.productId, productIds.available));
+    expect(cart?.status).toBe("ACTIVE");
+    expect(balance?.availableQuantity).toBe(1);
+  });
+
+  it("rejects a product deactivated after it entered the cart without creating an order", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    await database
+      .update(products)
+      .set({ status: "INACTIVE", updatedAt: new Date() })
+      .where(eq(products.id, productIds.available));
+
+    const response = await checkoutRequest(
+      "customerA",
+      "checkout-inactive-product-0001",
+    );
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      code: "CHECKOUT_PRODUCT_UNAVAILABLE",
+      details: { productId: productIds.available },
+    });
+    expect(await database.select().from(orders)).toHaveLength(0);
+    expect(await database.select().from(payments)).toHaveLength(0);
+    expect(await database.select().from(idempotencyRecords)).toHaveLength(0);
+    expect(
+      await database
+        .select()
+        .from(inventoryMovements)
+        .where(eq(inventoryMovements.type, "SALE")),
+    ).toHaveLength(0);
+
+    const [cart] = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(eq(carts.customerId, userIds.customerA));
+    expect(cart?.status).toBe("ACTIVE");
+  });
+
+  it("keeps the cart and stock intact when simulated payment is rejected", async () => {
+    await addToCart("customerA", productIds.available, 1);
+
+    const response = await checkoutRequest(
+      "customerA",
+      "checkout-rejected-payment-0001",
+      "SIMULATED_CARD_REJECTED",
+    );
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      code: "PAYMENT_REJECTED",
+      details: {
+        method: "SIMULATED_CARD_REJECTED",
+        status: "REJECTED",
+      },
+    });
+    expect(await database.select().from(orders)).toHaveLength(0);
+    expect(await database.select().from(payments)).toHaveLength(0);
+    expect(
+      await database
+        .select()
+        .from(inventoryMovements)
+        .where(eq(inventoryMovements.type, "SALE")),
+    ).toHaveLength(0);
+
+    const [attempt] = await database.select().from(idempotencyRecords);
+    const [cart] = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(eq(carts.customerId, userIds.customerA));
+    const [balance] = await database
+      .select({ availableQuantity: inventoryBalances.availableQuantity })
+      .from(inventoryBalances)
+      .where(eq(inventoryBalances.productId, productIds.available));
+    expect(attempt).toMatchObject({ orderId: null, status: "FAILED" });
+    expect(cart?.status).toBe("ACTIVE");
+    expect(balance?.availableQuantity).toBe(5);
+  });
+
+  it("allows only one concurrent checkout to consume the last unit", async () => {
+    await database
+      .update(inventoryBalances)
+      .set({ availableQuantity: 1, version: 0 })
+      .where(eq(inventoryBalances.productId, productIds.available));
+    await addToCart("customerA", productIds.available, 1);
+    await addToCart("customerB", productIds.available, 1);
+
+    const responses = await Promise.all([
+      checkoutRequest("customerA", "checkout-concurrent-a-0001"),
+      checkoutRequest("customerB", "checkout-concurrent-b-0001"),
+    ]);
+
+    expect(
+      responses.map((response) => response.statusCode).sort((left, right) => left - right),
+    ).toEqual([201, 409]);
+    expect(responses.find((response) => response.statusCode === 409)?.json()).toMatchObject({
+      code: "CHECKOUT_INSUFFICIENT_STOCK",
+    });
+    expect(await database.select().from(orders)).toHaveLength(1);
+    expect(await database.select().from(payments)).toHaveLength(1);
+    expect(await database.select().from(idempotencyRecords)).toHaveLength(1);
+    expect(
+      await database
+        .select()
+        .from(inventoryMovements)
+        .where(eq(inventoryMovements.type, "SALE")),
+    ).toHaveLength(1);
+
+    const [balance] = await database
+      .select({ availableQuantity: inventoryBalances.availableQuantity })
+      .from(inventoryBalances)
+      .where(eq(inventoryBalances.productId, productIds.available));
+    const customerCarts = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(
+        and(
+          eq(carts.customerId, userIds.customerA),
+          eq(carts.status, "CHECKED_OUT"),
+        ),
+      );
+    const checkedOutCartB = await database
+      .select({ status: carts.status })
+      .from(carts)
+      .where(
+        and(
+          eq(carts.customerId, userIds.customerB),
+          eq(carts.status, "CHECKED_OUT"),
+        ),
+      );
+    expect(balance?.availableQuantity).toBe(0);
+    expect(customerCarts.length + checkedOutCartB.length).toBe(1);
+  });
+
+  it("rolls back order, payment, movement, balance, and cart when a late checkout write fails", async () => {
+    await addToCart("customerA", productIds.available, 2);
+    const inventory = app.get(InventoryStockService);
+    const deduct = inventory.deductInTransaction.bind(inventory);
+    vi.spyOn(inventory, "deductInTransaction").mockImplementationOnce(
+      async (transaction, items, reference) => {
+        await deduct(transaction, items, reference);
+        throw new Error("Injected failure after inventory writes");
+      },
+    );
+
+    const response = await checkoutRequest(
+      "customerA",
+      "checkout-rollback-0001",
+    );
+
+    expect(response.statusCode).toBe(500);
+    expect(await database.select().from(orders)).toHaveLength(0);
+    expect(await database.select().from(orderItems)).toHaveLength(0);
+    expect(await database.select().from(payments)).toHaveLength(0);
+    expect(await database.select().from(idempotencyRecords)).toHaveLength(0);
+    expect(
+      await database
+        .select()
+        .from(inventoryMovements)
+        .where(eq(inventoryMovements.type, "SALE")),
+    ).toHaveLength(0);
+
+    const [balance] = await database
+      .select({ availableQuantity: inventoryBalances.availableQuantity })
+      .from(inventoryBalances)
+      .where(eq(inventoryBalances.productId, productIds.available));
+    const [cart] = await database
+      .select({ closedAt: carts.closedAt, status: carts.status })
+      .from(carts)
+      .where(eq(carts.customerId, userIds.customerA));
+    expect(balance?.availableQuantity).toBe(5);
+    expect(cart).toMatchObject({ closedAt: null, status: "ACTIVE" });
   });
 });

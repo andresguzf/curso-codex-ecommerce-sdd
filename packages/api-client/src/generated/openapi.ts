@@ -300,6 +300,57 @@ export interface paths {
         patch: operations["updateCartItem"];
         trace?: never;
     };
+    "/api/v1/cart/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim or merge the browser's anonymous cart */
+        post: operations["claimAnonymousCart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkout/shipping-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read configured simulated shipping costs in USD */
+        get: operations["checkoutShippingMethods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkout/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the customer's immutable checkout confirmation */
+        get: operations["checkoutReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/checkout": {
         parameters: {
             query?: never;
@@ -518,8 +569,6 @@ export interface components {
             description: string;
             /** @example 1299990.00 */
             price: string;
-            /** @example CLP */
-            currency: string;
             image?: components["schemas"]["ProductImageReferenceDto"];
             /**
              * @default INACTIVE
@@ -535,8 +584,11 @@ export interface components {
             description: string;
             /** @example 1299990.00 */
             price: string;
-            /** @example CLP */
-            currency: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
             image: components["schemas"]["ProductImageReferenceDto"];
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
@@ -552,7 +604,6 @@ export interface components {
             name?: string;
             description?: string;
             price?: string;
-            currency?: string;
             image?: components["schemas"]["ProductImageReferenceDto"];
         };
         UpdateProductStatusRequestDto: {
@@ -571,8 +622,11 @@ export interface components {
             description: string;
             /** @example 1299990.00 */
             price: string;
-            /** @example CLP */
-            currency: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
             image: components["schemas"]["ProductListImageDto"];
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
@@ -597,8 +651,11 @@ export interface components {
             description: string;
             /** @example 1299990.00 */
             price: string;
-            /** @example CLP */
-            currency: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
             image: components["schemas"]["ProductListImageDto"];
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
@@ -621,8 +678,11 @@ export interface components {
             name: string;
             /** @example 1299990.00 */
             price: string;
-            /** @example CLP */
-            currency: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
             image: components["schemas"]["CartImageDto"];
             stockAvailable: number;
             isAvailable: boolean;
@@ -645,13 +705,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            customerId: string;
+            customerId: string | null;
             /** @enum {string} */
             status: "ACTIVE";
             items: components["schemas"]["CartItemDto"][];
             totalQuantity: number;
-            /** @example CLP */
-            currency: string | null;
+            /**
+             * @example USD
+             * @enum {string|null}
+             */
+            currency: "USD" | null;
             /** @example 2599980.00 */
             subtotal: string;
             /** @example 2599980.00 */
@@ -669,22 +732,17 @@ export interface components {
         UpdateCartItemRequestDto: {
             quantity: number;
         };
-        CheckoutAddressDto: {
-            recipientName: string;
-            line1: string;
-            line2?: string;
-            city: string;
-            region: string;
-            postalCode: string;
-            /** @example CL */
-            countryCode: string;
+        CartClaimResponseDto: {
+            cart: components["schemas"]["ActiveCartResponseDto"];
+            adjustedProductIds: unknown[][];
         };
-        CheckoutRequestDto: {
+        CheckoutShippingOptionDto: {
             /** @enum {string} */
-            paymentMethod: "SIMULATED_CARD_APPROVED" | "SIMULATED_CARD_REJECTED";
+            method: "PICKUP" | "STANDARD" | "EXPRESS";
+            /** @example 5.00 */
+            cost: string;
             /** @enum {string} */
-            shippingMethod: "PICKUP" | "STANDARD" | "EXPRESS";
-            shippingAddress: components["schemas"]["CheckoutAddressDto"];
+            currency: "USD";
         };
         CheckoutOrderItemDto: {
             /** Format: uuid */
@@ -698,8 +756,11 @@ export interface components {
             taxAmount: string;
             /** @example 200.00 */
             lineTotal: string;
-            /** @example USD */
-            currency: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
         };
         CheckoutOrderDto: {
             /** Format: uuid */
@@ -707,7 +768,8 @@ export interface components {
             number: string;
             /** @enum {string} */
             status: "PROCESSING";
-            currency: string;
+            /** @enum {string} */
+            currency: "USD";
             subtotal: string;
             shippingTotal: string;
             taxTotal: string;
@@ -726,6 +788,23 @@ export interface components {
         CheckoutResponseDto: {
             order: components["schemas"]["CheckoutOrderDto"];
             payment: components["schemas"]["CheckoutPaymentDto"];
+        };
+        CheckoutAddressDto: {
+            recipientName: string;
+            line1: string;
+            line2?: string;
+            city: string;
+            region: string;
+            postalCode: string;
+            /** @example CL */
+            countryCode: string;
+        };
+        CheckoutRequestDto: {
+            /** @enum {string} */
+            paymentMethod: "SIMULATED_CARD_APPROVED" | "SIMULATED_CARD_REJECTED";
+            /** @enum {string} */
+            shippingMethod: "PICKUP" | "STANDARD" | "EXPRESS";
+            shippingAddress: components["schemas"]["CheckoutAddressDto"];
         };
         HealthDatabaseResponseDto: {
             /**
@@ -1316,7 +1395,6 @@ export interface operations {
                 sortBy?: "createdAt" | "name" | "price" | "sku" | "stockAvailable" | "updatedAt";
                 maxPrice?: string;
                 minPrice?: string;
-                currency?: string;
                 availability?: "IN_STOCK" | "OUT_OF_STOCK";
                 status?: "ACTIVE" | "INACTIVE";
                 search?: string;
@@ -1665,20 +1743,6 @@ export interface operations {
                     "application/json": components["schemas"]["ActiveCartResponseDto"];
                 };
             };
-            /** @description Invalid or expired session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description CUSTOMER role required */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
         };
     };
     addCartItem: {
@@ -1704,20 +1768,6 @@ export interface operations {
             };
             /** @description Invalid product or quantity */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid or expired session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description CUSTOMER role required */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1753,20 +1803,6 @@ export interface operations {
             };
             /** @description Invalid item identifier */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid or expired session */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description CUSTOMER role required */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1811,6 +1847,39 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Cart item not found in the customer's cart */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product unavailable or insufficient stock */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    claimAnonymousCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartClaimResponseDto"];
+                };
+            };
             /** @description Invalid or expired session */
             401: {
                 headers: {
@@ -1825,15 +1894,76 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Cart item not found in the customer's cart */
-            404: {
+        };
+    };
+    checkoutShippingMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutShippingOptionDto"][];
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Product unavailable or insufficient stock */
-            409: {
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkoutReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutResponseDto"];
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Receipt not found for this customer */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

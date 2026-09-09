@@ -7,7 +7,10 @@ import { create } from "zustand";
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
 
-export const authClient = createAuthBrowserClient({ baseUrl: apiBaseUrl });
+export const authClient = createAuthBrowserClient({
+  baseUrl: apiBaseUrl,
+  fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }),
+});
 
 type SessionStatus = "initializing" | "authenticated" | "anonymous";
 
@@ -40,4 +43,20 @@ export function storefrontDestinationFor(role: AuthRole): string {
 
 export function isExternalDestination(destination: string): boolean {
   return /^https?:\/\//.test(destination);
+}
+
+export function safeStorefrontReturnTo(
+  destination: string | null,
+  fallback = "/account",
+): string {
+  if (
+    !destination ||
+    !destination.startsWith("/") ||
+    destination.startsWith("//") ||
+    destination.includes("\\")
+  ) {
+    return fallback;
+  }
+
+  return destination;
 }

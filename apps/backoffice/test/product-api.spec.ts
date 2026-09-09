@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const product = {
   createdAt: "2026-09-04T12:00:00.000Z",
-  currency: "CLP",
+  currency: "USD",
   deletedAt: null,
   description: "Teclado mecánico RGB",
   id: "4dff7cda-b8e6-459d-b187-dc6fb8f2582c",
@@ -31,7 +31,6 @@ describe("product administration API client", () => {
     vi.stubGlobal("fetch", fetchMock);
     const api = await import("../src/features/products/product-api");
     const input = {
-      currency: product.currency,
       description: product.description,
       image: product.image,
       name: product.name,

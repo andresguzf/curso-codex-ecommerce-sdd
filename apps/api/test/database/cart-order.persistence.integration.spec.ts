@@ -229,6 +229,44 @@ describe("cart, order, payment, and idempotency persistence", () => {
     expect(nextCart?.id).toBeTypeOf("string");
   });
 
+  it("allows one active anonymous cart and enforces exactly one owner", async () => {
+    const customer = await insertUser("anonymous-owner-customer@example.com");
+    const anonymousTokenHash = "a".repeat(64);
+    const expiresAt = new Date(Date.now() + 60_000);
+
+    await database.insert(carts).values({ anonymousTokenHash, expiresAt });
+
+    await expect(
+      database.insert(carts).values({ anonymousTokenHash, expiresAt }),
+    ).rejects.toMatchObject({
+      cause: {
+        code: "23505",
+        constraint: "carts_anonymous_active_unique",
+      },
+    });
+
+    await expect(database.insert(carts).values({})).rejects.toMatchObject({
+      cause: { code: "23514", constraint: "carts_owner_consistent" },
+    });
+    await expect(
+      database.insert(carts).values({
+        anonymousTokenHash: "b".repeat(64),
+        customerId: customer.id,
+        expiresAt,
+      }),
+    ).rejects.toMatchObject({
+      cause: { code: "23514", constraint: "carts_owner_consistent" },
+    });
+    await expect(
+      database.insert(carts).values({
+        anonymousTokenHash: "c".repeat(64),
+        expiresAt: null,
+      }),
+    ).rejects.toMatchObject({
+      cause: { code: "23514", constraint: "carts_owner_consistent" },
+    });
+  });
+
   it("rejects orphaned carts, lines, orders, and payments", async () => {
     const missingId = randomUUID();
     const customer = await insertUser("relations-customer@example.com");

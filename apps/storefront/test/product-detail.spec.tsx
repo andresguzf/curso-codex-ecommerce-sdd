@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ProductDetail as ProductDetailModel } from "@technology-ecommerce/api-schemas";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,6 +8,19 @@ import {
   PublicProductNotFoundError,
 } from "../src/features/catalog/catalog-api";
 import { ProductDetail } from "../src/features/catalog/product-detail";
+
+const cartAction = vi.hoisted(() => ({
+  addProduct: vi.fn(),
+}));
+
+vi.mock("../src/features/cart/use-add-to-cart", () => ({
+  useAddToCart: () => ({
+    addProduct: cartAction.addProduct,
+    feedback: null,
+    isAdding: false,
+    isSessionInitializing: false,
+  }),
+}));
 
 vi.mock("../src/features/catalog/catalog-api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../src/features/catalog/catalog-api")>();
@@ -50,6 +63,7 @@ function renderDetail(productId = availableProduct.id) {
 
 describe("storefront product detail", () => {
   beforeEach(() => {
+    cartAction.addProduct.mockReset();
     vi.mocked(getPublicProduct).mockReset();
   });
 
@@ -69,10 +83,21 @@ describe("storefront product detail", () => {
     expect(await screen.findByRole("heading", { name: "Teclado Relay 75" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Teclado Relay 75" })).toBeInTheDocument();
     expect(screen.getByText(availableProduct.description)).toBeInTheDocument();
-    expect(screen.getByText("US$149,90")).toBeInTheDocument();
+    expect(screen.getByText("$149.90")).toBeInTheDocument();
     expect(screen.getByText("8 unidades disponibles")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar Teclado Relay 75 al carrito" })).toBeEnabled();
     expect(getPublicProduct).toHaveBeenCalledWith(availableProduct.id);
+  });
+
+  it("connects the detail purchase action to the cart mutation", async () => {
+    vi.mocked(getPublicProduct).mockResolvedValue(availableProduct);
+
+    renderDetail();
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Agregar Teclado Relay 75 al carrito",
+    }));
+
+    expect(cartAction.addProduct).toHaveBeenCalledWith(availableProduct);
   });
 
   it.each(["inexistente", "inactivo"])(

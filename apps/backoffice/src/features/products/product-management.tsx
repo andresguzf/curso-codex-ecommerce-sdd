@@ -38,8 +38,8 @@ type ConfirmationState = Readonly<{
   product: ProductListItem;
 }>;
 
-function formatMoney(price: string, currency: string) {
-  return new Intl.NumberFormat("es-CL", { currency, style: "currency" }).format(Number(price));
+function formatMoney(price: string) {
+  return new Intl.NumberFormat("en-US", { currency: "USD", style: "currency" }).format(Number(price));
 }
 
 export function ProductManagement() {
@@ -68,7 +68,6 @@ export function ProductManagement() {
     mutationFn: async (input: CreateProductRequest) => {
       if (form?.mode === "edit") {
         const changes: UpdateProductRequest = {
-          currency: input.currency,
           description: input.description,
           image: input.image,
           name: input.name,
@@ -125,7 +124,7 @@ export function ProductManagement() {
       header: "Producto",
       id: "product",
     },
-    { cell: (product) => formatMoney(product.price, product.currency), header: "Precio", id: "price" },
+    { cell: (product) => formatMoney(product.price), header: "Precio (USD)", id: "price" },
     { cell: (product) => product.stockAvailable, header: "Stock", id: "stock" },
     {
       cell: (product) => (

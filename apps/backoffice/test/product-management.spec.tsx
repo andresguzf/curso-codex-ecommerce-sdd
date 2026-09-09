@@ -27,7 +27,7 @@ vi.mock("../src/features/products/product-api", () => api);
 
 const activeProduct = {
   createdAt: "2026-09-04T12:00:00.000Z",
-  currency: "CLP",
+  currency: "USD",
   description: "Teclado mecánico RGB",
   id: "4dff7cda-b8e6-459d-b187-dc6fb8f2582c",
   image: { storageKey: "products/keyboard", url: "https://picsum.photos/id/96/800/600" },
@@ -85,10 +85,11 @@ describe("product administration", () => {
     expect(await screen.findByText("Teclado Nova 75")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "+ Nuevo producto" }));
+    expect(screen.queryByLabelText("Moneda")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "MON-ULTRA-27" } });
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Monitor Ultra 27" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Monitor para productividad" } });
-    fireEvent.change(screen.getByLabelText("Precio"), { target: { value: "299990.00" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "299.90" } });
     fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
 
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ sku: "MON-ULTRA-27", status: "INACTIVE" })));

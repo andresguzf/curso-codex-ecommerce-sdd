@@ -61,7 +61,7 @@ type ProductResponse = Readonly<{
   name: string;
   description: string;
   price: string;
-  currency: string;
+  currency: "USD";
   image: { storageKey: string; url: string };
   status: "ACTIVE" | "INACTIVE";
   createdAt: string;
@@ -78,14 +78,13 @@ let tokens: Record<"admin" | "billing" | "customer", string>;
 let userIds: Record<"admin" | "billing" | "customer", string>;
 
 const productPayload = {
-  currency: "clp",
   description: "Notebook profesional para desarrollo",
   image: {
     storageKey: "products/notebook-pro/cover.webp",
     url: "https://cdn.example.com/products/notebook-pro/cover.webp",
   },
   name: "Notebook Pro 14",
-  price: "1299990.00",
+  price: "1299.90",
   sku: " notebook-001 ",
   status: "INACTIVE",
 } as const;
@@ -216,9 +215,9 @@ describe("administrative product lifecycle", () => {
     const created = createdResponse.json<ProductResponse>();
     expect(createdResponse.statusCode).toBe(201);
     expect(created).toMatchObject({
-      currency: "CLP",
+      currency: "USD",
       image: productPayload.image,
-      price: "1299990.00",
+      price: "1299.90",
       sku: "NOTEBOOK-001",
       status: "INACTIVE",
     });
@@ -262,6 +261,12 @@ describe("administrative product lifecycle", () => {
       headers: authorization(tokens.admin),
       payload: { stock: 100 },
     });
+    const foreignCurrency = await server.inject({
+      method: "POST",
+      url: "/api/v1/products",
+      headers: authorization(tokens.admin),
+      payload: { ...productPayload, currency: "EUR", sku: "INVALID-CURRENCY" },
+    });
     const duplicate = await server.inject({
       method: "POST",
       url: "/api/v1/products",
@@ -270,8 +275,20 @@ describe("administrative product lifecycle", () => {
     });
     expect(negativePrice.statusCode).toBe(400);
     expect(directStock.statusCode).toBe(400);
+    expect(foreignCurrency.statusCode).toBe(400);
     expect(duplicate.statusCode).toBe(409);
     expect(duplicate.json()).toMatchObject({ code: "PRODUCT_SKU_ALREADY_EXISTS" });
+    await expect(
+      database.insert(products).values({
+        currency: "EUR",
+        description: "Persistence currency guard fixture",
+        name: "Foreign currency fixture",
+        price: "10.00",
+        sku: `EUR-${randomUUID()}`,
+      }),
+    ).rejects.toMatchObject({
+      cause: { constraint: "products_currency_usd_only" },
+    });
   });
 
   it("updates, activates and soft-deletes without destroying image history", async () => {
@@ -342,7 +359,6 @@ describe("administrative product lifecycle", () => {
   it("lists public and administrative products with SQL filters, ordering and totals", async () => {
     const fixtures = [
       {
-        currency: "USD",
         description: "Gaming performance notebook",
         name: "Gaming Laptop",
         price: "1500.00",
@@ -351,7 +367,6 @@ describe("administrative product lifecycle", () => {
         stock: 5,
       },
       {
-        currency: "USD",
         description: "Quiet office keyboard",
         name: "Office Keyboard",
         price: "80.00",
@@ -360,7 +375,6 @@ describe("administrative product lifecycle", () => {
         stock: 10,
       },
       {
-        currency: "USD",
         description: "Wireless gaming mouse",
         name: "Gaming Mouse",
         price: "50.00",
@@ -369,7 +383,6 @@ describe("administrative product lifecycle", () => {
         stock: 0,
       },
       {
-        currency: "USD",
         description: "Wide gaming display",
         name: "Gaming Monitor",
         price: "400.00",
@@ -378,7 +391,6 @@ describe("administrative product lifecycle", () => {
         stock: 2,
       },
       {
-        currency: "EUR",
         description: "Mirrorless travel camera",
         name: "Travel Camera",
         price: "900.00",
@@ -391,7 +403,6 @@ describe("administrative product lifecycle", () => {
       .insert(products)
       .values(
         fixtures.map((fixture) => ({
-          currency: fixture.currency,
           description: fixture.description,
           name: fixture.name,
           price: fixture.price,
@@ -435,7 +446,7 @@ describe("administrative product lifecycle", () => {
 
     const combined = await server.inject({
       method: "GET",
-      url: "/api/v1/products?search=gaming&availability=IN_STOCK&currency=usd&minPrice=1000.00&maxPrice=2000.00&sortBy=name&sortOrder=asc",
+      url: "/api/v1/products?search=gaming&availability=IN_STOCK&minPrice=1000.00&maxPrice=2000.00&sortBy=name&sortOrder=asc",
     });
     expect(combined.statusCode).toBe(200);
     expect(combined.json()).toMatchObject({
@@ -771,7 +782,6 @@ describe("administrative product lifecycle", () => {
     const [product] = await database
       .insert(products)
       .values({
-        currency: "CLP",
         description: "Fixture for concurrent inventory deduction",
         name: "Last Unit Fixture",
         price: "1000.00",
@@ -876,7 +886,6 @@ describe("administrative product lifecycle", () => {
       url: "/api/v1/products",
       headers: authorization(tokens.admin),
       payload: {
-        currency: "CLP",
         description: "Producto temporal sin imagen cargada",
         name: "Producto Placeholder",
         price: "10.00",

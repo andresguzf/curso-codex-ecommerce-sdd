@@ -32,12 +32,20 @@ function createOpenApiConfig() {
       },
       "technology_ecommerce_refresh",
     )
+    .addCookieAuth(
+      "technology_ecommerce_cart",
+      {
+        description: "Opaque HttpOnly identifier for an anonymous cart",
+        type: "apiKey",
+      },
+      "technology_ecommerce_cart",
+    )
     .addTag("authentication", "Login, session renewal and logout")
     .addTag("health", "API and PostgreSQL readiness")
     .addTag("catalog-media", "Binary catalog image delivery")
     .addTag("products", "Administrative and public product catalog")
     .addTag("inventory", "Inventory balances and auditable movements")
-    .addTag("cart", "Persistent customer shopping cart")
+    .addTag("cart", "Persistent customer or anonymous shopping cart")
     .addTag("checkout", "Transactional purchase confirmation")
     .build();
 }

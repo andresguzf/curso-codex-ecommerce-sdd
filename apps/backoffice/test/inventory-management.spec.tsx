@@ -23,7 +23,7 @@ vi.mock("../src/features/products/product-api", () => ({ getAdministrativeProduc
 const product = {
   availability: "IN_STOCK" as const,
   createdAt: "2026-09-07T12:00:00.000Z",
-  currency: "CLP",
+  currency: "USD",
   description: "Teclado mecánico RGB",
   id: "4dff7cda-b8e6-459d-b187-dc6fb8f2582c",
   image: { storageKey: "products/keyboard", url: "https://picsum.photos/id/96/800/600" },

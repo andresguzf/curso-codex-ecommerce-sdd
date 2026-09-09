@@ -4,14 +4,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm } from "../src/features/auth/login-form";
 import { RegisterForm } from "../src/features/auth/register-form";
 import { SessionControls } from "../src/features/auth/session-controls";
+import { claimAnonymousCart } from "../src/features/cart/cart-api";
 import { authClient, storefrontDestinationFor, useSessionStore } from "../src/features/auth/session";
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => navigation,
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
+vi.mock("../src/features/cart/cart-api", () => ({
+  claimAnonymousCart: vi.fn(),
+}));
 
 describe("storefront authentication", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/login");
     navigation.replace.mockReset();
+    vi.mocked(claimAnonymousCart).mockReset();
+    vi.mocked(claimAnonymousCart).mockResolvedValue({
+      adjustedProductIds: [],
+      cart: {} as never,
+    });
     useSessionStore.setState({ notice: null, session: null, status: "anonymous" });
   });
 
@@ -31,8 +44,36 @@ describe("storefront authentication", () => {
     fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "una-clave-segura-2026" } });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta" }));
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/account"));
+    expect(claimAnonymousCart).toHaveBeenCalledWith("access-token");
     expect(useSessionStore.getState().session?.user.role).toBe("CUSTOMER");
     expect(screen.queryByLabelText(/rol/i)).not.toBeInTheDocument();
+  });
+
+  it("claims the visitor cart on login and preserves the checkout destination", async () => {
+    window.history.replaceState({}, "", "/login?returnTo=%2Fcheckout");
+    vi.spyOn(authClient, "login").mockResolvedValue({
+      accessToken: "access-token",
+      tokenType: "Bearer",
+      accessTokenExpiresAt: "2026-09-02T10:15:00.000Z",
+      sessionExpiresAt: "2026-09-09T10:15:00.000Z",
+      user: {
+        id: "3296f1d5-5a1d-4b94-9caa-b26878f447e4",
+        email: "ana@example.com",
+        displayName: "Ana Díaz",
+        role: "CUSTOMER",
+      },
+    });
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
+      target: { value: "ana@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Contraseña"), {
+      target: { value: "una-clave-segura-2026" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/checkout"));
+    expect(claimAnonymousCart).toHaveBeenCalledWith("access-token");
   });
 
   it("maps privileged roles to the independent backoffice", () => {

@@ -49,11 +49,15 @@ El sistema SHALL permitir que `ADMIN` cree, consulte, modifique, active y desact
 - **THEN** el sistema rechaza la operación
 
 ### Requirement: Aislamiento de datos del cliente
-El sistema MUST limitar a cada `CUSTOMER` a sus propios datos, carrito, órdenes, facturas y documentos.
+El sistema MUST limitar a cada `CUSTOMER` a sus propios datos, carrito asociado, órdenes, facturas y documentos, y MUST aislar cada carrito anónimo mediante la posesión de un identificador opaco válido sin convertirlo en una identidad autorizada para checkout u otros recursos protegidos.
 
 #### Scenario: Cliente consulta una orden ajena
 - **WHEN** un cliente solicita una orden perteneciente a otro cliente
 - **THEN** el sistema deniega el acceso sin revelar los datos de la orden
+
+#### Scenario: Visitante intenta usar un identificador ajeno
+- **WHEN** una persona presenta un identificador de carrito anónimo inválido, manipulado o que no puede verificarse
+- **THEN** el sistema no revela ni modifica líneas de otro carrito y no concede acceso a órdenes, facturas o datos de clientes
 
 ### Requirement: Consulta administrativa paginada de usuarios
 El sistema SHALL permitir que `ADMIN` busque, filtre y ordene usuarios mediante una lista paginada por el backend que incluya `items`, `page`, `pageSize`, `totalItems` y `totalPages`.

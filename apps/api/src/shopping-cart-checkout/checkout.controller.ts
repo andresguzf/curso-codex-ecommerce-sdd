@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  Get,
+  Param,
   Inject,
   Post,
   UseGuards,
@@ -16,6 +18,9 @@ import {
   ApiHeader,
   ApiOperation,
   ApiProperty,
+  ApiOkResponse,
+  ApiNotFoundResponse,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
@@ -31,7 +36,8 @@ import {
 import { CheckoutService } from "./checkout.service";
 import type { CheckoutResult } from "./checkout.types";
 import { PAYMENT_METHODS } from "./payment/payment.port";
-import { SHIPPING_METHODS } from "./shipping/shipping.port";
+import { SHIPPING_METHODS, ShippingQuoteProvider } from "./shipping/shipping.port";
+import { SYSTEM_CURRENCY } from "../shared/system-currency";
 
 const checkoutSchema = z
   .object({
@@ -76,14 +82,14 @@ class CheckoutOrderItemDto {
   @ApiProperty({ example: "100.00", type: String }) unitPrice!: string;
   @ApiProperty({ example: "0.00", type: String }) taxAmount!: string;
   @ApiProperty({ example: "200.00", type: String }) lineTotal!: string;
-  @ApiProperty({ example: "USD" }) currency!: string;
+  @ApiProperty({ enum: ["USD"], example: "USD" }) currency!: "USD";
 }
 
 class CheckoutOrderDto {
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() number!: string;
   @ApiProperty({ enum: ["PROCESSING"] }) status!: "PROCESSING";
-  @ApiProperty() currency!: string;
+  @ApiProperty({ enum: ["USD"] }) currency!: "USD";
   @ApiProperty({ type: String }) subtotal!: string;
   @ApiProperty({ type: String }) shippingTotal!: string;
   @ApiProperty({ type: String }) taxTotal!: string;
@@ -103,6 +109,12 @@ class CheckoutResponseDto {
   @ApiProperty({ type: CheckoutPaymentDto }) payment!: CheckoutPaymentDto;
 }
 
+class CheckoutShippingOptionDto {
+  @ApiProperty({ enum: SHIPPING_METHODS }) method!: string;
+  @ApiProperty({ type: String, example: "5.00" }) cost!: string;
+  @ApiProperty({ enum: ["USD"] }) currency!: "USD";
+}
+
 @ApiTags("checkout")
 @ApiBearerAuth("access-token")
 @ApiUnauthorizedResponse({ description: "Invalid or expired session" })
@@ -111,7 +123,36 @@ class CheckoutResponseDto {
 @UseGuards(AuthenticationGuard, RolesGuard)
 @Roles("CUSTOMER")
 export class CheckoutController {
-  constructor(@Inject(CheckoutService) private readonly checkoutService: CheckoutService) {}
+  constructor(
+    @Inject(CheckoutService) private readonly checkoutService: CheckoutService,
+    @Inject(ShippingQuoteProvider) private readonly shipping: ShippingQuoteProvider,
+  ) {}
+
+  @Get("shipping-methods")
+  @ApiOperation({ operationId: "checkoutShippingMethods", summary: "Read configured simulated shipping costs in USD" })
+  @ApiOkResponse({ type: [CheckoutShippingOptionDto] })
+  async shippingMethods(): Promise<CheckoutShippingOptionDto[]> {
+    return Promise.all(SHIPPING_METHODS.map(async (method) => {
+      const quote = await this.shipping.quote({
+        currency: SYSTEM_CURRENCY,
+        destination: { countryCode: "CL", postalCode: "0000000" },
+        method,
+      });
+      return { method, cost: quote.cost, currency: SYSTEM_CURRENCY };
+    }));
+  }
+
+  @Get("orders/:orderId")
+  @ApiOperation({ operationId: "checkoutReceipt", summary: "Read the customer's immutable checkout confirmation" })
+  @ApiParam({ name: "orderId", format: "uuid" })
+  @ApiOkResponse({ type: CheckoutResponseDto })
+  @ApiNotFoundResponse({ description: "Receipt not found for this customer" })
+  receipt(@Param("orderId") orderId: string, @CurrentUser() customer: AuthenticatedUser) {
+    if (!z.uuid().safeParse(orderId).success) throw new BadRequestException({
+      code: "REQUEST_VALIDATION_FAILED", message: "Invalid order identifier",
+    });
+    return this.checkoutService.getReceipt(customer.id, orderId);
+  }
 
   @Post()
   @ApiOperation({

@@ -43,9 +43,6 @@ export class ProductAdministrationService {
 
     return this.repository.list({
       ...query,
-      ...(query.currency
-        ? { currency: query.currency.trim().toUpperCase() }
-        : {}),
       ...(query.view === "public" ? { status: "ACTIVE" as const } : {}),
     });
   }
@@ -123,7 +120,6 @@ export class ProductAdministrationService {
   private normalize(input: CreateAdministrativeProduct): CreateAdministrativeProduct {
     return {
       ...input,
-      currency: input.currency.trim().toUpperCase(),
       description: input.description.trim(),
       image: {
         storageKey: input.image.storageKey.trim(),
@@ -136,9 +132,6 @@ export class ProductAdministrationService {
 
   private normalizeUpdate(input: UpdateAdministrativeProduct): UpdateAdministrativeProduct {
     return {
-      ...(input.currency === undefined
-        ? {}
-        : { currency: input.currency.trim().toUpperCase() }),
       ...(input.description === undefined
         ? {}
         : { description: input.description.trim() }),

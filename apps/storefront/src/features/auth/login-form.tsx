@@ -4,16 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { loginRequestSchema, type LoginRequest } from "@technology-ecommerce/api-schemas";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthField } from "./field";
 import { broadcastSessionChange } from "./session-provider";
-import { authClient, isExternalDestination, storefrontDestinationFor, useSessionStore } from "./session";
+import { claimAnonymousCart } from "../cart/cart-api";
+import { authClient, isExternalDestination, safeStorefrontReturnTo, storefrontDestinationFor, useSessionStore } from "./session";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setSession = useSessionStore((state) => state.setSession);
   const setNotice = useSessionStore((state) => state.setNotice);
   const [formMessage, setFormMessage] = useState<string>();
@@ -26,10 +28,19 @@ export function LoginForm() {
     setFormMessage(undefined);
     try {
       const session = await authClient.login(input);
+      const claim = session.user.role === "CUSTOMER"
+        ? await claimAnonymousCart(session.accessToken)
+        : null;
       setSession(session);
-      setNotice("Sesión iniciada correctamente.");
+      setNotice(
+        claim?.adjustedProductIds.length
+          ? "Sesión iniciada. Ajustamos algunas cantidades del carrito al stock disponible."
+          : "Sesión iniciada correctamente.",
+      );
       broadcastSessionChange("session-changed");
-      const destination = storefrontDestinationFor(session.user.role);
+      const destination = session.user.role === "CUSTOMER"
+        ? safeStorefrontReturnTo(searchParams.get("returnTo"))
+        : storefrontDestinationFor(session.user.role);
       if (isExternalDestination(destination)) window.location.assign(destination);
       else router.replace(destination);
     } catch (error) {
@@ -45,7 +56,7 @@ export function LoginForm() {
       <button disabled={formState.isSubmitting} className="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-bold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600 disabled:cursor-wait disabled:opacity-60">
         {formState.isSubmitting ? "Verificando…" : "Iniciar sesión"}
       </button>
-      <p className="text-center text-sm text-slate-600">¿Primera vez? <Link href="/register" className="font-bold text-indigo-700 underline-offset-4 hover:underline">Crea tu cuenta</Link></p>
+      <p className="text-center text-sm text-slate-600">¿Primera vez? <Link href={searchParams.get("returnTo") ? `/register?returnTo=${encodeURIComponent(searchParams.get("returnTo")!)}` : "/register"} className="font-bold text-indigo-700 underline-offset-4 hover:underline">Crea tu cuenta</Link></p>
     </form>
   );
 }

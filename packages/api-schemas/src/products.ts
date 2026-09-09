@@ -3,6 +3,7 @@ import { z } from "zod";
 import { paginationMetadataSchema } from "./common";
 
 export const productStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+export const systemCurrencySchema = z.literal("USD");
 
 export const productImageReferenceSchema = z
   .object({
@@ -18,7 +19,6 @@ const productPriceSchema = z
 
 export const createProductRequestSchema = z
   .object({
-    currency: z.string().regex(/^[A-Za-z]{3}$/),
     description: z.string().trim().min(1).max(10_000),
     image: productImageReferenceSchema,
     name: z.string().trim().min(1).max(200),
@@ -43,7 +43,7 @@ export const administrativeProductSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().min(1),
   price: productPriceSchema,
-  currency: z.string().regex(/^[A-Z]{3}$/),
+  currency: systemCurrencySchema,
   image: productImageReferenceSchema,
   status: productStatusSchema,
   createdAt: z.iso.datetime({ offset: true }),
@@ -77,7 +77,6 @@ export const productPageSchema = paginationMetadataSchema.extend({
 export const productListQuerySchema = z
   .object({
     availability: productAvailabilitySchema.optional(),
-    currency: z.string().trim().regex(/^[A-Za-z]{3}$/).optional(),
     maxPrice: productPriceSchema.optional(),
     minPrice: productPriceSchema.optional(),
     page: z.coerce.number().int().min(1).default(1),

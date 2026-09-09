@@ -5,11 +5,11 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 ## What Changes
 
 - Crear un monorepo con frontend Next.js y TypeScript, backend independiente mediante API REST y PostgreSQL como base de datos transaccional.
-- Incorporar un storefront público con hero, catálogo paginado, búsqueda, filtros, ordenamiento, detalle de producto, disponibilidad, carrito y checkout con pagos y envíos simulados.
+- Incorporar un storefront público con hero, catálogo paginado, búsqueda, filtros, ordenamiento, detalle de producto y un carrito utilizable sin registro ni login; exigir autenticación únicamente al iniciar el checkout con pagos y envíos simulados.
 - Incorporar un back office para administrar usuarios, productos, inventario, órdenes y facturas según los roles `CUSTOMER`, `ADMIN` y `BILLING`.
 - Implementar registro, login, logout, recuperación de sesión y autorización por roles, aplicando los permisos en el backend.
-- Gestionar productos simples con SKU, nombre, descripción, precio, moneda, imagen, stock disponible, fechas y estado activo/inactivo, con eliminación lógica y trazabilidad.
-- Gestionar un carrito por cliente, validar cantidades contra el stock, recalcular totales y crear órdenes mediante checkout idempotente.
+- Gestionar productos simples con SKU, nombre, descripción, precio expresado siempre en dólares estadounidenses (`USD`), imagen, stock disponible, fechas y estado activo/inactivo, sin configuración de moneda por producto, con eliminación lógica y trazabilidad.
+- Gestionar un carrito persistente por cliente autenticado o por visitante anónimo, validar cantidades contra el stock, recalcular totales, vincular o fusionar el carrito al iniciar sesión y crear órdenes mediante checkout autenticado e idempotente.
 - Mantener órdenes, pagos y facturas como conceptos independientes con estados y responsabilidades separados.
 - Descontar inventario únicamente al confirmar una compra exitosa, impedir stock negativo y registrar movimientos compensatorios ante cancelaciones.
 - Permitir que `ADMIN` y `BILLING` generen facturas desde órdenes o manualmente; las facturas manuales no alterarán inventario.
@@ -39,7 +39,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 
 - `identity-access`: Registro, autenticación, sesión, autorización con tres roles y administración del ciclo de vida de usuarios.
 - `product-catalog`: Catálogo público y administrativo, detalle, búsqueda, filtros, ordenamiento, paginación y gestión de productos e imágenes.
-- `shopping-cart-checkout`: Carrito persistente por cliente, validación de cantidades, cálculo de totales y checkout con pago y envío simulados.
+- `shopping-cart-checkout`: Carrito público persistente por cliente o visitante anónimo, validación de cantidades, cálculo de totales, vinculación al autenticarse y checkout protegido con pago y envío simulados.
 - `order-management`: Creación, consulta, transición y administración de órdenes, incluyendo historial del cliente y snapshots comerciales.
 - `inventory-control`: Existencias, validación concurrente, movimientos, ajustes y prevención de stock negativo.
 - `billing-invoicing`: Facturación manual o desde órdenes, estados de factura y pago, numeración y separación explícita respecto de órdenes e inventario.
@@ -53,7 +53,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `product-catalog`: identidades visuales diferenciadas, dashboard administrativo por rol y selección persistente de tema claro u oscuro.
 - `product-catalog`: seed de veinte productos, múltiples imágenes con portada, galería accesible y separación entre productos recientes de la landing y catálogo completo paginado.
 - `product-catalog`: productos destacados, categorías importantes configurables y composición agregada y ordenada de las secciones comerciales de la landing.
-- `shopping-cart-checkout`: indicador de cantidad del carrito, mensajes flash y confirmación al retirar líneas.
+- `shopping-cart-checkout`: identificación segura y expiración del carrito anónimo, fusión con el carrito del cliente, indicador de cantidad para visitantes y clientes, mensajes flash y confirmación al retirar líneas.
 - `order-management`: búsqueda y paginación administrativa y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
 - `billing-invoicing`: perfil de empresa, autocompletado remoto y experiencia administrativa paginada.
@@ -75,3 +75,5 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.
 - Nuevas fixtures de desarrollo para productos, imágenes temporales deterministas de Lorem Picsum y usuarios, ampliación del modelo y contrato de imágenes de producto, una ruta explícita de migración posterior a Cloudinary y nuevas pruebas de galería y navegación entre landing y catálogo.
 - Nuevos campos y filtros de destaque para productos y categorías, un endpoint REST agregado de landing y pruebas de orden, límites, deduplicación y autorización administrativa.
+- Persistencia PostgreSQL de carritos anónimos mediante identificadores opacos almacenados en cookie segura, sin exigir una cuenta hasta el checkout, además de reglas de expiración, aislamiento y fusión al autenticarse.
+- Moneda global única `USD` para catálogo, carrito, checkout, órdenes, pagos, facturas y documentos; los contratos y snapshots conservarán el código técnico de moneda fijo para hacer explícitos los importes, pero ninguna interfaz permitirá elegirlo por producto u operación.

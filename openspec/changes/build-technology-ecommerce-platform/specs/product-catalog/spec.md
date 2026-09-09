@@ -5,7 +5,7 @@ Define el catálogo tecnológico público y administrativo, incluyendo productos
 ## ADDED Requirements
 
 ### Requirement: Datos de producto
-El sistema SHALL mantener para cada producto un identificador, SKU único, nombre, descripción, precio no negativo, moneda, imagen, fechas de creación y actualización, estado `ACTIVE` o `INACTIVE` y disponibilidad de stock.
+El sistema SHALL mantener para cada producto un identificador, SKU único, nombre, descripción, precio no negativo expresado en la moneda global fija `USD`, imagen, fechas de creación y actualización, estado `ACTIVE` o `INACTIVE` y disponibilidad de stock, y SHALL NOT permitir configurar una moneda por producto.
 
 #### Scenario: Producto válido
 - **WHEN** un administrador crea un producto con todos los datos obligatorios válidos
@@ -14,6 +14,10 @@ El sistema SHALL mantener para cada producto un identificador, SKU único, nombr
 #### Scenario: SKU duplicado
 - **WHEN** un administrador intenta guardar un SKU ya utilizado
 - **THEN** el sistema rechaza la operación con un error de validación
+
+#### Scenario: Moneda fija del catálogo
+- **WHEN** un administrador crea o edita un producto
+- **THEN** el sistema asigna o conserva `USD` sin solicitar una moneda y rechaza cualquier contrato que intente persistir una distinta
 
 ### Requirement: Catálogo público
 El sistema SHALL mostrar un hero, una lista de productos activos y el detalle de cada producto, incluyendo precio, imagen, descripción y stock disponible.

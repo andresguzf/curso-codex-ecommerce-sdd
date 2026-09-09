@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { CartActionFeedback } from "../cart/cart-action-feedback";
+import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProducts } from "./catalog-api";
 import { CatalogFilters, type CatalogFilterValues } from "./catalog-filters";
 import { CatalogHero } from "./catalog-hero";
@@ -19,6 +21,7 @@ export function CatalogLanding() {
     queryFn: () => getPublicProducts(query),
     queryKey: ["catalog", "public", query],
   });
+  const { addProduct, feedback, isAdding } = useAddToCart();
 
   function navigateWith(updates: Record<string, string | undefined>) {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -80,6 +83,10 @@ export function CatalogLanding() {
           query={query}
         />
 
+        <div className="mb-6">
+          <CartActionFeedback feedback={feedback} />
+        </div>
+
         {productsQuery.isPending ? <LoadingState message="Cargando productos disponibles…" /> : null}
         {productsQuery.isError ? (
           <ErrorState
@@ -91,7 +98,13 @@ export function CatalogLanding() {
             message="Comprueba que la API esté disponible y vuelve a intentarlo."
           />
         ) : null}
-        {productsQuery.data ? <ProductGrid products={productsQuery.data.items} /> : null}
+        {productsQuery.data ? (
+          <ProductGrid
+            isAdding={isAdding}
+            onAddToCart={(product) => void addProduct(product)}
+            products={productsQuery.data.items}
+          />
+        ) : null}
       </section>
     </main>
   );

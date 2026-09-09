@@ -3,7 +3,7 @@ export type CartProduct = Readonly<{
   sku: string;
   name: string;
   price: string;
-  currency: string;
+  currency: "USD";
   image: Readonly<{
     storageKey: string;
     url: string;
@@ -24,15 +24,31 @@ export type ActiveCartItem = Readonly<{
 
 export type ActiveCart = Readonly<{
   id: string;
-  customerId: string;
+  customerId: string | null;
   status: "ACTIVE";
   items: readonly ActiveCartItem[];
   totalQuantity: number;
-  currency: string | null;
+  currency: "USD" | null;
   subtotal: string;
   total: string;
   createdAt: Date;
   updatedAt: Date;
+}>;
+
+export type CartOwner =
+  | Readonly<{
+      kind: "customer";
+      customerId: string;
+    }>
+  | Readonly<{
+      kind: "anonymous";
+      anonymousTokenHash: string;
+      expiresAt: Date;
+    }>;
+
+export type CartClaimResult = Readonly<{
+  adjustedProductIds: readonly string[];
+  cart: ActiveCart;
 }>;
 
 export type AddCartItem = Readonly<{

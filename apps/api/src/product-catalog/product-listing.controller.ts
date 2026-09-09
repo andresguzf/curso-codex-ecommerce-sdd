@@ -44,7 +44,6 @@ const moneySchema = z
 const productListQuerySchema = z
   .object({
     availability: z.enum(PRODUCT_AVAILABILITIES).optional(),
-    currency: z.string().trim().regex(/^[A-Za-z]{3}$/).optional(),
     maxPrice: moneySchema.optional(),
     minPrice: moneySchema.optional(),
     page: z.coerce.number().int().min(1).default(1),
@@ -77,7 +76,7 @@ class ProductListItemDto {
   @ApiProperty() name!: string;
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;
-  @ApiProperty({ example: "CLP" }) currency!: string;
+  @ApiProperty({ enum: ["USD"], example: "USD" }) currency!: "USD";
   @ApiProperty({ type: ProductListImageDto }) image!: ProductListImageDto;
   @ApiProperty({ enum: PRODUCT_STATUSES }) status!: (typeof PRODUCT_STATUSES)[number];
   @ApiProperty({ minimum: 0 }) stockAvailable!: number;
@@ -126,7 +125,6 @@ export class ProductListingController {
     name: "availability",
     required: false,
   })
-  @ApiQuery({ name: "currency", required: false, type: String })
   @ApiQuery({ name: "minPrice", required: false, type: String })
   @ApiQuery({ name: "maxPrice", required: false, type: String })
   @ApiQuery({ enum: PRODUCT_SORT_FIELDS, name: "sortBy", required: false })

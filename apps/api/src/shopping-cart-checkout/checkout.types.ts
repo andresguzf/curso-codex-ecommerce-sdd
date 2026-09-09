@@ -31,7 +31,7 @@ export type CheckoutOrderItem = Readonly<{
   unitPrice: string;
   taxAmount: string;
   lineTotal: string;
-  currency: string;
+  currency: "USD";
 }>;
 
 export type CheckoutResult = Readonly<{
@@ -39,7 +39,7 @@ export type CheckoutResult = Readonly<{
     id: string;
     number: string;
     status: "PROCESSING";
-    currency: string;
+    currency: "USD";
     subtotal: string;
     shippingTotal: string;
     taxTotal: string;

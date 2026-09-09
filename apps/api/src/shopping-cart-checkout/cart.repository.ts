@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, sql } from "drizzle-orm";
 
 import { DatabaseService } from "../database/database.service";
 import {
@@ -9,8 +9,13 @@ import {
   productImages,
   products,
 } from "../database/schema";
+import { SYSTEM_CURRENCY } from "../shared/system-currency";
 import { calculateCartTotals } from "./cart-totals";
-import type { ActiveCart } from "./cart.types";
+import type {
+  ActiveCart,
+  CartClaimResult,
+  CartOwner,
+} from "./cart.types";
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
 
@@ -20,7 +25,9 @@ type CartTransaction = Parameters<
 
 type ActiveCartRow = Readonly<{
   id: string;
-  customerId: string;
+  anonymousTokenHash: string | null;
+  customerId: string | null;
+  expiresAt: Date | null;
   status: "ACTIVE";
   createdAt: Date;
   updatedAt: Date;
@@ -51,41 +58,46 @@ export class CartInsufficientStockError extends Error {
   }
 }
 
-export class CartCurrencyMismatchError extends Error {
-  constructor(
-    readonly cartCurrency: string,
-    readonly productCurrency: string,
-  ) {
-    super("A cart cannot contain products in different currencies");
-    this.name = "CartCurrencyMismatchError";
-  }
-}
-
 @Injectable()
 export class CartRepository {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
   ) {}
 
-  async getOrCreateActive(customerId: string): Promise<ActiveCart> {
+  async getOrCreateActive(owner: CartOwner): Promise<ActiveCart> {
     const cart = await this.database.client.transaction(async (transaction) => {
-      await this.lockCustomerCart(transaction, customerId);
-      return this.findOrCreateActiveCart(transaction, customerId);
+      await this.lockOwnerCart(transaction, owner);
+      return this.findOrCreateActiveCart(transaction, owner);
     });
 
     return this.readCart(cart);
   }
 
+  async deleteExpiredAnonymousCarts(now = new Date()): Promise<number> {
+    const deleted = await this.database.client
+      .delete(carts)
+      .where(
+        and(
+          isNull(carts.customerId),
+          eq(carts.status, "ACTIVE"),
+          lte(carts.expiresAt, now),
+        ),
+      )
+      .returning({ id: carts.id });
+
+    return deleted.length;
+  }
+
   async addItem(
-    customerId: string,
+    owner: CartOwner,
     productId: string,
     quantity: number,
   ): Promise<ActiveCart> {
     const cart = await this.database.client.transaction(async (transaction) => {
-      await this.lockCustomerCart(transaction, customerId);
+      await this.lockOwnerCart(transaction, owner);
       const activeCart = await this.findOrCreateActiveCart(
         transaction,
-        customerId,
+        owner,
       );
       const [currentItem] = await transaction
         .select({ quantity: cartItems.quantity })
@@ -102,11 +114,6 @@ export class CartRepository {
       const product = await this.requireAvailableProduct(
         transaction,
         productId,
-      );
-      await this.assertCartCurrency(
-        transaction,
-        activeCart.id,
-        product.currency,
       );
       this.assertStock(
         productId,
@@ -135,11 +142,16 @@ export class CartRepository {
 
       const [updatedCart] = await transaction
         .update(carts)
-        .set({ updatedAt: now })
+        .set({
+          expiresAt: owner.kind === "anonymous" ? owner.expiresAt : null,
+          updatedAt: now,
+        })
         .where(eq(carts.id, activeCart.id))
         .returning({
           createdAt: carts.createdAt,
+          anonymousTokenHash: carts.anonymousTokenHash,
           customerId: carts.customerId,
+          expiresAt: carts.expiresAt,
           id: carts.id,
           status: carts.status,
           updatedAt: carts.updatedAt,
@@ -152,13 +164,13 @@ export class CartRepository {
   }
 
   async updateItem(
-    customerId: string,
+    owner: CartOwner,
     itemId: string,
     quantity: number,
   ): Promise<ActiveCart> {
     const cart = await this.database.client.transaction(async (transaction) => {
-      await this.lockCustomerCart(transaction, customerId);
-      const activeCart = await this.findActiveCart(transaction, customerId);
+      await this.lockOwnerCart(transaction, owner);
+      const activeCart = await this.findActiveCart(transaction, owner);
       if (!activeCart) throw new CartItemNotFoundError();
 
       const [item] = await transaction
@@ -184,11 +196,16 @@ export class CartRepository {
         .where(eq(cartItems.id, item.id));
       const [updatedCart] = await transaction
         .update(carts)
-        .set({ updatedAt: now })
+        .set({
+          expiresAt: owner.kind === "anonymous" ? owner.expiresAt : null,
+          updatedAt: now,
+        })
         .where(eq(carts.id, activeCart.id))
         .returning({
           createdAt: carts.createdAt,
+          anonymousTokenHash: carts.anonymousTokenHash,
           customerId: carts.customerId,
+          expiresAt: carts.expiresAt,
           id: carts.id,
           status: carts.status,
           updatedAt: carts.updatedAt,
@@ -200,10 +217,10 @@ export class CartRepository {
     return this.readCart(cart);
   }
 
-  async removeItem(customerId: string, itemId: string): Promise<ActiveCart> {
+  async removeItem(owner: CartOwner, itemId: string): Promise<ActiveCart> {
     const cart = await this.database.client.transaction(async (transaction) => {
-      await this.lockCustomerCart(transaction, customerId);
-      const activeCart = await this.findActiveCart(transaction, customerId);
+      await this.lockOwnerCart(transaction, owner);
+      const activeCart = await this.findActiveCart(transaction, owner);
       if (!activeCart) throw new CartItemNotFoundError();
 
       const [removed] = await transaction
@@ -216,11 +233,16 @@ export class CartRepository {
 
       const [updatedCart] = await transaction
         .update(carts)
-        .set({ updatedAt: new Date() })
+        .set({
+          expiresAt: owner.kind === "anonymous" ? owner.expiresAt : null,
+          updatedAt: new Date(),
+        })
         .where(eq(carts.id, activeCart.id))
         .returning({
           createdAt: carts.createdAt,
+          anonymousTokenHash: carts.anonymousTokenHash,
           customerId: carts.customerId,
+          expiresAt: carts.expiresAt,
           id: carts.id,
           status: carts.status,
           updatedAt: carts.updatedAt,
@@ -232,52 +254,193 @@ export class CartRepository {
     return this.readCart(cart);
   }
 
-  private async lockCustomerCart(
-    transaction: CartTransaction,
+  async claimAnonymousCart(
     customerId: string,
+    anonymousTokenHash: string,
+  ): Promise<CartClaimResult> {
+    const result = await this.database.client.transaction(async (transaction) => {
+      const lockKeys = [
+        `anonymous:${anonymousTokenHash}`,
+        `customer:${customerId}`,
+      ].sort();
+      for (const key of lockKeys) {
+        await transaction.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`active-cart:${key}`}))`,
+        );
+      }
+
+      const anonymousOwner: CartOwner = {
+        anonymousTokenHash,
+        expiresAt: new Date(),
+        kind: "anonymous",
+      };
+      const customerOwner: CartOwner = { customerId, kind: "customer" };
+      const anonymousCart = await this.findActiveCart(
+        transaction,
+        anonymousOwner,
+      );
+      if (!anonymousCart) {
+        return {
+          adjustedProductIds: [] as string[],
+          cart: await this.findOrCreateActiveCart(transaction, customerOwner),
+        };
+      }
+
+      const customerCart = await this.findActiveCart(transaction, customerOwner);
+      if (!customerCart) {
+        const [claimed] = await transaction
+          .update(carts)
+          .set({
+            anonymousTokenHash: null,
+            customerId,
+            expiresAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(carts.id, anonymousCart.id))
+          .returning(this.cartSelection());
+        return {
+          adjustedProductIds: [] as string[],
+          cart: this.requireActiveCartRow(claimed),
+        };
+      }
+
+      const anonymousItems = await transaction
+        .select({
+          id: cartItems.id,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+        })
+        .from(cartItems)
+        .where(eq(cartItems.cartId, anonymousCart.id))
+        .for("update");
+      const adjustedProductIds: string[] = [];
+      for (const anonymousItem of anonymousItems) {
+        const [existing] = await transaction
+          .select({ id: cartItems.id, quantity: cartItems.quantity })
+          .from(cartItems)
+          .where(
+            and(
+              eq(cartItems.cartId, customerCart.id),
+              eq(cartItems.productId, anonymousItem.productId),
+            ),
+          )
+          .for("update")
+          .limit(1);
+        let availableQuantity = 0;
+        try {
+          const product = await this.requireAvailableProduct(
+            transaction,
+            anonymousItem.productId,
+          );
+          availableQuantity = product.availableQuantity;
+        } catch (error) {
+          if (!(error instanceof CartProductUnavailableError)) throw error;
+        }
+        const requestedQuantity = (existing?.quantity ?? 0) + anonymousItem.quantity;
+        const mergedQuantity = Math.min(requestedQuantity, availableQuantity);
+        if (mergedQuantity < requestedQuantity) {
+          adjustedProductIds.push(anonymousItem.productId);
+        }
+
+        if (mergedQuantity === 0) continue;
+        if (existing) {
+          await transaction
+            .update(cartItems)
+            .set({ quantity: mergedQuantity, updatedAt: new Date() })
+            .where(eq(cartItems.id, existing.id));
+        } else {
+          await transaction.insert(cartItems).values({
+            cartId: customerCart.id,
+            productId: anonymousItem.productId,
+            quantity: mergedQuantity,
+          });
+        }
+      }
+
+      await transaction.delete(carts).where(eq(carts.id, anonymousCart.id));
+      const [updated] = await transaction
+        .update(carts)
+        .set({ updatedAt: new Date() })
+        .where(eq(carts.id, customerCart.id))
+        .returning(this.cartSelection());
+
+      return {
+        adjustedProductIds,
+        cart: this.requireActiveCartRow(updated),
+      };
+    });
+
+    return {
+      adjustedProductIds: result.adjustedProductIds,
+      cart: await this.readCart(result.cart),
+    };
+  }
+
+  private async lockOwnerCart(
+    transaction: CartTransaction,
+    owner: CartOwner,
   ): Promise<void> {
     await transaction.execute(
-      sql`select pg_advisory_xact_lock(hashtext(${`active-cart:${customerId}`}))`,
+      sql`select pg_advisory_xact_lock(hashtext(${`active-cart:${this.ownerKey(owner)}`}))`,
     );
   }
 
   private async findActiveCart(
     transaction: CartTransaction,
-    customerId: string,
+    owner: CartOwner,
   ): Promise<ActiveCartRow | undefined> {
     const [cart] = await transaction
-      .select({
-        createdAt: carts.createdAt,
-        customerId: carts.customerId,
-        id: carts.id,
-        status: carts.status,
-        updatedAt: carts.updatedAt,
-      })
+      .select(this.cartSelection())
       .from(carts)
-      .where(and(eq(carts.customerId, customerId), eq(carts.status, "ACTIVE")))
+      .where(
+        and(
+          owner.kind === "customer"
+            ? eq(carts.customerId, owner.customerId)
+            : eq(carts.anonymousTokenHash, owner.anonymousTokenHash),
+          eq(carts.status, "ACTIVE"),
+        ),
+      )
       .for("update")
       .limit(1);
 
-    return cart?.status === "ACTIVE" ? { ...cart, status: "ACTIVE" } : undefined;
+    if (cart?.status !== "ACTIVE") return undefined;
+    if (
+      owner.kind === "anonymous" &&
+      (!cart.expiresAt || cart.expiresAt.getTime() <= Date.now())
+    ) {
+      await transaction
+        .update(carts)
+        .set({ closedAt: new Date(), status: "ABANDONED", updatedAt: new Date() })
+        .where(eq(carts.id, cart.id));
+      return undefined;
+    }
+    return { ...cart, status: "ACTIVE" };
   }
 
   private async findOrCreateActiveCart(
     transaction: CartTransaction,
-    customerId: string,
+    owner: CartOwner,
   ): Promise<ActiveCartRow> {
-    const current = await this.findActiveCart(transaction, customerId);
-    if (current) return current;
+    const current = await this.findActiveCart(transaction, owner);
+    if (current) {
+      if (owner.kind !== "anonymous") return current;
+      const [refreshed] = await transaction
+        .update(carts)
+        .set({ expiresAt: owner.expiresAt, updatedAt: new Date() })
+        .where(eq(carts.id, current.id))
+        .returning(this.cartSelection());
+      return this.requireActiveCartRow(refreshed);
+    }
 
     const [created] = await transaction
       .insert(carts)
-      .values({ customerId })
-      .returning({
-        createdAt: carts.createdAt,
-        customerId: carts.customerId,
-        id: carts.id,
-        status: carts.status,
-        updatedAt: carts.updatedAt,
-      });
+      .values(owner.kind === "customer"
+        ? { customerId: owner.customerId }
+        : {
+            anonymousTokenHash: owner.anonymousTokenHash,
+            expiresAt: owner.expiresAt,
+          })
+      .returning(this.cartSelection());
 
     return this.requireActiveCartRow(created);
   }
@@ -285,9 +448,9 @@ export class CartRepository {
   private async requireAvailableProduct(
     transaction: CartTransaction,
     productId: string,
-  ): Promise<Readonly<{ availableQuantity: number; currency: string }>> {
+  ): Promise<Readonly<{ availableQuantity: number }>> {
     const [product] = await transaction
-      .select({ currency: products.currency, id: products.id })
+      .select({ id: products.id })
       .from(products)
       .where(
         and(
@@ -309,33 +472,7 @@ export class CartRepository {
 
     return {
       availableQuantity: balance?.availableQuantity ?? 0,
-      currency: product.currency,
     };
-  }
-
-  private async assertCartCurrency(
-    transaction: CartTransaction,
-    cartId: string,
-    productCurrency: string,
-  ): Promise<void> {
-    const [existingItem] = await transaction
-      .select({ currency: products.currency })
-      .from(cartItems)
-      .innerJoin(products, eq(products.id, cartItems.productId))
-      .where(
-        and(
-          eq(cartItems.cartId, cartId),
-          ne(products.currency, productCurrency),
-        ),
-      )
-      .limit(1);
-
-    if (existingItem) {
-      throw new CartCurrencyMismatchError(
-        existingItem.currency,
-        productCurrency,
-      );
-    }
   }
 
   private assertStock(
@@ -359,7 +496,9 @@ export class CartRepository {
     cart:
       | Readonly<{
           createdAt: Date;
-          customerId: string;
+          anonymousTokenHash: string | null;
+          customerId: string | null;
+          expiresAt: Date | null;
           id: string;
           status: "ACTIVE" | "CHECKED_OUT" | "ABANDONED";
           updatedAt: Date;
@@ -372,12 +511,29 @@ export class CartRepository {
     return { ...cart, status: "ACTIVE" };
   }
 
+  private cartSelection() {
+    return {
+      anonymousTokenHash: carts.anonymousTokenHash,
+      createdAt: carts.createdAt,
+      customerId: carts.customerId,
+      expiresAt: carts.expiresAt,
+      id: carts.id,
+      status: carts.status,
+      updatedAt: carts.updatedAt,
+    };
+  }
+
+  private ownerKey(owner: CartOwner): string {
+    return owner.kind === "customer"
+      ? `customer:${owner.customerId}`
+      : `anonymous:${owner.anonymousTokenHash}`;
+  }
+
   private async readCart(cart: ActiveCartRow): Promise<ActiveCart> {
     const stockAvailable = sql<number>`coalesce(${inventoryBalances.availableQuantity}, 0)`.mapWith(Number);
     const rows = await this.database.client
       .select({
         createdAt: cartItems.createdAt,
-        currency: products.currency,
         imageStorageKey: productImages.storageKey,
         imageUrl: productImages.url,
         itemId: cartItems.id,
@@ -400,12 +556,6 @@ export class CartRepository {
       )
       .where(eq(cartItems.cartId, cart.id))
       .orderBy(asc(cartItems.createdAt), asc(cartItems.id));
-    const currencies = new Set(rows.map((row) => row.currency));
-    if (currencies.size > 1) {
-      const [cartCurrency = "", productCurrency = ""] = currencies;
-      throw new CartCurrencyMismatchError(cartCurrency, productCurrency);
-    }
-
     const totals = calculateCartTotals(
       rows.map((row) => ({ quantity: row.quantity, unitPrice: row.price })),
     );
@@ -415,7 +565,7 @@ export class CartRepository {
       quantity: row.quantity,
       subtotal: totals.lineSubtotals[index] ?? "0.00",
       product: {
-        currency: row.currency,
+        currency: SYSTEM_CURRENCY,
         id: row.productId,
         image: {
           storageKey:
@@ -436,13 +586,16 @@ export class CartRepository {
     }));
 
     return {
-      ...cart,
-      currency: currencies.values().next().value ?? null,
+      createdAt: cart.createdAt,
+      customerId: cart.customerId,
+      id: cart.id,
+      currency: rows.length > 0 ? SYSTEM_CURRENCY : null,
       items,
       status: "ACTIVE",
       subtotal: totals.subtotal,
       total: totals.total,
       totalQuantity: items.reduce((total, item) => total + item.quantity, 0),
+      updatedAt: cart.updatedAt,
     };
   }
 }

@@ -1,19 +1,53 @@
 ## Purpose
 
-Define el carrito persistente del cliente y un checkout seguro que valida productos, cantidades, totales, pago simulado y método de envío.
+Define el carrito público y persistente para visitantes o clientes autenticados, y un checkout protegido que valida identidad, productos, cantidades, totales siempre expresados en `USD`, pago simulado y método de envío, sin conversión ni selección de moneda.
 
 ## ADDED Requirements
 
-### Requirement: Carrito activo por cliente
-El sistema SHALL mantener como máximo un carrito activo por cliente autenticado y SHALL permitir agregar productos, cambiar cantidades y eliminar líneas.
+### Requirement: Carrito público por cliente o visitante
+El sistema SHALL permitir agregar productos, cambiar cantidades, consultar y eliminar líneas sin registro ni login, y SHALL mantener como máximo un carrito activo por cliente autenticado o por identificador anónimo vigente.
+
+#### Scenario: Visitante agrega un producto
+- **WHEN** una persona sin sesión agrega una cantidad positiva que no supera el stock disponible
+- **THEN** el sistema crea o actualiza una línea en un carrito anónimo persistente sin exigir registro ni login
 
 #### Scenario: Agregar un producto disponible
-- **WHEN** un cliente agrega una cantidad positiva que no supera el stock disponible
+- **WHEN** un cliente autenticado agrega una cantidad positiva que no supera el stock disponible
 - **THEN** el sistema crea o actualiza la línea correspondiente en su carrito activo
 
 #### Scenario: Cantidad superior al stock
 - **WHEN** un cliente intenta agregar o actualizar una cantidad superior a la disponibilidad actual
 - **THEN** el sistema rechaza la cantidad e informa la disponibilidad aceptable
+
+### Requirement: Persistencia y aislamiento del carrito anónimo
+El sistema SHALL persistir el carrito anónimo en PostgreSQL, SHALL identificarlo mediante una credencial opaca almacenada en una cookie protegida y MUST impedir que una persona consulte o modifique un carrito anónimo sin poseer su identificador válido.
+
+#### Scenario: Visitante vuelve posteriormente
+- **WHEN** un visitante conserva la cookie válida y vuelve al storefront dentro del período de vigencia
+- **THEN** el sistema recupera el mismo carrito y sus líneas desde PostgreSQL
+
+#### Scenario: Identificador anónimo inválido
+- **WHEN** una solicitud presenta un identificador inexistente, vencido o manipulado
+- **THEN** el sistema no expone ningún carrito ajeno y puede crear un carrito anónimo vacío para continuar navegando
+
+#### Scenario: Carrito anónimo vencido
+- **WHEN** un carrito anónimo supera el período de retención configurado
+- **THEN** el sistema puede eliminarlo mediante una limpieza segura sin afectar carritos de clientes ni inventario
+
+### Requirement: Vinculación del carrito al autenticarse
+El sistema SHALL vincular el carrito anónimo al cliente cuando este inicia sesión y no tiene un carrito activo, o SHALL fusionarlo transaccionalmente con su carrito activo sumando líneas coincidentes hasta la disponibilidad vigente e informando cualquier ajuste de cantidad.
+
+#### Scenario: Cliente sin carrito previo
+- **WHEN** un visitante con carrito inicia sesión como `CUSTOMER` y no existe otro carrito activo para esa cuenta
+- **THEN** el sistema asocia el carrito existente al cliente sin perder sus líneas ni totales
+
+#### Scenario: Cliente con carrito previo
+- **WHEN** un visitante con carrito inicia sesión como `CUSTOMER` y la cuenta ya tiene un carrito activo
+- **THEN** el sistema fusiona ambos carritos en una sola operación, mantiene un único carrito activo y devuelve las cantidades y totales resultantes
+
+#### Scenario: Suma superior al stock durante la fusión
+- **WHEN** la suma de una línea anónima y una línea autenticada supera el stock disponible
+- **THEN** el sistema conserva hasta la cantidad disponible e informa que esa línea fue ajustada sin reservar ni descontar inventario
 
 ### Requirement: Totales del carrito
 El sistema SHALL calcular el subtotal y total autoritativos desde precios vigentes y cantidades válidas, y SHALL actualizarlos después de cada cambio del carrito.
@@ -23,7 +57,11 @@ El sistema SHALL calcular el subtotal y total autoritativos desde precios vigent
 - **THEN** el sistema devuelve el carrito con los subtotales de línea y total recalculados
 
 ### Requirement: Validación final de checkout
-El sistema MUST revalidar identidad, estado de productos, precios, cantidades y stock inmediatamente antes de completar el checkout.
+El sistema MUST exigir una sesión `CUSTOMER` antes de aceptar el checkout y MUST revalidar identidad, estado de productos, precios, cantidades y stock inmediatamente antes de completarlo.
+
+#### Scenario: Visitante intenta iniciar checkout
+- **WHEN** una persona con carrito anónimo intenta continuar al checkout sin iniciar sesión
+- **THEN** la interfaz solicita registro o login, conserva el carrito y permite retomar el checkout después de autenticarse
 
 #### Scenario: Stock cambia antes de confirmar
 - **WHEN** la cantidad disponible deja de cubrir el carrito antes de la confirmación
@@ -48,18 +86,22 @@ El sistema MUST aceptar una clave de idempotencia por intento de checkout y MUST
 - **THEN** el sistema devuelve el resultado original sin crear otra orden ni otro movimiento de stock
 
 ### Requirement: Indicador global del carrito
-El storefront SHALL mostrar en la navegación la cantidad total de unidades del carrito activo y SHALL actualizarla después de agregar, cambiar o eliminar una línea.
+El storefront SHALL mostrar en la navegación la cantidad total de unidades del carrito activo, SHALL actualizarla después de agregar, cambiar o eliminar una línea y SHALL permitir abrir el detalle del carrito desde ese indicador.
 
 #### Scenario: Cantidad actualizada
-- **WHEN** una operación válida cambia las cantidades del carrito
+- **WHEN** una operación válida de un visitante o cliente cambia las cantidades del carrito
 - **THEN** el indicador de navegación muestra la suma vigente de unidades de todas las líneas
+
+#### Scenario: Abrir el carrito
+- **WHEN** una persona activa el indicador global del carrito
+- **THEN** el storefront navega al detalle del carrito activo y muestra sus líneas y cantidades vigentes
 
 ### Requirement: Retroalimentación de operaciones del carrito
 La interfaz SHALL mostrar un mensaje flash accesible después de agregar un producto, cambiar una cantidad o eliminar una línea, y SHALL presentar de forma clara los errores de disponibilidad o validación.
 
 #### Scenario: Producto agregado
-- **WHEN** un cliente agrega correctamente un producto disponible
-- **THEN** la interfaz confirma la operación mediante un mensaje flash y actualiza totales e indicador del carrito
+- **WHEN** un visitante o cliente agrega correctamente un producto disponible
+- **THEN** la interfaz confirma la operación, actualiza totales e indicador y navega al detalle del carrito con la cantidad vigente
 
 #### Scenario: Cantidad rechazada
 - **WHEN** el backend rechaza una cantidad superior al stock disponible

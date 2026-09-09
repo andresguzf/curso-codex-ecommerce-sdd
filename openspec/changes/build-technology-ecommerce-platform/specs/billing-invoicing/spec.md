@@ -34,7 +34,7 @@ El sistema SHALL mantener el estado de factura independiente de la orden y SHALL
 - **THEN** la factura queda `PENDING_PAYMENT` hasta que un usuario autorizado registre el pago o la anule
 
 ### Requirement: Numeración y snapshots
-El sistema SHALL asignar a cada factura emitida un número único y SHALL conservar snapshots inmutables del emisor, cliente, líneas, precios, impuestos, moneda y totales.
+El sistema SHALL asignar a cada factura emitida un número único y SHALL conservar snapshots inmutables del emisor, cliente, líneas, precios, impuestos, código de moneda fijo `USD` y totales, sin selección ni conversión de moneda.
 
 #### Scenario: Cambio posterior del cliente o producto
 - **WHEN** se modifican datos maestros después de emitir una factura

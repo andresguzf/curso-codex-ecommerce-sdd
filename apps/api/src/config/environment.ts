@@ -86,6 +86,12 @@ const environmentSchema = z
       .max(86_400)
       .default(900),
     CORS_ALLOWED_ORIGINS: allowedOriginsSchema,
+    CART_ANONYMOUS_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(31_536_000)
+      .default(2_592_000),
     IMAGE_STORAGE_LOCAL_ROOT: z
       .string()
       .trim()

@@ -57,7 +57,6 @@ export function ProductForm({
   const { formState, handleSubmit, register } = useForm<ProductFormValues>({
     defaultValues: product
       ? {
-          currency: product.currency,
           description: product.description,
           image: product.image,
           name: product.name,
@@ -66,7 +65,6 @@ export function ProductForm({
           status: product.status,
         }
       : {
-          currency: "CLP",
           description: "",
           image: { storageKey: "", url: "" },
           name: "",
@@ -87,7 +85,6 @@ export function ProductForm({
       onSubmit={handleSubmit((input) =>
         onSubmit({
           ...input,
-          currency: input.currency.toUpperCase(),
           image: normalizeImage(input.image, input.sku),
         }),
       )}
@@ -126,21 +123,15 @@ export function ProductForm({
         ) : null}
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2">
         <TextField
           error={formState.errors.price?.message}
           id="product-price"
           inputMode="decimal"
-          label="Precio"
-          placeholder="129990.00"
+          hint="Todos los precios del sistema se expresan en dólares estadounidenses."
+          label="Precio (USD)"
+          placeholder="1299.90"
           {...register("price")}
-        />
-        <TextField
-          error={formState.errors.currency?.message}
-          id="product-currency"
-          label="Moneda"
-          maxLength={3}
-          {...register("currency")}
         />
         <div className="grid gap-2">
           <label className="text-sm font-semibold text-slate-800" htmlFor="product-status">

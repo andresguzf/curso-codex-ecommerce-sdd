@@ -1,5 +1,6 @@
 export const PRODUCT_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
+export type ProductCurrency = "USD";
 
 export type ProductImageReference = Readonly<{
   storageKey: string;
@@ -12,7 +13,7 @@ export type AdministrativeProduct = Readonly<{
   name: string;
   description: string;
   price: string;
-  currency: string;
+  currency: ProductCurrency;
   image: ProductImageReference;
   status: ProductStatus;
   createdAt: Date;
@@ -50,7 +51,6 @@ export type ProductListQuery = Readonly<{
   search?: string;
   status?: ProductStatus;
   availability?: ProductAvailability;
-  currency?: string;
   minPrice?: string;
   maxPrice?: string;
   sortBy: ProductSortField;
@@ -71,7 +71,6 @@ export type CreateAdministrativeProduct = Readonly<{
   name: string;
   description: string;
   price: string;
-  currency: string;
   image: ProductImageReference;
   status: ProductStatus;
 }>;
@@ -81,6 +80,5 @@ export type UpdateAdministrativeProduct = Readonly<{
   name?: string;
   description?: string;
   price?: string;
-  currency?: string;
   image?: ProductImageReference;
 }>;

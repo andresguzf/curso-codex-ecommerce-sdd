@@ -185,7 +185,7 @@ BackofficeShell
 ## Data
 
 - PostgreSQL es la autoridad transaccional.
-- Usa importes decimales de precisión fija y código de moneda; nunca `float` para dinero.
+- Usa importes decimales de precisión fija y conserva el código técnico de moneda, fijado globalmente en `USD`; nunca `float` para dinero ni permitas seleccionar moneda por producto u operación.
 - Usa fechas con zona horaria.
 - Conserva snapshots históricos en líneas de orden y factura.
 - Conserva snapshots del perfil empresarial en órdenes, facturas y PDFs.
@@ -354,6 +354,10 @@ No expongas una actualización genérica de `stock` dentro del `PATCH` de produc
 - `PATCH /api/v1/cart/items/:itemId`: cambiar cantidad.
 - `DELETE /api/v1/cart/items/:itemId`: eliminar línea.
 - `POST /api/v1/checkout`: validar, simular pago/envío y confirmar compra; requiere `Idempotency-Key`.
+- `GET /api/v1/checkout/shipping-methods`: costos configurados del envío simulado en USD; requiere `CUSTOMER`.
+- `GET /api/v1/checkout/orders/:orderId`: confirmación histórica del checkout propio desde su resultado idempotente; requiere `CUSTOMER` y comprueba propiedad. No representa el estado operativo vigente de la orden.
+
+El formulario `/checkout` recupera el carrito del cliente, valida dirección con React Hook Form y Zod y usa costos del API. Conserva la misma clave y petición ante resultados inciertos, bloquea envíos duplicados y navega a `/checkout/orders/:orderId` al confirmar. La confirmación se recupera por REST tras una recarga; no persistas tokens ni respuestas de compras en localStorage.
 
 ## Orders
 
@@ -398,7 +402,7 @@ Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. 
 
 # Catalog and pagination behavior
 
-Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio, moneda, portada, galería ordenada, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada.
+Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio en `USD`, código de moneda fijo `USD`, portada, galería ordenada, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada. Una futura multimoneda deberá configurarse globalmente mediante un cambio OpenSpec explícito, nunca por producto.
 
 - El storefront solo muestra productos activos.
 - Un producto agotado puede mostrarse, pero no agregarse al carrito.
