@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSessionStore } from "../auth/session";
+import { invoiceOrder } from "../invoices/invoice-api";
 import { cancelOrder, completeOrder, getOrder, listOrders, type AdministrativeOrderFilters } from "./order-api";
 
 export const ordersQueryRoot = ["backoffice", "orders"] as const;
@@ -43,5 +44,16 @@ export function useOrderMutations(onSuccess: (message: string) => void, onError:
     onSuccess: () => refresh("Orden cancelada y stock restituido correctamente."),
     onError: (error: Error) => onError(error.message),
   });
-  return { cancel, complete };
+  const invoice = useMutation({
+    mutationFn: (orderId: string) => invoiceOrder(session!.accessToken, orderId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ordersQueryRoot }),
+        client.invalidateQueries({ queryKey: ["backoffice", "invoices"] }),
+      ]);
+      onSuccess(`Orden convertida en factura ${result.number ?? "correctamente"}.`);
+    },
+    onError: (error: Error) => onError(error.message),
+  });
+  return { cancel, complete, invoice };
 }

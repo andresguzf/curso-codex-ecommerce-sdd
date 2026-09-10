@@ -8,8 +8,10 @@ import { AdministrativeOrderDetailPage } from "../src/features/orders/order-deta
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), search: "" }));
 const api = vi.hoisted(() => ({ listOrders: vi.fn(), getOrder: vi.fn(), downloadOrderPdf: vi.fn(), cancelOrder: vi.fn(), completeOrder: vi.fn() }));
+const billingApi = vi.hoisted(() => ({ invoiceOrder: vi.fn() }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/orders", useRouter: () => navigation, useSearchParams: () => new URLSearchParams(navigation.search) }));
 vi.mock("../src/features/orders/order-api", () => api);
+vi.mock("../src/features/invoices/invoice-api", async (original) => ({ ...await original<object>(), invoiceOrder: billingApi.invoiceOrder }));
 
 const base = {
   id: "421d45a3-104e-4413-b79f-25290d1cb0a3", number: "ORD-001", status: "PROCESSING" as const, currency: "USD" as const,
@@ -26,6 +28,7 @@ beforeEach(() => {
   api.listOrders.mockResolvedValue({ items: [base, invoiced], page: 1, pageSize: 20, totalItems: 2, totalPages: 1 }); api.getOrder.mockResolvedValue(detail);
   api.cancelOrder.mockResolvedValue({ ...base, status: "CANCELLED", cancelledAt: "2026-09-10T12:00:00Z" }); api.completeOrder.mockResolvedValue({ ...invoiced, status: "COMPLETED" });
   api.downloadOrderPdf.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: "order-001.pdf" });
+  billingApi.invoiceOrder.mockResolvedValue({ number: "INV-001" });
 });
 
 describe("backoffice order management", () => {
@@ -49,7 +52,7 @@ describe("backoffice order management", () => {
   it("shows Admin actions by state, confirms completion and validates cancellation reason", async () => {
     const invalidate = mount(<OrdersManagementPage />); await screen.findByText("ORD-001");
     const processingRow = screen.getByText("ORD-001").closest("tr")!; const invoicedRow = screen.getByText("ORD-002").closest("tr")!;
-    expect(within(processingRow).queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(within(processingRow).queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Facturar orden" })).toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
     fireEvent.click(within(invoicedRow).getByRole("button", { name: "Completar" })); fireEvent.click(within(screen.getByRole("dialog", { name: "¿Completar esta orden?" })).getByRole("button", { name: "Completar orden" }));
     await waitFor(() => expect(api.completeOrder).toHaveBeenCalledWith("ADMIN-token", invoiced.id)); expect(await screen.findByText("Orden completada correctamente.")).toBeInTheDocument();
     fireEvent.click(within(processingRow).getByRole("button", { name: "Cancelar" })); const dialog = screen.getByRole("dialog", { name: "Cancelar orden" }); fireEvent.click(within(dialog).getByRole("button", { name: "Confirmar cancelación" })); expect(await within(dialog).findByText("Escribe un motivo de 1 a 500 caracteres.")).toBeInTheDocument();
@@ -59,13 +62,29 @@ describe("backoffice order management", () => {
   it("lets Billing complete and cancel orders according to their state", async () => {
     session("BILLING"); mount(<OrdersManagementPage />); await screen.findByText("ORD-001");
     const processingRow = screen.getByText("ORD-001").closest("tr")!; const invoicedRow = screen.getByText("ORD-002").closest("tr")!;
-    expect(within(processingRow).queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument(); expect(within(invoicedRow).getByRole("button", { name: "Completar" })).toBeInTheDocument(); expect(within(invoicedRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(within(processingRow).queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Facturar orden" })).toBeInTheDocument(); expect(within(processingRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument(); expect(within(invoicedRow).getByRole("button", { name: "Completar" })).toBeInTheDocument(); expect(within(invoicedRow).getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
     fireEvent.click(within(invoicedRow).getByRole("button", { name: "Completar" })); fireEvent.click(within(screen.getByRole("dialog", { name: "¿Completar esta orden?" })).getByRole("button", { name: "Completar orden" }));
     await waitFor(() => expect(api.completeOrder).toHaveBeenCalledWith("BILLING-token", invoiced.id)); expect(api.listOrders).toHaveBeenCalledWith("BILLING-token", expect.anything(), expect.any(AbortSignal));
   });
+  it.each(["ADMIN", "BILLING"] as const)("allows %s to convert a processing order into an invoice", async (role) => {
+    session(role); mount(<OrdersManagementPage />); await screen.findByText("ORD-001");
+    const processingRow = screen.getByText("ORD-001").closest("tr")!;
+    fireEvent.click(within(processingRow).getByRole("button", { name: "Facturar orden" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "¿Convertir esta orden en factura?" })).getByRole("button", { name: "Facturar orden" }));
+    await waitFor(() => expect(billingApi.invoiceOrder).toHaveBeenCalledWith(`${role}-token`, base.id));
+    expect(await screen.findByText(/Orden convertida en factura/)).toBeInTheDocument();
+  });
   it("renders immutable historical detail and eligible order actions for Billing", async () => {
     session("BILLING"); mount(<AdministrativeOrderDetailPage orderId={base.id} />);
-    expect(await screen.findByText("Teclado histórico")).toBeInTheDocument(); expect(screen.getAllByText("Cliente histórico")).toHaveLength(2); expect(screen.getByText("Aprobado")).toBeInTheDocument(); expect(screen.getAllByText("Envío histórico")).toHaveLength(2); expect(screen.getByText(/Orden pendiente de facturación/)).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(screen.getByText(/snapshot de la orden/)).toBeInTheDocument();
+    expect(await screen.findByText("Teclado histórico")).toBeInTheDocument(); expect(screen.getAllByText("Cliente histórico")).toHaveLength(2); expect(screen.getByText("Aprobado")).toBeInTheDocument(); expect(screen.getAllByText("Envío histórico")).toHaveLength(2); expect(screen.getByText(/Orden pendiente de facturación/)).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Facturar orden" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(screen.getByText(/snapshot de la orden/)).toBeInTheDocument();
+  });
+  it.each(["ADMIN", "BILLING"] as const)("allows %s to convert the order from its detail view", async (role) => {
+    session(role); mount(<AdministrativeOrderDetailPage orderId={base.id} />);
+    await screen.findByText("Teclado histórico");
+    fireEvent.click(screen.getByRole("button", { name: "Facturar orden" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "¿Convertir esta orden en factura?" })).getByRole("button", { name: "Facturar orden" }));
+    await waitFor(() => expect(billingApi.invoiceOrder).toHaveBeenCalledWith(`${role}-token`, base.id));
+    expect(await screen.findByText(/Orden convertida en factura/)).toBeInTheDocument();
   });
   it("downloads an authorized order PDF and surfaces API errors", async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);

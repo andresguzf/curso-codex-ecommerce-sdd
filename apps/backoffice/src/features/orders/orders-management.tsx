@@ -28,8 +28,9 @@ export function OrdersManagement() {
   const canManageOrders = role === "ADMIN" || role === "BILLING";
   const [cancelTarget, setCancelTarget] = useState<OrderRow>();
   const [completeTarget, setCompleteTarget] = useState<OrderRow>();
+  const [invoiceTarget, setInvoiceTarget] = useState<OrderRow>();
   const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string }>();
-  function mutationSuccess(message: string) { setCancelTarget(undefined); setCompleteTarget(undefined); setNotice({ kind: "success", message }); }
+  function mutationSuccess(message: string) { setCancelTarget(undefined); setCompleteTarget(undefined); setInvoiceTarget(undefined); setNotice({ kind: "success", message }); }
   const mutations = useOrderMutations(mutationSuccess, (message) => setNotice({ kind: "error", message }));
   const query = useAdministrativeOrders(filters);
 
@@ -66,7 +67,7 @@ export function OrdersManagement() {
     { id: "customer", header: "Cliente histórico", cell: (order) => <div><p className="m-0 font-semibold">{snapshotText(order.customerSnapshot, "displayName")}</p><p className="mb-0 mt-1 break-all text-xs text-slate-500">{snapshotText(order.customerSnapshot, "email")}</p></div> },
     { id: "status", header: "Estado", cell: (order) => <OrderStatus status={order.status} /> },
     { id: "total", header: "Total (USD)", cell: (order) => <span className="font-bold tabular-nums">{formatOrderMoney(order.total)}</span> },
-    { id: "actions", header: "Acciones", cell: (order) => <div className="flex min-w-56 flex-wrap gap-2"><Link className="rounded-md border border-blue-300 px-3 py-2 font-semibold text-blue-800 hover:bg-blue-50" href={`/orders/${order.id}`}>Ver detalle</Link>{canManageOrders && order.status === "INVOICED" ? <button className="rounded-md border border-emerald-300 px-3 py-2 font-semibold text-emerald-800 hover:bg-emerald-50" onClick={() => setCompleteTarget(order)} type="button">Completar</button> : null}{canManageOrders && (order.status === "PROCESSING" || order.status === "INVOICED") ? <button className="rounded-md border border-red-300 px-3 py-2 font-semibold text-red-800 hover:bg-red-50" onClick={() => setCancelTarget(order)} type="button">Cancelar</button> : null}</div> },
+    { id: "actions", header: "Acciones", cell: (order) => <div className="flex min-w-56 flex-wrap gap-2"><Link className="rounded-md border border-blue-300 px-3 py-2 font-semibold text-blue-800 hover:bg-blue-50" href={`/orders/${order.id}`}>Ver detalle</Link>{canManageOrders && order.status === "PROCESSING" ? <button className="rounded-md border border-indigo-300 px-3 py-2 font-semibold text-indigo-800 hover:bg-indigo-50" onClick={() => setInvoiceTarget(order)} type="button">Facturar orden</button> : null}{canManageOrders && order.status === "INVOICED" ? <button className="rounded-md border border-emerald-300 px-3 py-2 font-semibold text-emerald-800 hover:bg-emerald-50" onClick={() => setCompleteTarget(order)} type="button">Completar</button> : null}{canManageOrders && (order.status === "PROCESSING" || order.status === "INVOICED") ? <button className="rounded-md border border-red-300 px-3 py-2 font-semibold text-red-800 hover:bg-red-50" onClick={() => setCancelTarget(order)} type="button">Cancelar</button> : null}</div> },
   ];
 
   return <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 sm:px-8"><div className="mx-auto max-w-[90rem]">
@@ -88,6 +89,7 @@ export function OrdersManagement() {
     </div>
   </div>
   <OrderCancellationDialog isPending={mutations.cancel.isPending} number={cancelTarget?.number ?? ""} onCancel={() => setCancelTarget(undefined)} onConfirm={(reason) => { setNotice(undefined); if (cancelTarget) mutations.cancel.mutate({ orderId: cancelTarget.id, reason }); }} open={Boolean(cancelTarget)} />
+  <ConfirmationDialog confirmLabel="Facturar orden" description={invoiceTarget ? `La orden ${invoiceTarget.number} se convertirá en factura y quedará marcada como facturada.` : ""} isPending={mutations.invoice.isPending} onCancel={() => setInvoiceTarget(undefined)} onConfirm={() => { setNotice(undefined); if (invoiceTarget) mutations.invoice.mutate(invoiceTarget.id); }} open={Boolean(invoiceTarget)} title="¿Convertir esta orden en factura?" />
   <ConfirmationDialog confirmLabel="Completar orden" description={completeTarget ? `La orden ${completeTarget.number} quedará completada. El inventario y el pago no cambiarán.` : ""} isPending={mutations.complete.isPending} onCancel={() => setCompleteTarget(undefined)} onConfirm={() => { setNotice(undefined); if (completeTarget) mutations.complete.mutate(completeTarget.id); }} open={Boolean(completeTarget)} title="¿Completar esta orden?" />
   </main>;
 }
