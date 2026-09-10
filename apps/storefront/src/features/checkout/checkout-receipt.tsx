@@ -27,6 +27,6 @@ export function CheckoutReceipt({ orderId }: Readonly<{ orderId: string }>) {
     <ul className="my-8 grid list-none gap-5 p-0">{result.order.items.map((item) => <li key={item.productId} className="flex justify-between gap-5 border-b border-slate-200 pb-4"><span>{item.name} × {item.quantity}</span><span className="font-bold">{formatProductPrice(item.lineTotal)}</span></li>)}</ul>
     <dl className="grid gap-3"><div className="flex justify-between"><dt>Envío</dt><dd>{formatProductPrice(result.order.shippingTotal)}</dd></div><div className="flex justify-between"><dt>Impuestos</dt><dd>{formatProductPrice(result.order.taxTotal)}</dd></div><div className="flex justify-between text-2xl font-black"><dt>Total (USD)</dt><dd>{formatProductPrice(result.order.total)}</dd></div></dl>
     <p className="mt-6 text-sm text-slate-600">No se realizó ningún cobro real. Conserva el número de tu pedido.</p>
-    <Link href="/" className="mt-5 inline-flex min-h-12 items-center rounded-xl bg-blue-700 px-6 font-bold text-white">Seguir comprando</Link>
+    <div className="mt-5 flex flex-wrap items-center gap-5"><Link href={`/account/orders/${result.order.id}`} className="font-bold text-blue-700 underline">Ver estado de mi pedido</Link><Link href="/" className="inline-flex min-h-12 items-center rounded-xl bg-blue-700 px-6 font-bold text-white">Seguir comprando</Link></div>
   </section>;
 }

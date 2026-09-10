@@ -215,14 +215,14 @@ El sistema reconoce exactamente:
 
 - `CUSTOMER`: navega, administra wishlist y carrito, compra y consulta únicamente sus compras, facturas y documentos.
 - `ADMIN`: administra usuarios, productos, categorías, etiquetas, perfil empresarial, inventario, órdenes y facturas.
-- `BILLING`: consulta clientes, productos autorizados, perfil empresarial y órdenes, crea facturas manuales o desde órdenes y gestiona estados de facturación; no administra usuarios, catálogo, perfil empresarial ni inventario.
+- `BILLING`: administra órdenes mediante transiciones válidas, incluida su finalización y cancelación elegible; consulta clientes, productos autorizados y perfil empresarial para crear facturas manuales o desde órdenes y gestionar estados de facturación. No administra usuarios, catálogo, perfil empresarial ni ajustes directos de inventario.
 
 Reglas obligatorias:
 
 - El registro público siempre crea `CUSTOMER` desde el backend.
 - Solo `ADMIN` asigna o modifica roles.
 - No se puede desactivar al último administrador activo.
-- `BILLING` no puede cancelar ni completar órdenes fuera del flujo de facturación.
+- `BILLING` puede completar y cancelar órdenes elegibles con las mismas reglas transaccionales y de auditoría de `ADMIN`, sin editar snapshots históricos.
 - Un `CUSTOMER` nunca accede a recursos de otro cliente.
 - La interfaz puede ocultar acciones, pero el API siempre debe volver a autorizarlas.
 
@@ -361,15 +361,27 @@ El formulario `/checkout` recupera el carrito del cliente, valida dirección con
 
 ## Orders
 
-- `GET /api/v1/orders`: listado administrativo para `ADMIN` y `BILLING` con permisos diferentes.
+Implementado en 7.2: `GET /orders/mine` admite `page` (1–1000000), `pageSize` (1–100, por defecto 20) y `status` opcional, ordena por `createdAt DESC, id DESC` y cuenta/pagina exclusivamente las órdenes del cliente autenticado. `GET /orders/:orderId` devuelve snapshots históricos y estado operativo vigente; para `CUSTOMER`, una orden ajena responde `404 ORDER_NOT_FOUND`, igual que una inexistente. No confundir el detalle operativo con la confirmación inmutable `/checkout/orders/:orderId`. Las consultas usan transacciones de lectura repeatable-read y no hacen joins a datos maestros para reconstruir snapshots.
+
+Implementado en 7.3: `ADMIN` y `BILLING` consultan cualquier detalle y `GET /orders` con búsqueda literal sobre número, nombre o email históricos, filtros `customerId`, `status`, `createdFrom`, `createdTo` (fecha-hora ISO inclusiva), `invoicing=ACTIVE_INVOICE|NO_ACTIVE_INVOICE`, paginación y orden `sortBy=createdAt|number|total|status`, `sortOrder=asc|desc`. Una factura no anulada cuenta como activa. La autorización inicial de las mutaciones de órdenes fue ampliada en 7.7; `/orders/mine` sigue siendo exclusivo de `CUSTOMER`.
+
+Implementado en 7.5: el storefront ofrece `/account/orders` y `/account/orders/:orderId` exclusivamente a sesiones `CUSTOMER`. El historial solicita una sola página al API, conserva `page` y `status` en la URL y usa la paginación compartida. El detalle consume el endpoint operativo `/orders/:orderId`, no la confirmación inmutable del checkout, y renderiza únicamente campos reconocidos de los snapshots históricos de cliente, líneas, dirección, envío y pago. La caché de TanStack Query incluye el identificador del cliente, no persiste datos privados y se descarta al quedar sin observadores; un cambio de cuenta nunca muestra temporalmente el detalle anterior. Las respuestas `401`, `403` y `404` no exponen datos de la orden ni mensajes internos del servidor. La navegación de clientes y la confirmación del checkout enlazan a estas vistas.
+
+Implementado en 7.6: el back office ofrece `/orders` y `/orders/:orderId` a sesiones `ADMIN` y `BILLING`. El listado solicita una sola página al API, conserva búsqueda, estado, facturación, rango de fechas, cliente, orden y página en la URL, y presenta filtros colapsables a la derecha. El detalle reconstruye exclusivamente snapshots históricos reconocidos y separa el estado operativo actual. Las consultas y mutaciones usan TanStack Query, validación Zod y errores seguros sin persistir respuestas privadas.
+
+Implementado en 7.7: `ADMIN` y `BILLING` pueden completar una orden `INVOICED` mediante `PATCH /orders/:orderId/status` con `{ "status": "COMPLETED" }`, o cancelar una orden `PROCESSING` o `INVOICED` elegible mediante el comando dedicado. Ambas operaciones conservan las mismas reglas de bloqueo, auditoría e idempotencia; la cancelación restituye inventario exactamente una vez sin conceder a `BILLING` acceso a ajustes manuales. El back office muestra las acciones según el estado para ambos roles. `CUSTOMER` sigue rechazado y `BILLING` continúa sin permisos sobre usuarios, catálogo, perfil empresarial ni inventario directo. La conversión a factura permanece en 8.2.
+
+- `GET /api/v1/orders`: listado administrativo para `ADMIN` y `BILLING`.
 - `GET /api/v1/orders/mine`: historial del cliente autenticado.
 - `GET /api/v1/orders/:orderId`: detalle con comprobación de propiedad o rol.
 - `PATCH /api/v1/orders/:orderId/status`: transición administrativa permitida.
-- `POST /api/v1/orders/:orderId/cancel`: cancelación con motivo e inventario compensatorio.
+- `POST /api/v1/orders/:orderId/cancel`: implementado en 7.4 y extendido a `BILLING` en 7.7, recibe `reason` obligatorio de 1–500 caracteres tras trim. Cancela `PROCESSING` o `INVOICED` únicamente sin facturas distintas de `VOID`; responde `409 ORDER_ACTIVE_INVOICE` si debe anularse primero una factura. Bloquea la orden antes de los balances y restituye las cantidades de sus movimientos `SALE`, con movimientos `CANCELLATION` y auditoría atómicos. Reintentos sobre `CANCELLED` devuelven el resultado existente, sin duplicar movimientos ni sobrescribir el primer motivo y actor. No modifica pagos ni facturas. El futuro flujo de emisión debe bloquear la misma orden y revalidar su estado para coordinarse con la cancelación.
 - `POST /api/v1/orders/:orderId/invoice`: generar factura desde una orden elegible.
 - `GET /api/v1/orders/:orderId/pdf`: descargar PDF autorizado.
 
 ## Invoices
+
+Implementado en 8.1: `InvoiceAggregate` crea borradores `DRAFT` sin número, valida origen, referencias, líneas, importes de precisión fija, impuestos, moneda `USD`, snapshots y fechas, y copia los datos en sus fronteras para mantenerlos inmutables. Al emitir a `PENDING_PAYMENT` asigna el número determinista y único `INV-<UUID>`; después admite `PAID` y permite anular desde `DRAFT`, `PENDING_PAYMENT` o `PAID`. `InvoiceLifecycleService` bloquea la factura, persiste exclusivamente los campos de ciclo de vida y registra `INVOICE_STATUS_CHANGED` en la misma transacción para `ADMIN` o `BILLING`. Un fallo de auditoría revierte la transición. Todavía no existen endpoints de facturas: conversión desde orden, creación manual y API pública pertenecen a 8.2–8.4.
 
 - `GET /api/v1/invoices`: listado paginado y filtrado.
 - `POST /api/v1/invoices`: factura manual sin impacto en inventario.

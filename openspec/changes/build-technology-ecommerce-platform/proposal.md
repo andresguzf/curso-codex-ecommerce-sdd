@@ -6,12 +6,13 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 
 - Crear un monorepo con frontend Next.js y TypeScript, backend independiente mediante API REST y PostgreSQL como base de datos transaccional.
 - Incorporar un storefront público con hero, catálogo paginado, búsqueda, filtros, ordenamiento, detalle de producto y un carrito utilizable sin registro ni login; exigir autenticación únicamente al iniciar el checkout con pagos y envíos simulados.
-- Incorporar un back office para administrar usuarios, productos, inventario, órdenes y facturas según los roles `CUSTOMER`, `ADMIN` y `BILLING`.
+- Incorporar un back office donde `ADMIN` administre usuarios, productos, inventario, órdenes y facturas, y `BILLING` administre exclusivamente órdenes y facturas.
 - Implementar registro, login, logout, recuperación de sesión y autorización por roles, aplicando los permisos en el backend.
 - Gestionar productos simples con SKU, nombre, descripción, precio expresado siempre en dólares estadounidenses (`USD`), imagen, stock disponible, fechas y estado activo/inactivo, sin configuración de moneda por producto, con eliminación lógica y trazabilidad.
 - Gestionar un carrito persistente por cliente autenticado o por visitante anónimo, validar cantidades contra el stock, recalcular totales, vincular o fusionar el carrito al iniciar sesión y crear órdenes mediante checkout autenticado e idempotente.
 - Mantener órdenes, pagos y facturas como conceptos independientes con estados y responsabilidades separados.
 - Descontar inventario únicamente al confirmar una compra exitosa, impedir stock negativo y registrar movimientos compensatorios ante cancelaciones.
+- Permitir a `ADMIN` y `BILLING` administrar las transiciones de las órdenes y cancelar órdenes en proceso o facturadas únicamente cuando no tengan facturas activas; exigir anular primero cualquier factura asociada no anulada, sin modificar automáticamente factura ni pago al cancelar.
 - Permitir que `ADMIN` y `BILLING` generen facturas desde órdenes o manualmente; las facturas manuales no alterarán inventario.
 - Permitir la consulta y exportación PDF de órdenes y facturas con controles de acceso según propiedad y rol.
 - Añadir auditoría para operaciones sensibles sobre usuarios, roles, productos, inventario, órdenes y facturas.
@@ -54,7 +55,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `product-catalog`: seed de veinte productos, múltiples imágenes con portada, galería accesible y separación entre productos recientes de la landing y catálogo completo paginado.
 - `product-catalog`: productos destacados, categorías importantes configurables y composición agregada y ordenada de las secciones comerciales de la landing.
 - `shopping-cart-checkout`: identificación segura y expiración del carrito anónimo, fusión con el carrito del cliente, indicador de cantidad para visitantes y clientes, mensajes flash y confirmación al retirar líneas.
-- `order-management`: búsqueda y paginación administrativa y snapshots del perfil de empresa.
+- `order-management`: búsqueda y paginación administrativa, gestión de estados por `ADMIN` y `BILLING` y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
 - `billing-invoicing`: perfil de empresa, autocompletado remoto y experiencia administrativa paginada.
 - `document-export`: datos de empresa preservados en PDFs históricos.

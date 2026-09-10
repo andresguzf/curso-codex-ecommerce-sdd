@@ -26,6 +26,8 @@ import {
 import { configureApplication } from "../../src/application";
 import {
   cartItems,
+  auditEntries,
+  invoices,
   carts,
   idempotencyRecords,
   inventoryBalances,
@@ -314,6 +316,8 @@ describe("persistent public cart", () => {
   }, 30_000);
 
   beforeEach(async () => {
+    await database.delete(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"));
+    await database.delete(invoices);
     await database.delete(idempotencyRecords);
     await database.delete(payments);
     await database.delete(orderItems);
@@ -953,6 +957,258 @@ describe("persistent public cart", () => {
     const repeated = await checkoutRequest("customerA", "checkout-historical-order-0001");
     expect(repeated.statusCode).toBe(201);
     expect(repeated.json()).toEqual(response.json());
+  });
+
+  it("lists only own orders newest first, paginates and filters before counting", async () => {
+    const ids: string[] = [];
+    for (const [index, customer] of (["customerA", "customerA", "customerB"] as const).entries()) {
+      await addToCart(customer, productIds.available, 1);
+      const response = await checkoutRequest(customer, `customer-order-history-${index}`);
+      expect(response.statusCode).toBe(201);
+      const id = response.json<{ order: { id: string } }>().order.id;
+      ids.push(id);
+      await database.update(orders).set({ createdAt: new Date(`2026-01-0${index + 1}T12:00:00Z`) }).where(eq(orders.id, id));
+    }
+    const get = (query: string) => server.inject({ method: "GET", url: `/api/v1/orders/mine${query}`, headers: authorization(accessTokens.customerA) });
+    const first = await get("?page=1&pageSize=1");
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({ page: 1, pageSize: 1, totalItems: 2, totalPages: 2, items: [{ id: ids[1], currency: "USD" }] });
+    expect(first.json<{ items: unknown[] }>().items).toHaveLength(1);
+    expect((await get("?page=2&pageSize=1")).json()).toMatchObject({ items: [{ id: ids[0] }] });
+    expect((await get("?page=3&pageSize=1")).json()).toMatchObject({ items: [], totalItems: 2, totalPages: 2 });
+    expect((await get("?status=COMPLETED")).json()).toMatchObject({ items: [], totalItems: 0, totalPages: 0 });
+    await database.update(orders).set({ status: "INVOICED" }).where(eq(orders.id, ids[0]!));
+    expect((await get("?status=INVOICED")).json()).toMatchObject({ items: [{ id: ids[0] }], totalItems: 1, totalPages: 1 });
+    await database.update(orders).set({ createdAt: new Date("2026-01-01T12:00:00Z") });
+    const tied = (await get("")).json<{ items: { id: string }[] }>();
+    expect(tied.items.map(({ id }) => id)).toEqual(ids.slice(0, 2).sort().reverse());
+  });
+
+  it("protects order detail, keeps snapshots and returns current operational status", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const checkout = await checkoutRequest("customerA", "customer-order-detail-001");
+    expect(checkout.statusCode).toBe(201);
+    const id = checkout.json<{ order: { id: string } }>().order.id;
+    const url = `/api/v1/orders/${id}`;
+    const before = await server.inject({ method: "GET", url, headers: authorization(accessTokens.customerA) });
+    expect(before.statusCode).toBe(200);
+    expect(before.json()).toMatchObject({ id, status: "PROCESSING", customerSnapshot: { id: userIds.customerA }, items: [{ unitPrice: "100.00", quantity: 1 }] });
+    await database.update(products).set({ name: "Edited product", price: "900.00" }).where(eq(products.id, productIds.available));
+    await database.update(users).set({ displayName: "Edited customer" }).where(eq(users.id, userIds.customerA));
+    await database.update(orders).set({ status: "INVOICED" }).where(eq(orders.id, id));
+    const after = await server.inject({ method: "GET", url, headers: authorization(accessTokens.customerA) });
+    expect(after.json()).toEqual({ ...before.json<Record<string, unknown>>(), status: "INVOICED" });
+    const foreign = await server.inject({ method: "GET", url, headers: authorization(accessTokens.customerB) });
+    const missing = await server.inject({ method: "GET", url: `/api/v1/orders/${randomUUID()}`, headers: authorization(accessTokens.customerB) });
+    expect(foreign.statusCode).toBe(404);
+    expect(missing.statusCode).toBe(404);
+    expect(foreign.json()).toMatchObject({ code: "ORDER_NOT_FOUND" });
+    expect(missing.json()).toMatchObject({ code: "ORDER_NOT_FOUND" });
+    for (const path of [url, "/api/v1/orders/mine"]) {
+      expect((await server.inject({ method: "GET", url: path })).statusCode).toBe(401);
+      for (const role of ["admin", "billing"] as const) {
+        expect((await server.inject({ method: "GET", url: path, headers: authorization(accessTokens[role]) })).statusCode).toBe(path === url ? 200 : 403);
+      }
+    }
+  });
+
+  it("validates order pagination, status and identifiers without accepting a requested owner", async () => {
+    for (const suffix of ["mine?page=0", "mine?page=1.5", "mine?pageSize=101", "mine?pageSize=-1", "mine?status=UNKNOWN", `mine?customerId=${userIds.customerB}`, "not-a-uuid"]) {
+      const response = await server.inject({ method: "GET", url: `/api/v1/orders/${suffix}`, headers: authorization(accessTokens.customerA) });
+      expect(response.statusCode).toBe(400);
+    }
+    const empty = await server.inject({ method: "GET", url: "/api/v1/orders/mine", headers: authorization(accessTokens.customerA) });
+    expect(empty.json()).toEqual({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
+  });
+
+  it("allows Admin and Billing to search, filter and paginate orders from all customers", async () => {
+    const ids: string[] = [];
+    for (const [index, customer] of (["customerA", "customerB"] as const).entries()) {
+      await addToCart(customer, productIds.available, 1);
+      const response = await checkoutRequest(customer, `administrative-orders-${index}`);
+      expect(response.statusCode).toBe(201);
+      const id = response.json<{ order: { id: string } }>().order.id;
+      ids.push(id);
+      await database.update(orders).set({ number: `ORDER-TEST-${index}`, createdAt: new Date(`2026-02-0${index + 1}T12:00:00Z`) }).where(eq(orders.id, id));
+    }
+    await database.insert(invoices).values({
+      origin: "ORDER", orderId: ids[0], customerId: userIds.customerA,
+      subtotal: "100.00", shippingTotal: "5.00", taxTotal: "0.00", total: "105.00",
+      issuerSnapshot: { name: "Test store" }, customerSnapshot: { id: userIds.customerA },
+    });
+    for (const role of ["admin", "billing"] as const) {
+      const get = (query: string) => server.inject({ method: "GET", url: `/api/v1/orders${query}`, headers: authorization(accessTokens[role]) });
+      expect((await get("?pageSize=1")).json()).toMatchObject({ items: [{ id: ids[1], customerId: userIds.customerB }], totalItems: 2, totalPages: 2 });
+      expect((await get("?pageSize=1&page=2")).json()).toMatchObject({ items: [{ id: ids[0] }] });
+      expect((await get(`?customerId=${userIds.customerA}&search=ORDER-TEST&status=PROCESSING&invoicing=ACTIVE_INVOICE&createdFrom=2026-02-01T00:00:00Z&createdTo=2026-02-01T23:59:59Z`)).json())
+        .toMatchObject({ items: [{ id: ids[0] }], totalItems: 1 });
+      expect((await get("?invoicing=NO_ACTIVE_INVOICE")).json()).toMatchObject({ items: [{ id: ids[1] }], totalItems: 1 });
+      expect((await get("?search=%25")).json()).toMatchObject({ items: [], totalItems: 0 });
+      expect((await get("?sortBy=number&sortOrder=asc&pageSize=1")).json()).toMatchObject({ items: [{ id: ids[0] }] });
+      expect((await get("?page=8")).json()).toMatchObject({ items: [], totalItems: 2 });
+      for (const query of ["?page=0", "?pageSize=101", "?sortBy=password", "?status=INVALID", "?customerId=bad", "?createdFrom=bad", "?createdFrom=2026-02-03T00:00:00Z&createdTo=2026-02-01T00:00:00Z"]) {
+        expect((await get(query)).statusCode).toBe(400);
+      }
+    }
+    expect((await server.inject({ method: "GET", url: "/api/v1/orders", headers: authorization(accessTokens.customerA) })).statusCode).toBe(403);
+    expect((await server.inject({ method: "GET", url: "/api/v1/orders" })).statusCode).toBe(401);
+    await database.update(invoices).set({ status: "VOID", voidedAt: new Date() });
+    const voided = await server.inject({ method: "GET", url: "/api/v1/orders?invoicing=ACTIVE_INVOICE", headers: authorization(accessTokens.billing) });
+    expect(voided.json()).toMatchObject({ items: [], totalItems: 0 });
+  });
+
+  it("allows Admin and Billing to complete invoiced orders, rejects bypasses and serializes concurrent transitions", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const response = await checkoutRequest("customerA", "administrative-transition-001");
+    expect(response.statusCode).toBe(201);
+    const id = response.json<{ order: { id: string } }>().order.id;
+    const url = `/api/v1/orders/${id}/status`;
+    const patch = (role: FixtureKey, status: string) => server.inject({ method: "PATCH", url, headers: authorization(accessTokens[role]), payload: { status } });
+    for (const role of ["customerA", "customerB"] as const) {
+      for (const status of ["COMPLETED", "CANCELLED", "INVOICED"]) expect((await patch(role, status)).statusCode).toBe(403);
+    }
+    expect((await server.inject({ method: "PATCH", url, payload: { status: "COMPLETED" } })).statusCode).toBe(401);
+    expect((await patch("admin", "UNKNOWN")).statusCode).toBe(400);
+    expect((await patch("admin", "COMPLETED")).json()).toMatchObject({ code: "ORDER_INVALID_TRANSITION" });
+    for (const role of ["admin", "billing"] as const) {
+      for (const status of ["CANCELLED", "INVOICED"]) {
+        const bypass = await patch(role, status);
+        expect(bypass.statusCode).toBe(409);
+        expect(bypass.json()).toMatchObject({ code: "ORDER_DEDICATED_WORKFLOW_REQUIRED" });
+      }
+    }
+    const beforePayments = await database.select().from(payments);
+    const beforeStock = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
+    await database.update(orders).set({ status: "INVOICED" }).where(eq(orders.id, id));
+    const results = await Promise.all([patch("billing", "COMPLETED"), patch("billing", "COMPLETED")]);
+    expect(results.map((result) => result.statusCode).sort()).toEqual([200, 409]);
+    expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("COMPLETED");
+    const audits = await database.select().from(auditEntries).where(eq(auditEntries.entityId, id));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ action: "ORDER_STATUS_CHANGED", actorUserId: userIds.billing, changes: { before: { status: "INVOICED" }, after: { status: "COMPLETED" } } });
+    expect(await database.select().from(payments)).toEqual(beforePayments);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeStock);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+    expect((await patch("admin", "CANCELLED")).statusCode).toBe(409);
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/orders/${randomUUID()}/status`, headers: authorization(accessTokens.admin), payload: { status: "COMPLETED" } })).statusCode).toBe(404);
+  });
+
+  it("cancels once under concurrent retries and preserves the first reason, actor and payment", async () => {
+    await addToCart("customerA", productIds.available, 2);
+    await addToCart("customerA", productIds.precise, 1);
+    const purchase = await checkoutRequest("customerA", "cancel-order-concurrent-001");
+    expect(purchase.statusCode).toBe(201);
+    const id = purchase.json<{ order: { id: string } }>().order.id;
+    const storedPayments = await database.select().from(payments);
+    const storedItems = await database.select().from(orderItems);
+    const [before] = await database.select().from(orders).where(eq(orders.id, id));
+    await database.update(products).set({ status: "INACTIVE", deletedAt: new Date() }).where(eq(products.id, productIds.available));
+    const cancel = (reason: string) => server.inject({ method: "POST", url: `/api/v1/orders/${id}/cancel`, headers: authorization(accessTokens.billing), payload: { reason } });
+    const [first, second] = await Promise.all([cancel("Customer request"), cancel("Concurrent reason")]);
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
+    expect(first.json()).toEqual(second.json());
+    expect(first.json()).toMatchObject({ status: "CANCELLED", id });
+    expect((await cancel("Changed on retry")).json()).toEqual(first.json());
+    const movements = await database.select().from(inventoryMovements).where(and(eq(inventoryMovements.type, "CANCELLATION"), eq(inventoryMovements.referenceId, id)));
+    expect(movements).toHaveLength(2);
+    expect(movements.map((m) => m.quantityDelta).sort()).toEqual([1, 2]);
+    const audits = await database.select().from(auditEntries).where(and(eq(auditEntries.entityId, id), eq(auditEntries.action, "ORDER_CANCELLED")));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.actorUserId).toBe(userIds.billing);
+    expect(["Customer request", "Concurrent reason"]).toContain(audits[0]?.changes.reason);
+    expect(movements.every((m) => m.reason === audits[0]?.changes.reason && m.actorUserId === userIds.billing)).toBe(true);
+    expect((await database.select().from(inventoryBalances).where(eq(inventoryBalances.productId, productIds.available)))[0]?.availableQuantity).toBe(5);
+    expect(await database.select().from(payments)).toEqual(storedPayments);
+    expect(await database.select().from(orderItems)).toEqual(storedItems);
+    const [after] = await database.select().from(orders).where(eq(orders.id, id));
+    expect(after).toEqual({ ...before, status: "CANCELLED", cancelledAt: after?.cancelledAt, updatedAt: after?.updatedAt });
+    expect(after?.cancelledAt).toBeInstanceOf(Date);
+  });
+
+  it("blocks every active invoice state and cancels an invoiced order only after voiding", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const purchase = await checkoutRequest("customerA", "cancel-invoiced-order-001");
+    const id = purchase.json<{ order: { id: string } }>().order.id;
+    await database.update(orders).set({ status: "INVOICED" }).where(eq(orders.id, id));
+    const createdAt = new Date("2026-01-01T00:00:00Z");
+    const [invoice] = await database.insert(invoices).values({
+      origin: "ORDER", orderId: id, customerId: userIds.customerA, createdAt,
+      subtotal: "100.00", shippingTotal: "5.00", taxTotal: "0.00", total: "105.00",
+      issuerSnapshot: { name: "Test store" }, customerSnapshot: { id: userIds.customerA },
+    }).returning();
+    const cancel = () => server.inject({ method: "POST", url: `/api/v1/orders/${id}/cancel`, headers: authorization(accessTokens.admin), payload: { reason: "Returned order" } });
+    for (const status of ["DRAFT", "PENDING_PAYMENT", "PAID"] as const) {
+      await database.update(invoices).set({ status, number: status === "DRAFT" ? null : "INV-CANCEL-1", issuedAt: status === "DRAFT" ? null : createdAt, paidAt: status === "PAID" ? createdAt : null }).where(eq(invoices.id, invoice!.id));
+      const beforeInvoices = await database.select().from(invoices);
+      const blocked = await cancel();
+      expect(blocked.statusCode).toBe(409);
+      expect(blocked.json()).toMatchObject({ code: "ORDER_ACTIVE_INVOICE" });
+      expect(await database.select().from(invoices)).toEqual(beforeInvoices);
+      expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("INVOICED");
+    }
+    expect(await database.select().from(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"))).toHaveLength(0);
+    await database.update(invoices).set({ status: "VOID", voidedAt: new Date() }).where(eq(invoices.id, invoice!.id));
+    const beforeInvoices = await database.select().from(invoices);
+    const beforePayments = await database.select().from(payments);
+    expect((await cancel()).statusCode).toBe(200);
+    expect(await database.select().from(invoices)).toEqual(beforeInvoices);
+    expect(await database.select().from(payments)).toEqual(beforePayments);
+  });
+
+  it("validates cancellation permissions, reason, identifiers and terminal states", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const purchase = await checkoutRequest("customerA", "cancel-validation-001");
+    const id = purchase.json<{ order: { id: string } }>().order.id;
+    const url = `/api/v1/orders/${id}/cancel`;
+    for (const role of ["customerA", "customerB"] as const) {
+      expect((await server.inject({ method: "POST", url, headers: authorization(accessTokens[role]), payload: { reason: "Test" } })).statusCode).toBe(403);
+    }
+    expect((await server.inject({ method: "POST", url, payload: { reason: "Test" } })).statusCode).toBe(401);
+    for (const payload of [{}, { reason: "  " }, { reason: "x".repeat(501) }, { reason: "Test", actorUserId: userIds.customerA }]) {
+      expect((await server.inject({ method: "POST", url, headers: authorization(accessTokens.admin), payload })).statusCode).toBe(400);
+    }
+    for (const [identifier, status] of [["bad", 400], [randomUUID(), 404]] as const) {
+      expect((await server.inject({ method: "POST", url: `/api/v1/orders/${identifier}/cancel`, headers: authorization(accessTokens.admin), payload: { reason: "Test" } })).statusCode).toBe(status);
+    }
+    await database.update(orders).set({ status: "COMPLETED" }).where(eq(orders.id, id));
+    const completed = await server.inject({ method: "POST", url, headers: authorization(accessTokens.admin), payload: { reason: "Test" } });
+    expect(completed.statusCode).toBe(409);
+    expect(completed.json()).toMatchObject({ code: "ORDER_INVALID_TRANSITION" });
+    expect(await database.select().from(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"))).toHaveLength(0);
+  });
+
+  it("rolls back a late restoration failure and permits a clean retry", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const purchase = await checkoutRequest("customerA", "cancel-rollback-001");
+    const id = purchase.json<{ order: { id: string } }>().order.id;
+    const beforeStock = await database.select().from(inventoryBalances);
+    const beforeAudit = await database.select().from(auditEntries);
+    const inventory = app.get(InventoryStockService);
+    const restore = inventory.restoreOrderInTransaction.bind(inventory);
+    vi.spyOn(inventory, "restoreOrderInTransaction").mockImplementationOnce(async (...args) => {
+      await restore(...args);
+      throw new Error("Simulated failure after stock writes");
+    });
+    const cancel = () => server.inject({ method: "POST", url: `/api/v1/orders/${id}/cancel`, headers: authorization(accessTokens.admin), payload: { reason: "Retry test" } });
+    expect((await cancel()).statusCode).toBe(500);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeStock);
+    expect(await database.select().from(auditEntries)).toEqual(beforeAudit);
+    expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("PROCESSING");
+    expect(await database.select().from(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"))).toHaveLength(0);
+    expect((await cancel()).statusCode).toBe(200);
+  });
+
+  it("rejects restock overflow without partial cancellation", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const purchase = await checkoutRequest("customerA", "cancel-overflow-001");
+    const id = purchase.json<{ order: { id: string } }>().order.id;
+    await database.update(inventoryBalances).set({ availableQuantity: 2_147_483_647 }).where(eq(inventoryBalances.productId, productIds.available));
+    const response = await server.inject({ method: "POST", url: `/api/v1/orders/${id}/cancel`, headers: authorization(accessTokens.admin), payload: { reason: "Overflow test" } });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: "ORDER_RESTOCK_OVERFLOW" });
+    expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("PROCESSING");
+    expect(await database.select().from(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"))).toHaveLength(0);
   });
 
   it("rejects stock changed after cart validation without partial checkout writes", async () => {

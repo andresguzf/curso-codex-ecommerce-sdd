@@ -368,6 +368,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Allow Admin or Billing to cancel an eligible order and restore consumed stock exactly once; active invoices must be voided first */
+        post: operations["cancelOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search and paginate orders for Admin and Billing */
+        get: operations["administrativeOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{orderId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Allow Admin or Billing to complete an invoiced order without changing stock or payment */
+        patch: operations["changeOrderStatus"];
+        trace?: never;
+    };
+    "/api/v1/orders/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List own orders, newest first with stable ID tie-breaker */
+        get: operations["customerOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read historical detail: own order for Customer, any order for Admin or Billing */
+        get: operations["customerOrderDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -805,6 +890,118 @@ export interface components {
             /** @enum {string} */
             shippingMethod: "PICKUP" | "STANDARD" | "EXPRESS";
             shippingAddress: components["schemas"]["CheckoutAddressDto"];
+        };
+        CancelOrderRequestDto: {
+            /** @description Required reason; the first successful cancellation preserves its reason and actor */
+            reason: string;
+        };
+        CustomerOrderSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** @enum {string} */
+            status: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+            /** @enum {string} */
+            currency: "USD";
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            cancelledAt: string | null;
+        };
+        AdministrativeOrderSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** @enum {string} */
+            status: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+            /** @enum {string} */
+            currency: "USD";
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            /** Format: uuid */
+            customerId: string;
+            customerSnapshot: {
+                [key: string]: unknown;
+            };
+        };
+        AdministrativeOrderPageDto: {
+            items: components["schemas"]["AdministrativeOrderSummaryDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        OrderStatusRequestDto: {
+            /**
+             * @description Only COMPLETED is accepted here; invoice and cancellation require dedicated workflows
+             * @enum {string}
+             */
+            status: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+        };
+        CustomerOrderPageDto: {
+            items: components["schemas"]["CustomerOrderSummaryDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        CustomerOrderLineDto: {
+            /** Format: uuid */
+            productId: string;
+            sku: string;
+            name: string;
+            quantity: number;
+            unitPrice: string;
+            taxAmount: string;
+            lineTotal: string;
+            /** @enum {string} */
+            currency: "USD";
+        };
+        CustomerOrderDetailDto: {
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** @enum {string} */
+            status: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+            /** @enum {string} */
+            currency: "USD";
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            customerSnapshot: {
+                [key: string]: unknown;
+            };
+            shippingAddressSnapshot: {
+                [key: string]: unknown;
+            };
+            shippingMethodSnapshot: {
+                [key: string]: unknown;
+            };
+            paymentSnapshot: {
+                [key: string]: unknown;
+            };
+            items: components["schemas"]["CustomerOrderLineDto"][];
         };
         HealthDatabaseResponseDto: {
             /**
@@ -2018,6 +2215,272 @@ export interface operations {
             };
             /** @description Cart, catalog, stock, payment, or idempotency conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cancelOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelOrderRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Cancelled order, including unchanged results on retries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderSummaryDto"];
+                };
+            };
+            /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid state, active invoice, or stock overflow */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    administrativeOrders: {
+        parameters: {
+            query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "number" | "total" | "status";
+                invoicing?: "ACTIVE_INVOICE" | "NO_ACTIVE_INVOICE";
+                createdTo?: unknown;
+                createdFrom?: unknown;
+                status?: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+                customerId?: unknown;
+                /** @description Literal search over order number and historical customer name/email */
+                search?: string;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministrativeOrderPageDto"];
+                };
+            };
+            /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    changeOrderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderStatusRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderSummaryDto"];
+                };
+            };
+            /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid transition or dedicated workflow required */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    customerOrders: {
+        parameters: {
+            query?: {
+                status?: "PROCESSING" | "INVOICED" | "COMPLETED" | "CANCELLED";
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderPageDto"];
+                };
+            };
+            /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    customerOrderDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOrderDetailDto"];
+                };
+            };
+            /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order missing or not owned by the customer */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

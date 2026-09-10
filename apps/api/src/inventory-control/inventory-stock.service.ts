@@ -82,4 +82,13 @@ export class InventoryStockService {
       normalizeReference(reference),
     );
   }
+
+  /** Caller must hold the order row lock and commit its cancellation atomically. */
+  restoreOrderInTransaction(
+    transaction: DatabaseTransaction,
+    reference: InventoryStockReference,
+  ): Promise<readonly InventoryStockChange[]> {
+    if (reference.referenceType !== "ORDER") throw new TypeError("An order reference is required");
+    return this.repository.restoreOrderInTransaction(transaction, normalizeReference(reference));
+  }
 }

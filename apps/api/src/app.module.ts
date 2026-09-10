@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
+import { BillingInvoicingModule } from "./billing-invoicing/billing-invoicing.module";
 import { validateEnvironment } from "./config/environment";
 import { DatabaseModule } from "./database/database.module";
 import { HealthModule } from "./health/health.module";
@@ -18,6 +19,7 @@ import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-ca
     }),
     DatabaseModule,
     AuthModule,
+    BillingInvoicingModule,
     InventoryControlModule,
     ProductCatalogModule,
     ShoppingCartCheckoutModule,

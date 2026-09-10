@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { DatabaseService } from "../database/database.service";
 import type { DatabaseTransaction } from "../database/database.service";
@@ -62,6 +62,27 @@ export class InventoryStockRepository {
     return this.database.client.transaction((transaction) =>
       this.apply(transaction, items, reference, "CANCELLATION"),
     );
+  }
+
+  async restoreOrderInTransaction(
+    transaction: DatabaseTransaction,
+    reference: InventoryStockReference,
+  ): Promise<readonly InventoryStockChange[]> {
+    const sales = await transaction.select({ productId: inventoryMovements.productId, quantityDelta: inventoryMovements.quantityDelta })
+      .from(inventoryMovements).where(and(
+        eq(inventoryMovements.referenceType, "ORDER"),
+        eq(inventoryMovements.referenceId, reference.referenceId),
+        eq(inventoryMovements.type, "SALE"),
+      ));
+    // Restore only stock actually consumed, never infer it from current products.
+    const quantities = new Map<string, number>();
+    for (const sale of sales) {
+      if (sale.quantityDelta >= 0) throw new Error("Invalid sale movement");
+      quantities.set(sale.productId, (quantities.get(sale.productId) ?? 0) - sale.quantityDelta);
+    }
+    const items = [...quantities].sort(([a], [b]) => a.localeCompare(b))
+      .map(([productId, quantity]) => ({ productId, quantity }));
+    return this.apply(transaction, items, reference, "CANCELLATION");
   }
 
   private async apply(

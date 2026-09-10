@@ -198,7 +198,7 @@ El sistema reconoce exactamente tres roles:
 | Carrito y checkout | Sí | Opcional | No |
 | Consultar compras propias | Sí | No aplica | No aplica |
 | Consultar todas las órdenes | No | Sí | Sí |
-| Cambiar estados operativos de órdenes | No | Sí | No |
+| Completar y cancelar órdenes elegibles | No | Sí | Sí |
 | Facturar una orden | No | Sí | Sí |
 | CRUD de productos | No | Sí | No |
 | Administrar categorías y etiquetas | No | Sí | No |
@@ -391,6 +391,23 @@ Especificación: [`shopping-cart-checkout/spec.md`](openspec/changes/build-techn
 
 ### 7. Órdenes
 
+La tarea 7.2 incorpora historial y detalle REST para `CUSTOMER`:
+
+- `GET /api/v1/orders/mine?page=1&pageSize=20&status=PROCESSING`: historial propio, paginado en PostgreSQL, con filtro opcional de estado y orden más reciente primero.
+- `GET /api/v1/orders/:orderId`: detalle propio con snapshots históricos y estado operativo actual. Las órdenes ajenas o inexistentes responden `404` sin revelar información.
+
+Ambas rutas usan `Authorization: Bearer <accessToken>` y están documentadas en Swagger. El resultado histórico de `/checkout/orders/:orderId` sigue separado del detalle operativo.
+
+La tarea 7.3 añadió consulta administrativa para `ADMIN` y `BILLING`: `GET /api/v1/orders` con búsqueda, cliente, fechas ISO, estado, presencia de factura activa, orden y paginación. Ambos roles pueden consultar cualquier detalle. La autorización inicial de las mutaciones se amplió posteriormente en 7.7.
+
+La tarea 7.4 implementó `POST /api/v1/orders/:orderId/cancel`, inicialmente para `ADMIN`, con `{ "reason": "Motivo de cancelación" }` (1–500 caracteres, sin espacios exteriores). La tarea 7.7 extendió la misma operación a `BILLING`. Permite cancelar órdenes `PROCESSING` o `INVOICED` sin facturas activas: cualquier factura distinta de `VOID` debe anularse primero mediante su propio flujo. La transacción bloquea la orden, repone las cantidades realmente descontadas por sus movimientos de venta y registra movimientos compensatorios y auditoría. Los reintentos, incluso concurrentes, devuelven la cancelación existente sin duplicar stock ni auditoría y conservan el primer motivo y autor. No modifica pagos ni facturas ni simula un reembolso; un fallo revierte toda la operación.
+
+La tarea 7.5 incorpora el área cliente `/account/orders` con historial paginado por el backend, filtro por estado conservado en la URL y enlaces a `/account/orders/:orderId`. El detalle presenta el estado operativo vigente junto con los snapshots históricos de productos, precios, cliente, dirección, envío y pago; una orden cancelada aclara que su pago es el registro original y no un reembolso. Ambas vistas exigen una sesión `CUSTOMER`, vuelven al login conservando el destino cuando falta sesión y separan la caché por cliente para no reutilizar datos privados al cambiar de cuenta. La confirmación del checkout enlaza al detalle operativo y la navegación autenticada expone “Mis compras”.
+
+La tarea 7.6 incorpora `/orders` y `/orders/:orderId` en el back office para `ADMIN` y `BILLING`. El listado usa búsqueda superior, filtros colapsables por estado, facturación, fechas y cliente, ordenamiento y paginación calculada por el backend; todos los criterios válidos se conservan en la URL. El detalle muestra el estado operativo y los snapshots históricos de cliente, líneas, pago y envío. La tarea 7.7 habilita para ambos roles completar una orden `INVOICED` y cancelar una orden `PROCESSING` o `INVOICED` elegible mediante el modal accesible con motivo obligatorio. El API vuelve a autorizar cada mutación, independientemente de los controles visibles en la interfaz.
+
+La tarea 7.7 conserva intactos los snapshots históricos: administrar una orden significa ejecutar transiciones explícitas, no editar cliente, productos, cantidades, precios, dirección, envío o pago capturados. La restitución de inventario causada por una cancelación es una consecuencia interna y atómica; no concede a `BILLING` acceso a ajustes manuales, usuarios, catálogo ni perfil empresarial. La conversión de orden a factura continúa separada y corresponde a la tarea 8.2.
+
 Especificación: [`order-management/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/order-management/spec.md)
 
 Una orden contiene:
@@ -418,7 +435,7 @@ Reglas:
 
 - El cliente consulta únicamente “Mis compras” y sus detalles.
 - `ADMIN` consulta y gestiona todas las órdenes.
-- `BILLING` consulta órdenes y ejecuta operaciones de facturación, pero no las cancela ni completa.
+- `BILLING` administra órdenes mediante transiciones válidas: puede completar y cancelar órdenes elegibles y, en la fase de facturación, convertirlas en factura.
 - Las listas del back office tienen búsqueda superior, filtros colapsables y paginación backend.
 - Una cancelación registra motivo y actor.
 - Si la orden consumió stock, cancelar genera una restitución exactamente una vez.
@@ -501,11 +518,13 @@ Estados iniciales:
 
 ```text
 DRAFT --> PENDING_PAYMENT --> PAID
-   |
-   +--> VOID, cuando la transición sea válida
+  |             |            |
+  +-------------+------------+--> VOID, cuando la transición sea válida
 ```
 
 Las facturas emitidas tienen numeración única y snapshots del emisor, cliente, líneas, precios, impuestos, código de moneda fijo `USD` y totales. El perfil empresarial incluye al menos nombre comercial, razón social, identificador fiscal, dirección física y logo; solo `ADMIN` lo modifica y `BILLING` puede consultarlo para facturación. La aplicación no convierte divisas ni configura monedas por producto; una futura multimoneda sería una configuración global y requeriría una revisión explícita.
+
+La tarea 8.1 implementa el agregado interno de factura y su servicio transaccional de ciclo de vida. Un borrador no tiene número ni fecha de emisión; al pasar a `PENDING_PAYMENT` recibe un número estable `INV-<UUID>` protegido además por la restricción única de PostgreSQL. `ADMIN` y `BILLING` pueden registrar las transiciones válidas a pendiente, pagada o anulada, y cada cambio se guarda junto con su auditoría en una misma transacción. Las transiciones nunca reescriben los snapshots comerciales ni generan movimientos de inventario. Los endpoints, la conversión desde orden y la creación manual corresponden a tareas posteriores.
 
 ### 10. Exportación documental
 

@@ -1448,6 +1448,394 @@
         ]
       }
     },
+    "/api/v1/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cancelled order, including unchanged results on retries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifier or query"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "409": {
+            "description": "Invalid state, active invoice, or stock overflow"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Allow Admin or Billing to cancel an eligible order and restore consumed stock exactly once; active invoices must be voided first",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "get": {
+        "operationId": "administrativeOrders",
+        "parameters": [
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "createdAt",
+                "number",
+                "total",
+                "status"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "invoicing",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ACTIVE_INVOICE",
+                "NO_ACTIVE_INVOICE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PROCESSING",
+                "INVOICED",
+                "COMPLETED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Literal search over order number and historical customer name/email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministrativeOrderPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifier or query"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Search and paginate orders for Admin and Billing",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/status": {
+      "patch": {
+        "operationId": "changeOrderStatus",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderStatusRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifier or query"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "409": {
+            "description": "Invalid transition or dedicated workflow required"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Allow Admin or Billing to complete an invoiced order without changing stock or payment",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/mine": {
+      "get": {
+        "operationId": "customerOrders",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PROCESSING",
+                "INVOICED",
+                "COMPLETED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifier or query"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List own orders, newest first with stable ID tie-breaker",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}": {
+      "get": {
+        "operationId": "customerOrderDetail",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOrderDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifier or query"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          },
+          "404": {
+            "description": "Order missing or not owned by the customer"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read historical detail: own order for Customer, any order for Admin or Billing",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -1505,6 +1893,10 @@
     {
       "name": "checkout",
       "description": "Transactional purchase confirmation"
+    },
+    {
+      "name": "orders",
+      "description": "Customer order history and historical detail"
     }
   ],
   "servers": [],
@@ -2847,6 +3239,384 @@
           "paymentMethod",
           "shippingMethod",
           "shippingAddress"
+        ]
+      },
+      "CancelOrderRequestDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Required reason; the first successful cancellation preserves its reason and actor"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CustomerOrderSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROCESSING",
+              "INVOICED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "taxTotal": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "currency",
+          "subtotal",
+          "shippingTotal",
+          "taxTotal",
+          "total",
+          "createdAt",
+          "updatedAt",
+          "cancelledAt"
+        ]
+      },
+      "AdministrativeOrderSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROCESSING",
+              "INVOICED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "taxTotal": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "currency",
+          "subtotal",
+          "shippingTotal",
+          "taxTotal",
+          "total",
+          "createdAt",
+          "updatedAt",
+          "cancelledAt",
+          "customerId",
+          "customerSnapshot"
+        ]
+      },
+      "AdministrativeOrderPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdministrativeOrderSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
+        ]
+      },
+      "OrderStatusRequestDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROCESSING",
+              "INVOICED",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "description": "Only COMPLETED is accepted here; invoice and cancellation require dedicated workflows"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CustomerOrderPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
+        ]
+      },
+      "CustomerOrderLineDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "unitPrice": {
+            "type": "string"
+          },
+          "taxAmount": {
+            "type": "string"
+          },
+          "lineTotal": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          }
+        },
+        "required": [
+          "productId",
+          "sku",
+          "name",
+          "quantity",
+          "unitPrice",
+          "taxAmount",
+          "lineTotal",
+          "currency"
+        ]
+      },
+      "CustomerOrderDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROCESSING",
+              "INVOICED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "taxTotal": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "customerSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "shippingAddressSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "shippingMethodSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "paymentSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerOrderLineDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "currency",
+          "subtotal",
+          "shippingTotal",
+          "taxTotal",
+          "total",
+          "createdAt",
+          "updatedAt",
+          "cancelledAt",
+          "customerSnapshot",
+          "shippingAddressSnapshot",
+          "shippingMethodSnapshot",
+          "paymentSnapshot",
+          "items"
         ]
       },
       "HealthDatabaseResponseDto": {

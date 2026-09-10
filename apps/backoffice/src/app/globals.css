@@ -67,6 +67,10 @@ html[data-theme="dark"] .bg-emerald-100 {
   background-color: #123d35;
 }
 
+html[data-theme="dark"] .bg-indigo-100 {
+  background-color: #252a55;
+}
+
 html[data-theme="dark"] .text-slate-950,
 html[data-theme="dark"] .text-slate-900,
 html[data-theme="dark"] .text-slate-800,
@@ -84,6 +88,10 @@ html[data-theme="dark"] .text-blue-950,
 html[data-theme="dark"] .text-blue-800,
 html[data-theme="dark"] .text-blue-700 {
   color: var(--admin-accent);
+}
+
+html[data-theme="dark"] .text-indigo-800 {
+  color: #c7d2fe;
 }
 
 html[data-theme="dark"] .text-emerald-800,

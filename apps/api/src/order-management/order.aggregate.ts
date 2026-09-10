@@ -63,6 +63,10 @@ function cents(value: string): bigint {
   return BigInt(value.replace(".", ""));
 }
 
+export function assertOrderTransition(from: OrderStatus, to: OrderStatus): void {
+  if (!TRANSITIONS[from].includes(to)) throw new InvalidOrderTransitionError(from, to);
+}
+
 function validate(snapshot: OrderSnapshot): void {
   if (!snapshot.id.trim() || !snapshot.number.trim() || snapshot.number.length > 64) {
     throw new TypeError("Order identity and number are required");
@@ -139,7 +143,7 @@ export class OrderAggregate {
   /** Domain rules only. Callers must authorize and coordinate invoice/stock atomically. */
   transition(to: OrderStatus, now = new Date()): OrderAggregate {
     const from = this.#snapshot.status;
-    if (!TRANSITIONS[from].includes(to)) throw new InvalidOrderTransitionError(from, to);
+    assertOrderTransition(from, to);
     if (now.getTime() < Date.parse(this.#snapshot.updatedAt)) {
       throw new TypeError("Order transition cannot precede its last update");
     }

@@ -34,6 +34,12 @@ export default function BackofficeHomePage() {
         <p className="mt-5 text-sm font-semibold text-blue-700">{session.user.displayName} · {session.user.role}</p>
         <p aria-live="polite" className="mt-3 text-sm text-slate-600">{notice}</p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Link
+            className="rounded-lg border border-slate-300 bg-white px-5 py-3 font-bold transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
+            href="/orders"
+          >
+            Gestionar órdenes
+          </Link>
           {session.user.role === "ADMIN" ? (
             <Link
               className="rounded-lg bg-[#15345b] px-5 py-3 font-bold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"

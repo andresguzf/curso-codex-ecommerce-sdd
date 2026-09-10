@@ -26,17 +26,35 @@ El sistema SHALL permitir que cada cliente liste y consulte exclusivamente sus p
 - **THEN** el sistema devuelve sus órdenes ordenadas de la más reciente a la más antigua sin incluir órdenes de otros clientes
 
 ### Requirement: Administración de órdenes
-El sistema SHALL permitir que `ADMIN` consulte y gestione todas las órdenes, mientras que `BILLING` SHALL poder consultarlas y ejecutar únicamente operaciones relacionadas con su facturación.
+El sistema SHALL permitir que `ADMIN` y `BILLING` consulten y administren todas las órdenes mediante sus transiciones operativas válidas, incluidas la finalización, la cancelación elegible y la conversión atómica de una orden en factura. Esta administración MUST preservar los snapshots históricos y MUST NOT conceder a `BILLING` permisos para editar usuarios, catálogo, perfil empresarial ni realizar ajustes directos de inventario.
 
-#### Scenario: Billing intenta cancelar una orden
-- **WHEN** un usuario `BILLING` intenta cancelar o completar una orden fuera del flujo de facturación
-- **THEN** el sistema deniega la operación
+#### Scenario: Billing administra una orden
+- **WHEN** un usuario `BILLING` solicita una transición válida sobre una orden
+- **THEN** el sistema aplica la misma regla operativa, transacción y auditoría exigidas para `ADMIN` sin permitir la modificación de sus snapshots históricos
+
+#### Scenario: Billing intenta alterar datos históricos
+- **WHEN** un usuario `BILLING` intenta editar cliente, productos, cantidades, precios, dirección, envío o pago capturados en una orden
+- **THEN** el sistema deniega la modificación y conserva intactos los snapshots de la orden
 
 ### Requirement: Cancelación consistente
 El sistema SHALL registrar el motivo y autor de una cancelación y SHALL coordinar la restitución de inventario exactamente una vez cuando la orden ya hubiera descontado existencias.
 
+La cancelación SHALL estar disponible para `ADMIN` y `BILLING` sobre órdenes `PROCESSING` o `INVOICED` sin facturas activas asociadas. Toda factura cuyo estado sea distinto de `VOID` SHALL considerarse activa y MUST anularse mediante el flujo de facturación antes de cancelar la orden. Cancelar MUST NOT modificar automáticamente la factura ni el pago histórico. La restitución automática y transaccional producida por esta operación MUST NOT conceder a `BILLING` acceso a ajustes manuales ni a la administración general del inventario.
+
+#### Scenario: Orden con factura activa
+- **WHEN** un usuario `ADMIN` o `BILLING` intenta cancelar una orden que tiene una factura no anulada
+- **THEN** el sistema rechaza la cancelación sin cambiar la orden, el inventario, la factura ni el pago e informa que primero debe anularse la factura
+
+#### Scenario: Orden facturada con factura anulada
+- **WHEN** un usuario `ADMIN` o `BILLING` cancela con motivo una orden `INVOICED` cuyas facturas asociadas están anuladas
+- **THEN** el sistema cancela la orden y restituye el stock consumido exactamente una vez, conservando la factura anulada y el pago histórico sin modificaciones
+
+#### Scenario: Reintento de cancelación
+- **WHEN** un usuario `ADMIN` o `BILLING` repite o envía concurrentemente la cancelación de la misma orden
+- **THEN** el sistema conserva el primer motivo y autor registrados y no duplica la restitución ni la auditoría de cancelación
+
 #### Scenario: Cancelación de orden confirmada
-- **WHEN** un administrador cancela una orden elegible que consumió inventario
+- **WHEN** un usuario `ADMIN` o `BILLING` cancela una orden elegible que consumió inventario
 - **THEN** el sistema cambia la orden a `CANCELLED` y registra los movimientos compensatorios sin duplicarlos en reintentos
 
 ### Requirement: Consulta de órdenes con herramientas de backoffice

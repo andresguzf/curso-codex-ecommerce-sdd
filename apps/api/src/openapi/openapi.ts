@@ -47,6 +47,7 @@ function createOpenApiConfig() {
     .addTag("inventory", "Inventory balances and auditable movements")
     .addTag("cart", "Persistent customer or anonymous shopping cart")
     .addTag("checkout", "Transactional purchase confirmation")
+    .addTag("orders", "Customer order history and historical detail")
     .build();
 }
 

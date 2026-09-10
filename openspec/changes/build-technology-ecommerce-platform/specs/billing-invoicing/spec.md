@@ -22,6 +22,17 @@ El sistema SHALL permitir que `ADMIN` o `BILLING` creen una factura manual selec
 - **WHEN** un usuario autorizado crea una factura manual con cliente y líneas válidas
 - **THEN** el sistema guarda una factura cuyo origen es `MANUAL` y que no referencia una orden
 
+### Requirement: Alcance operativo de Billing
+El sistema SHALL permitir que `BILLING` administre el ciclo operativo de órdenes y facturas, incluida la conversión de órdenes elegibles, la creación manual de facturas y las transiciones autorizadas de ambos agregados, y MUST denegarle la administración de usuarios, catálogo, perfil empresarial y ajustes directos de inventario.
+
+#### Scenario: Billing convierte una orden en factura
+- **WHEN** un usuario `BILLING` factura una orden elegible
+- **THEN** el sistema crea la factura y cambia la orden a `INVOICED` atómicamente con las mismas validaciones y auditoría aplicables a `ADMIN`
+
+#### Scenario: Billing crea una factura sin orden
+- **WHEN** un usuario `BILLING` crea una factura manual válida
+- **THEN** el sistema crea una factura de origen `MANUAL` sin generar una orden ni modificar inventario
+
 ### Requirement: Estados de factura y pago
 El sistema SHALL mantener el estado de factura independiente de la orden y SHALL admitir al menos `DRAFT`, `PENDING_PAYMENT`, `PAID` y `VOID` mediante transiciones autorizadas y auditadas.
 

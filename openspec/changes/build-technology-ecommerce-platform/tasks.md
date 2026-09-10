@@ -62,15 +62,16 @@
 ## 7. Gestión de órdenes
 
 - [x] 7.1 Implementar el agregado y máquina de estados de orden con snapshots, número único y transiciones válidas; verificar que cambios posteriores de producto o usuario no alteran la orden.
-- [ ] 7.2 Implementar endpoints de historial y detalle propios para `CUSTOMER`; verificar orden descendente, paginación y denegación de órdenes ajenas.
-- [ ] 7.3 Implementar listado, filtros, detalle y transiciones administrativas para `ADMIN`, y acceso de solo lectura/facturación para `BILLING`; verificar la matriz de permisos y transiciones inválidas.
-- [ ] 7.4 Implementar cancelación con motivo y restitución idempotente de inventario; verificar que reintentar la cancelación no duplica el movimiento compensatorio.
-- [ ] 7.5 Crear las pantallas de “Mis compras” y detalle de orden en storefront; verificar estados, snapshots, pago, envío y acceso exclusivo del propietario.
-- [ ] 7.6 Crear la gestión de órdenes del back office para Admin y Billing; verificar filtros, paginación, acciones visibles por rol y rechazo backend de acciones no autorizadas.
+- [x] 7.2 Implementar endpoints de historial y detalle propios para `CUSTOMER`; verificar orden descendente, paginación y denegación de órdenes ajenas.
+- [x] 7.3 Implementar listado, filtros, detalle y transiciones administrativas para `ADMIN`, y acceso de solo lectura/facturación para `BILLING`; verificar la matriz de permisos y transiciones inválidas.
+- [x] 7.4 Implementar cancelación exclusiva de `ADMIN` con motivo y restitución idempotente de inventario para órdenes `PROCESSING` o `INVOICED` sin facturas activas; exigir anular primero cualquier factura distinta de `VOID`, conservar factura y pago sin cambios y verificar atomicidad, permisos, estados inválidos y que los reintentos concurrentes no duplican movimientos ni auditoría ni sobrescriben el primer motivo y autor.
+- [x] 7.5 Crear las pantallas de “Mis compras” y detalle de orden en storefront; verificar estados, snapshots, pago, envío y acceso exclusivo del propietario.
+- [x] 7.6 Crear la gestión de órdenes del back office para Admin y Billing; verificar filtros, paginación, acciones visibles por rol y rechazo backend de acciones no autorizadas.
+- [x] 7.7 Extender la administración de órdenes a `BILLING` para completar y cancelar órdenes elegibles con las mismas reglas transaccionales y de auditoría de `ADMIN`, sin permitir la edición de snapshots ni conceder acceso a usuarios, catálogo, perfil empresarial o ajustes directos de inventario; actualizar contrato y backoffice y verificar permisos positivos de `BILLING`, permisos negativos fuera de alcance, restitución idempotente y acciones visibles por estado.
 
 ## 8. Facturación
 
-- [ ] 8.1 Implementar el agregado de factura con origen, estados, numeración única, snapshots y transiciones auditadas; verificar borrador, emisión pendiente, pago y anulación.
+- [x] 8.1 Implementar el agregado de factura con origen, estados, numeración única, snapshots y transiciones auditadas; verificar borrador, emisión pendiente, pago y anulación.
 - [ ] 8.2 Implementar conversión atómica de orden a factura y cambio a `INVOICED`; verificar que una orden no produce dos facturas activas y que el inventario no cambia.
 - [ ] 8.3 Implementar creación de factura manual para `ADMIN` y `BILLING`; verificar origen `MANUAL`, cliente y líneas válidas, ausencia de orden y cero movimientos de inventario.
 - [ ] 8.4 Implementar endpoints paginados de facturas con búsqueda, filtros, detalle y actualización de estado; verificar permisos administrativos y consulta exclusiva del cliente propietario.
@@ -90,7 +91,7 @@
 - [ ] 10.2 Implementar correlation IDs, logs estructurados, manejo uniforme de errores y métricas básicas; verificar propagación del identificador y ausencia de contraseñas, tokens o datos sensibles en logs.
 - [ ] 10.3 Añadir pruebas de contrato que comparen OpenAPI, cliente generado y respuestas reales; verificar que CI falla cuando el contrato cambia sin regenerar el cliente.
 - [ ] 10.4 Añadir pruebas end-to-end de registro, login, catálogo, carrito anónimo persistente, fusión al autenticar, checkout protegido, historial, administración, facturación desde orden y factura manual; verificar el flujo completo en una base aislada.
-- [ ] 10.5 Añadir pruebas end-to-end negativas para escalamiento de rol, acceso cruzado entre clientes y operaciones prohibidas de Billing; verificar respuestas de autorización sin fuga de datos.
+- [ ] 10.5 Añadir pruebas end-to-end negativas para escalamiento de rol, acceso cruzado entre clientes y operaciones de `BILLING` fuera de la administración de órdenes y facturas; verificar respuestas de autorización sin fuga de datos.
 - [ ] 10.6 Ejecutar lint, typecheck, pruebas unitarias, integración, componentes, end-to-end y builds de producción; corregir fallos hasta que la suite completa sea exitosa.
 
 ## 11. Empaquetado y preparación de despliegue

@@ -82,6 +82,8 @@ El API será propietario de registro, login, renovación y logout. Las contrase�
 
 Cada endpoint protegido aplicará guards de rol y comprobaciones de propiedad. El registro público asignará `CUSTOMER` del lado servidor. Solo `ADMIN` podrá crear o cambiar roles, y una restricción de dominio impedirá desactivar al último administrador activo.
 
+`ADMIN` podrá operar todos los módulos administrativos. `BILLING` podrá administrar órdenes y facturas, incluidas las transiciones válidas, la cancelación elegible, la conversión atómica de orden a factura y la factura manual, pero no podrá administrar usuarios, catálogo, perfil empresarial ni realizar ajustes directos de inventario. Las restituciones de stock causadas por una cancelación serán una consecuencia interna y transaccional del módulo de órdenes, no un permiso de inventario para `BILLING`.
+
 Alternativa considerada: confiar en protección de rutas del frontend. Se descarta porque el navegador no es una frontera de seguridad.
 
 ### 6. Modelo relacional y datos históricos
@@ -158,6 +160,8 @@ Invoice: DRAFT --> PENDING_PAYMENT --> PAID
 Facturar desde una orden creará la factura y cambiará la orden a `INVOICED` en una sola transacción, protegido por una restricción que impida dos facturas activas para la misma orden. El estado inicial de la factura reflejará el pago registrado sin modificarlo.
 
 Una factura manual tendrá origen `MANUAL`, cliente y líneas propias, no requerirá orden y nunca invocará inventario. Facturar, pagar, anular o exportar tampoco generará movimientos de stock. Cancelar una orden que consumió inventario creará movimientos compensatorios idempotentes.
+
+La cancelación requiere `ADMIN` o `BILLING`, motivo y una orden `PROCESSING` o `INVOICED` sin facturas activas. Cualquier factura distinta de `VOID` bloquea la operación: debe anularse primero mediante el flujo de facturación. La cancelación no modifica automáticamente facturas ni pagos, ni simula un reembolso. La orden, la restitución de inventario y la auditoría se confirman en una sola transacción; se bloquea primero la orden y después los balances en orden estable. Los flujos de facturación deben coordinarse sobre el mismo bloqueo de orden para evitar emitir una factura mientras se cancela. Una repetición de la cancelación conserva el primer motivo y autor y no produce movimientos ni auditoría duplicados. Ni `ADMIN` ni `BILLING` pueden editar los snapshots históricos de una orden confirmada: “modificar una orden” significa ejecutar comandos y transiciones de dominio explícitos.
 
 ### 10. Documentos PDF desde snapshots
 

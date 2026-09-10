@@ -34,8 +34,8 @@ El sistema SHALL reconocer únicamente `CUSTOMER`, `ADMIN` y `BILLING`, y SHALL 
 - **THEN** el sistema deniega la operación sin depender de los controles visuales del frontend
 
 #### Scenario: Billing accede a facturación
-- **WHEN** un usuario `BILLING` consulta órdenes o gestiona facturas
-- **THEN** el sistema permite la operación dentro de los permisos de facturación y deniega gestión de usuarios, catálogo e inventario
+- **WHEN** un usuario `BILLING` consulta o administra órdenes o gestiona facturas
+- **THEN** el sistema permite las operaciones de órdenes y facturación, incluida la conversión de una orden en factura y la creación de facturas manuales, y deniega gestión de usuarios, catálogo, ajustes directos de inventario y perfil empresarial
 
 ### Requirement: Administración de usuarios
 El sistema SHALL permitir que `ADMIN` cree, consulte, modifique, active y desactive usuarios, y asigne cualquiera de los tres roles sin eliminar el historial comercial asociado.
