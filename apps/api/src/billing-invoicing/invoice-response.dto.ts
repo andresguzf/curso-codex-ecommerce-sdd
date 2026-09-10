@@ -19,10 +19,10 @@ export class InvoiceLineResponseDto {
 
 export class InvoiceResponseDto {
   @ApiProperty({ format: "uuid" }) id!: string;
-  @ApiProperty() number!: string;
+  @ApiProperty({ type: String, nullable: true }) number!: string | null;
   @ApiProperty({ enum: INVOICE_ORIGINS }) origin!: InvoiceOrigin;
   @ApiProperty({ enum: INVOICE_STATUSES }) status!: InvoiceStatus;
-  @ApiProperty({ format: "uuid" }) orderId!: string;
+  @ApiProperty({ type: String, format: "uuid", nullable: true }) orderId!: string | null;
   @ApiProperty({ format: "uuid" }) customerId!: string;
   @ApiProperty({ type: String, format: "uuid", nullable: true }) createdByUserId!: string | null;
   @ApiProperty({ enum: ["USD"] }) currency!: string;
@@ -35,7 +35,7 @@ export class InvoiceResponseDto {
   @ApiProperty({ type: [InvoiceLineResponseDto] }) lines!: InvoiceLineResponseDto[];
   @ApiProperty({ type: String, format: "date-time" }) createdAt!: string;
   @ApiProperty({ type: String, format: "date-time" }) updatedAt!: string;
-  @ApiProperty({ type: String, format: "date-time" }) issuedAt!: string;
+  @ApiProperty({ type: String, format: "date-time", nullable: true }) issuedAt!: string | null;
   @ApiProperty({ type: String, format: "date-time", nullable: true }) dueAt!: string | null;
   @ApiProperty({ type: String, format: "date-time", nullable: true }) paidAt!: string | null;
   @ApiProperty({ type: String, format: "date-time", nullable: true }) voidedAt!: string | null;

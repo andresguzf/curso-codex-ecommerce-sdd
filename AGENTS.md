@@ -279,7 +279,7 @@ Invoice: DRAFT --> PENDING_PAYMENT --> PAID
 
 # REST API and OpenAPI status
 
-El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, se sirve en `/api/v1/openapi.json` y expone Swagger UI en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Por ahora solo el health check está implementado; el resto de este mapa continúa planificado. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
+El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, se sirve en `/api/v1/openapi.json` y expone Swagger UI en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Health, autenticación, carrito, checkout, órdenes e invoice flows de las tareas completadas ya tienen rutas implementadas; el resto de este mapa continúa planificado. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
 
 ## Health
 
@@ -383,12 +383,20 @@ Implementado en 7.7: `ADMIN` y `BILLING` pueden completar una orden `INVOICED` m
 
 Implementado en 8.1: `InvoiceAggregate` crea borradores `DRAFT` sin número, valida origen, referencias, líneas, importes de precisión fija, impuestos, moneda `USD`, snapshots y fechas, y copia los datos en sus fronteras para mantenerlos inmutables. Al emitir a `PENDING_PAYMENT` asigna el número determinista y único `INV-<UUID>`; después admite `PAID` y permite anular desde `DRAFT`, `PENDING_PAYMENT` o `PAID`. `InvoiceLifecycleService` bloquea la factura, persiste exclusivamente los campos de ciclo de vida y registra `INVOICE_STATUS_CHANGED` en la misma transacción para `ADMIN` o `BILLING`. Un fallo de auditoría revierte la transición.
 
-Implementado en 8.2: `InvoiceFromOrderService` coordina orden y factura dentro de una transacción PostgreSQL. Bloquea primero la orden igual que el flujo de cancelación, rechaza estados no elegibles, pagos ausentes y facturas activas, y conserva líneas, precios, impuestos, totales y cliente desde la orden sin consultar producto o usuario vigente. Persiste factura, líneas, estado `INVOICED` y dos entradas de auditoría de forma atómica. La restricción parcial `invoices_active_order_unique` sirve como defensa adicional contra duplicados. No importa ni invoca operaciones de inventario. Los endpoints restantes y la factura manual pertenecen a 8.3–8.4; el snapshot empresarial completo depende de 15.4.
+Implementado en 8.2: `InvoiceFromOrderService` coordina orden y factura dentro de una transacción PostgreSQL. Bloquea primero la orden igual que el flujo de cancelación, rechaza estados no elegibles, pagos ausentes y facturas activas, y conserva líneas, precios, impuestos, totales y cliente desde la orden sin consultar producto o usuario vigente. Persiste factura, líneas, estado `INVOICED` y dos entradas de auditoría de forma atómica. La restricción parcial `invoices_active_order_unique` sirve como defensa adicional contra duplicados. No importa ni invoca operaciones de inventario. El snapshot empresarial completo depende de 15.4.
 
-- `GET /api/v1/invoices`: listado paginado y filtrado.
-- `POST /api/v1/invoices`: factura manual sin impacto en inventario.
-- `GET /api/v1/invoices/:invoiceId`: detalle autorizado.
-- `PATCH /api/v1/invoices/:invoiceId/status`: transición de estado autorizada.
+Implementado en 8.3: `POST /api/v1/invoices` crea un borrador manual `MANUAL` sin orden para `ADMIN` o `BILLING`. Valida un cliente activo con rol `CUSTOMER`, líneas personalizadas o referencias a productos activos, cantidades, importes y tasas; cuando existe `productId`, captura SKU, nombre y descripción vigentes del backend en vez de confiar en esos textos del cliente. Calcula subtotal, impuesto por línea con redondeo a centavos y total en `USD`, y persiste factura, líneas y `MANUAL_INVOICE_CREATED` atómicamente. No importa ni invoca orden, pago o inventario. El snapshot empresarial completo depende de 15.4.
+
+Implementado en 8.4: `InvoiceQueryService` y `InvoiceController` exponen `GET /api/v1/invoices` con búsqueda, filtros por cliente/estado/origen/fechas, ordenamiento explícito y paginación backend; `GET /api/v1/invoices/:invoiceId` reconstruye el detalle desde snapshots y líneas históricas. `CUSTOMER` queda limitado por API a sus propias facturas, mientras `ADMIN` y `BILLING` consultan el ámbito administrativo. `PATCH /api/v1/invoices/:invoiceId/status` delega en el agregado y `InvoiceLifecycleService` para aplicar transiciones válidas, bloqueo y auditoría atómica únicamente a `ADMIN`/`BILLING`; las operaciones no tocan inventario.
+
+Implementado en 8.5: el back office ofrece `/invoices` y `/invoices/:invoiceId` con tabla paginada, búsqueda superior, filtros colapsables, detalle histórico y acciones de transición para `ADMIN` y `BILLING`. `ManualInvoiceForm` usa React Hook Form con `zodResolver` y Zod, permite líneas manuales y envía solo identificadores/valores validados al API; la conversión desde una orden usa `POST /api/v1/orders/:orderId/invoice`. Los clientes no tienen acceso al workspace administrativo. El autocomplete remoto se incorpora posteriormente en 17.3.
+
+Implementado en 8.6: el storefront ofrece `/account/invoices` y `/account/invoices/:invoiceId` exclusivamente a `CUSTOMER`. El listado consulta una sola página con `GET /api/v1/invoices`, conserva `page` en la URL y presenta paginación; el detalle usa `GET /api/v1/invoices/:invoiceId` y muestra únicamente líneas, totales, estado, origen y snapshots históricos reconocidos. Las consultas privadas incluyen el identificador del cliente en la clave de TanStack Query, no persisten respuestas y no exponen acciones de cambio de estado. La autorización sigue siendo del API: `CUSTOMER` solo recibe sus facturas y una factura ajena responde como no encontrada, sin renderizar sus datos.
+
+- `GET /api/v1/invoices`: implementado en 8.4; listado paginado y filtrado para los tres roles, forzando la propiedad del cliente.
+- `POST /api/v1/invoices`: implementado en 8.3; crea un borrador manual para un cliente activo con líneas válidas, importes calculados por el servidor y cero impacto en orden, pago e inventario.
+- `GET /api/v1/invoices/:invoiceId`: implementado en 8.4; detalle autorizado con líneas y snapshots históricos.
+- `PATCH /api/v1/invoices/:invoiceId/status`: implementado en 8.4; transición de estado autorizada para `ADMIN` y `BILLING`.
 - `GET /api/v1/invoices/:invoiceId/pdf`: descargar PDF autorizado.
 
 ## Store profile

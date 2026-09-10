@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import Link from "next/link";
 import { SessionControls } from "@/features/auth/session-controls";
 import { storefrontDestinationFor, useSessionStore } from "@/features/auth/session";
 
@@ -18,5 +19,5 @@ export default function AccountPage() {
   }, [router, session, status]);
 
   if (status !== "authenticated" || !session || session.user.role !== "CUSTOMER") return <main className="grid min-h-screen place-items-center">Restaurando sesión…</main>;
-  return <main className="grid min-h-screen place-items-center bg-slate-50 px-6"><section className="max-w-lg text-center"><p className="font-mono text-xs tracking-[.2em] text-indigo-600 uppercase">Cuenta de cliente</p><h1 className="mt-3 text-4xl font-black tracking-tight">{session.user.displayName}</h1><p className="mt-4 text-slate-600">Tu sesión vive solo en memoria y se restaura de forma segura al recargar.</p><div className="mt-8"><SessionControls /></div></section></main>;
+  return <main className="grid min-h-screen place-items-center bg-slate-50 px-6"><section className="max-w-lg text-center"><p className="font-mono text-xs tracking-[.2em] text-indigo-600 uppercase">Cuenta de cliente</p><h1 className="mt-3 text-4xl font-black tracking-tight">{session.user.displayName}</h1><p className="mt-4 text-slate-600">Tu sesión vive solo en memoria y se restaura de forma segura al recargar.</p><nav aria-label="Documentos de tu cuenta" className="mt-8 flex flex-wrap justify-center gap-4"><Link href="/account/orders" className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-bold text-blue-700 hover:border-blue-400">Mis compras</Link><Link href="/account/invoices" className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-bold text-blue-700 hover:border-blue-400">Mis facturas</Link></nav><div className="mt-8"><SessionControls /></div></section></main>;
 }

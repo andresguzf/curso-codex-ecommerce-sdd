@@ -1,0 +1,32 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ConfirmationDialog, ErrorState, LoadingState } from "@technology-ecommerce/ui";
+import Link from "next/link";
+import { useState } from "react";
+
+import { useSessionStore } from "../auth/session";
+import { changeInvoiceStatus, getInvoice } from "./invoice-api";
+import { formatInvoiceDate, formatInvoiceMoney, invoiceStatusLabels, InvoiceStatus, snapshotText } from "./invoice-presentation";
+const invoicesQueryRoot = ["backoffice", "invoices"] as const;
+
+function nextStatus(status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID") {
+  if (status === "DRAFT") return "PENDING_PAYMENT" as const;
+  if (status === "PENDING_PAYMENT") return "PAID" as const;
+  if (status === "PAID") return "VOID" as const;
+  return undefined;
+}
+
+export function InvoiceDetailPage({ invoiceId }: Readonly<{ invoiceId: string }>) {
+  const session = useSessionStore((state) => state.session);
+  const [notice, setNotice] = useState<string>();
+  const [voidOpen, setVoidOpen] = useState(false);
+  const client = useQueryClient();
+  const query = useQuery({ enabled: Boolean(session), queryKey: [...invoicesQueryRoot, session?.user.id, "detail", invoiceId], queryFn: ({ signal }) => getInvoice(session!.accessToken, invoiceId, signal) });
+  const mutation = useMutation({ mutationFn: (status: "PENDING_PAYMENT" | "PAID" | "VOID") => changeInvoiceStatus(session!.accessToken, invoiceId, { status }), onSuccess: async (_invoice, status) => { await client.invalidateQueries({ queryKey: invoicesQueryRoot }); setVoidOpen(false); setNotice(`Factura ${invoiceStatusLabels[status].toLowerCase()} correctamente.`); }, onError: (error: Error) => setNotice(error.message) });
+  if (query.isPending) return <main className="grid min-h-screen place-items-center"><LoadingState message="Cargando detalle de factura…" /></main>;
+  if (query.isError) return <main className="mx-auto min-h-screen max-w-3xl px-6 py-12"><Link className="font-bold text-blue-700 underline" href="/invoices">← Facturas</Link><div className="mt-6"><ErrorState action={<button className="font-bold underline" onClick={() => { void query.refetch(); }} type="button">Reintentar</button>} message={query.error instanceof Error ? query.error.message : "No se pudo cargar la factura."} /></div></main>;
+  const invoice = query.data;
+  const transition = nextStatus(invoice.status);
+  return <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 sm:px-8"><div className="mx-auto max-w-6xl"><header className="flex flex-wrap items-end justify-between gap-5 border-b border-slate-300 pb-6"><div><Link className="text-sm font-bold text-blue-800 hover:underline" href="/invoices">← Volver a facturas</Link><p className="mb-0 mt-5 break-all font-mono text-sm font-bold">{invoice.number ?? "Borrador sin número"}</p><h1 className="mb-0 mt-2 text-3xl font-bold">Detalle de factura</h1><p className="mb-0 mt-2 text-sm text-slate-500">Creada {formatInvoiceDate(invoice.createdAt)} · Actualizada {formatInvoiceDate(invoice.updatedAt)}</p></div><div className="flex flex-wrap items-center gap-3"><InvoiceStatus status={invoice.status} />{transition && transition !== "VOID" ? <button className="rounded-lg border border-emerald-300 px-4 py-2 font-bold text-emerald-800" disabled={mutation.isPending} onClick={() => mutation.mutate(transition)} type="button">{invoice.status === "DRAFT" ? "Emitir factura" : "Marcar pagada"}</button> : null}{transition === "VOID" ? <button className="rounded-lg border border-red-300 px-4 py-2 font-bold text-red-800" onClick={() => setVoidOpen(true)} type="button">Anular</button> : null}</div></header><div aria-live="polite" className="min-h-10 py-3 text-sm font-semibold text-emerald-800">{notice}</div><article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="grid gap-7 p-6 lg:grid-cols-[minmax(0,1fr)_19rem]"><section aria-labelledby="invoice-lines"><h2 className="text-xl font-bold" id="invoice-lines">Líneas históricas</h2><div className="mt-4 overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead><tr className="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500"><th className="py-3 pr-4">Producto</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">Precio</th><th className="py-3 pl-3 text-right">Total</th></tr></thead><tbody>{invoice.lines.map((line) => <tr className="border-b border-slate-200" key={line.position}><td className="py-4 pr-4"><strong>{line.nameSnapshot}</strong><span className="mt-1 block break-all text-xs text-slate-500">{line.skuSnapshot ?? "Línea manual"}</span></td><td className="px-3 py-4">{line.quantity}</td><td className="px-3 py-4 tabular-nums">{formatInvoiceMoney(line.unitPrice)}</td><td className="py-4 pl-3 text-right font-bold tabular-nums">{formatInvoiceMoney(line.lineTotal)}</td></tr>)}</tbody></table></div></section><aside className="self-start rounded-xl bg-slate-50 p-5"><h2 className="text-lg font-bold">Totales en USD</h2><dl className="mt-5 grid gap-3">{[["Subtotal", invoice.subtotal], ["Envío", invoice.shippingTotal], ["Impuestos", invoice.taxTotal], ["Total", invoice.total]].map(([label, value]) => <div className={`flex justify-between gap-4 ${label === "Total" ? "border-t border-slate-300 pt-4 text-lg font-bold" : "text-sm"}`} key={label}><dt>{label}</dt><dd className="m-0 tabular-nums">{formatInvoiceMoney(value)}</dd></div>)}</dl></aside></div><div className="grid gap-6 border-t border-slate-200 p-6 md:grid-cols-2"><section><h2 className="text-lg font-bold">Cliente histórico</h2><p className="mb-0 mt-3">{snapshotText(invoice.customerSnapshot, "displayName")}</p><p className="mb-0 mt-1 break-all text-sm text-slate-500">{snapshotText(invoice.customerSnapshot, "email")}</p></section><section><h2 className="text-lg font-bold">Origen</h2><p className="mb-0 mt-3">{invoice.origin === "ORDER" ? "Orden de compra" : "Factura manual"}</p><p className="mb-0 mt-1 break-all font-mono text-xs text-slate-500">{invoice.orderId ?? "Sin orden asociada"}</p></section></div></article></div><ConfirmationDialog confirmLabel="Anular factura" description={`La factura ${invoice.number ?? "sin número"} quedará anulada y conservará su historial.`} isPending={mutation.isPending} onCancel={() => setVoidOpen(false)} onConfirm={() => mutation.mutate("VOID")} open={voidOpen} title="¿Anular esta factura?" /></main>;
+}

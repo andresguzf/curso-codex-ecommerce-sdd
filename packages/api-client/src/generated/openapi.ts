@@ -160,6 +160,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search and paginate invoices; customers only see their own */
+        get: operations["listInvoices"];
+        put?: never;
+        /** Create a manual draft invoice without an order or inventory changes */
+        post: operations["createManualInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{invoiceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an invoice; customers only see their own */
+        get: operations["getInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{invoiceId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Transition an invoice status as Admin or Billing */
+        patch: operations["changeInvoiceStatus"];
+        trace?: never;
+    };
     "/api/v1/inventory/{productId}/adjustments": {
         parameters: {
             query?: never;
@@ -613,13 +665,13 @@ export interface components {
         InvoiceResponseDto: {
             /** Format: uuid */
             id: string;
-            number: string;
+            number: string | null;
             /** @enum {string} */
             origin: "MANUAL" | "ORDER";
             /** @enum {string} */
             status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID";
             /** Format: uuid */
-            orderId: string;
+            orderId: string | null;
             /** Format: uuid */
             customerId: string;
             /** Format: uuid */
@@ -642,13 +694,82 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             /** Format: date-time */
-            issuedAt: string;
+            issuedAt: string | null;
             /** Format: date-time */
             dueAt: string | null;
             /** Format: date-time */
             paidAt: string | null;
             /** Format: date-time */
             voidedAt: string | null;
+        };
+        InvoiceSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            number: string | null;
+            /** @enum {string} */
+            origin: "MANUAL" | "ORDER";
+            /** @enum {string} */
+            status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID";
+            /** Format: uuid */
+            orderId: string | null;
+            /** Format: uuid */
+            customerId: string;
+            /** Format: uuid */
+            createdByUserId: string | null;
+            /** @enum {string} */
+            currency: "USD";
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            issuerSnapshot: {
+                [key: string]: unknown;
+            };
+            customerSnapshot: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            issuedAt: string | null;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            voidedAt: string | null;
+        };
+        InvoicePageDto: {
+            items: components["schemas"]["InvoiceSummaryDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        InvoiceStatusRequestDto: {
+            /** @enum {string} */
+            status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID";
+        };
+        ManualInvoiceLineRequestDto: {
+            /** Format: uuid */
+            productId?: string | null;
+            sku?: string | null;
+            name?: string;
+            description?: string;
+            quantity: number;
+            /** @example 100.00 */
+            unitPrice: string;
+            /** @example 19.0000 */
+            taxRate: string;
+        };
+        CreateManualInvoiceRequestDto: {
+            /** Format: uuid */
+            customerId: string;
+            /** @default 0.00 */
+            shippingTotal: string;
+            lines: components["schemas"]["ManualInvoiceLineRequestDto"][];
         };
         InventoryAdjustmentRequestDto: {
             /**
@@ -1594,6 +1715,210 @@ export interface operations {
                 content?: never;
             };
             /** @description Invalid order state, missing payment or existing active invoice */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInvoices: {
+        parameters: {
+            query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "number" | "total" | "status" | "origin";
+                createdTo?: unknown;
+                createdFrom?: unknown;
+                origin?: "MANUAL" | "ORDER";
+                status?: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID";
+                customerId?: unknown;
+                search?: string;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicePageDto"];
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createManualInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManualInvoiceRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceResponseDto"];
+                };
+            };
+            /** @description Invalid customer, line or amount input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only Admin or Billing can create manual invoices */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Active customer or referenced product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceResponseDto"];
+                };
+            };
+            /** @description Invalid invoice identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    changeInvoiceStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceStatusRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceResponseDto"];
+                };
+            };
+            /** @description Invalid invoice status request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid invoice state transition */
             409: {
                 headers: {
                     [name: string]: unknown;

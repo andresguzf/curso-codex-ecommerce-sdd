@@ -1341,6 +1341,321 @@ describe("persistent public cart", () => {
     expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
   });
 
+  it("creates a manual draft invoice for Admin with server-calculated totals and no commercial side effects", async () => {
+    const [customerBefore] = await database
+      .select({ displayName: users.displayName, email: users.email })
+      .from(users)
+      .where(eq(users.id, userIds.customerA));
+    const beforeOrders = await database.select().from(orders);
+    const beforePayments = await database.select().from(payments);
+    const beforeBalances = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/api/v1/invoices",
+      headers: authorization(accessTokens.admin),
+      payload: {
+        customerId: userIds.customerA,
+        shippingTotal: "5.00",
+        lines: [
+          {
+            name: "Consultoría de instalación",
+            description: "Instalación y configuración del equipo",
+            quantity: 2,
+            unitPrice: "100.00",
+            taxRate: "19.0000",
+          },
+        ],
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    const body = response.json<{
+      id: string;
+      number: string | null;
+      orderId: string | null;
+      origin: string;
+      status: string;
+      subtotal: string;
+      shippingTotal: string;
+      taxTotal: string;
+      total: string;
+      customerSnapshot: Record<string, unknown>;
+      lines: Array<Record<string, unknown>>;
+    }>();
+    expect(body).toMatchObject({
+      number: null,
+      orderId: null,
+      origin: "MANUAL",
+      status: "DRAFT",
+      subtotal: "200.00",
+      shippingTotal: "5.00",
+      taxTotal: "38.00",
+      total: "243.00",
+      customerSnapshot: {
+        id: userIds.customerA,
+        displayName: customerBefore?.displayName,
+        email: customerBefore?.email,
+      },
+      lines: [
+        {
+          productId: null,
+          position: 1,
+          skuSnapshot: null,
+          nameSnapshot: "Consultoría de instalación",
+          descriptionSnapshot: "Instalación y configuración del equipo",
+          quantity: 2,
+          unitPrice: "100.00",
+          taxRate: "19.0000",
+          taxAmount: "38.00",
+          lineSubtotal: "200.00",
+          lineTotal: "238.00",
+          currency: "USD",
+        },
+      ],
+    });
+
+    const [storedInvoice] = await database.select().from(invoices).where(eq(invoices.id, body.id));
+    const storedLines = await database.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, body.id));
+    expect(storedInvoice).toMatchObject({
+      createdByUserId: userIds.admin,
+      customerId: userIds.customerA,
+      number: null,
+      orderId: null,
+      origin: "MANUAL",
+      status: "DRAFT",
+      total: "243.00",
+    });
+    expect(storedLines).toHaveLength(1);
+    expect(await database.select().from(orders)).toEqual(beforeOrders);
+    expect(await database.select().from(payments)).toEqual(beforePayments);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeBalances);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+    const audits = await database
+      .select()
+      .from(auditEntries)
+      .where(and(eq(auditEntries.entityId, body.id), eq(auditEntries.action, "MANUAL_INVOICE_CREATED")));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actorUserId: userIds.admin,
+      changes: {
+        after: {
+          customerId: userIds.customerA,
+          lineCount: 1,
+          orderId: null,
+          origin: "MANUAL",
+          status: "DRAFT",
+          total: "243.00",
+        },
+      },
+    });
+  });
+
+  it("allows Billing to reference active products and freezes their commercial identity", async () => {
+    const [productBefore] = await database.select().from(products).where(eq(products.id, productIds.precise));
+    const beforeMovements = await database.select().from(inventoryMovements);
+    const response = await server.inject({
+      method: "POST",
+      url: "/api/v1/invoices",
+      headers: authorization(accessTokens.billing),
+      payload: {
+        customerId: userIds.customerB,
+        lines: [
+          {
+            productId: productIds.precise,
+            name: "Ignored client name",
+            description: "Ignored client description",
+            quantity: 3,
+            unitPrice: "0.29",
+            taxRate: "7.5000",
+          },
+        ],
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    const body = response.json<{ id: string; lines: Array<Record<string, unknown>>; total: string }>();
+    expect(body).toMatchObject({
+      total: "0.94",
+      lines: [
+        {
+          productId: productIds.precise,
+          skuSnapshot: productBefore?.sku,
+          nameSnapshot: productBefore?.name,
+          descriptionSnapshot: productBefore?.description,
+          lineSubtotal: "0.87",
+          taxAmount: "0.07",
+          lineTotal: "0.94",
+        },
+      ],
+    });
+    await database
+      .update(products)
+      .set({ name: "Changed after manual invoice", updatedAt: new Date() })
+      .where(eq(products.id, productIds.precise));
+    const [storedLine] = await database.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, body.id));
+    expect(storedLine?.nameSnapshot).toBe(productBefore?.name);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+  });
+
+  it("validates manual invoice permissions, customers, products and lines", async () => {
+    const validPayload = {
+      customerId: userIds.customerA,
+      lines: [
+        {
+          name: "Custom line",
+          description: "Valid custom line",
+          quantity: 1,
+          unitPrice: "10.00",
+          taxRate: "0.0000",
+        },
+      ],
+    };
+    expect((await server.inject({ method: "POST", url: "/api/v1/invoices", payload: validPayload })).statusCode).toBe(401);
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/api/v1/invoices",
+          headers: authorization(accessTokens.customerA),
+          payload: validPayload,
+        })
+      ).statusCode,
+    ).toBe(403);
+
+    const invalidRequests = [
+      { ...validPayload, currency: "EUR" },
+      { ...validPayload, lines: [] },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], description: undefined }] },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], unitPrice: "10" }] },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], taxRate: "101.0000" }] },
+    ];
+    for (const payload of invalidRequests) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/api/v1/invoices",
+        headers: authorization(accessTokens.admin),
+        payload,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ code: "REQUEST_VALIDATION_FAILED" });
+    }
+
+    for (const payload of [
+      { ...validPayload, customerId: userIds.admin },
+      {
+        ...validPayload,
+        lines: [{ ...validPayload.lines[0], productId: randomUUID() }],
+      },
+    ]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/api/v1/invoices",
+        headers: authorization(accessTokens.billing),
+        payload,
+      });
+      expect(response.statusCode).toBe(404);
+    }
+    expect(await database.select().from(invoices)).toHaveLength(0);
+  });
+
+  it("lists invoices with backend pagination and filters, protects ownership and transitions status", async () => {
+    const create = (customerId: string, name: string) =>
+      server.inject({
+        method: "POST",
+        url: "/api/v1/invoices",
+        headers: authorization(accessTokens.billing),
+        payload: {
+          customerId,
+          lines: [
+            {
+              name,
+              description: `${name} description`,
+              quantity: 1,
+              unitPrice: "10.00",
+              taxRate: "0.0000",
+            },
+          ],
+        },
+      });
+
+    const first = await create(userIds.customerA, "Alpha invoice");
+    const second = await create(userIds.customerA, "Beta invoice");
+    const foreign = await create(userIds.customerB, "Foreign invoice");
+    expect([first.statusCode, second.statusCode, foreign.statusCode]).toEqual([201, 201, 201]);
+    const firstId = first.json<{ id: string }>().id;
+    const secondId = second.json<{ id: string }>().id;
+    const foreignId = foreign.json<{ id: string }>().id;
+    await database
+      .update(invoices)
+      .set({ createdAt: new Date("2026-01-01T12:00:00Z"), updatedAt: new Date("2026-01-01T12:00:00Z") })
+      .where(eq(invoices.id, firstId));
+    await database
+      .update(invoices)
+      .set({ createdAt: new Date("2026-01-02T12:00:00Z"), updatedAt: new Date("2026-01-02T12:00:00Z") })
+      .where(eq(invoices.id, secondId));
+
+    const pending = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/invoices/${firstId}/status`,
+      headers: authorization(accessTokens.billing),
+      payload: { status: "PENDING_PAYMENT" },
+    });
+    expect(pending.statusCode).toBe(200);
+    expect(pending.json()).toMatchObject({ id: firstId, status: "PENDING_PAYMENT", number: `INV-${firstId.toUpperCase()}` });
+    const paid = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/invoices/${firstId}/status`,
+      headers: authorization(accessTokens.admin),
+      payload: { status: "PAID" },
+    });
+    expect(paid.statusCode).toBe(200);
+    expect(paid.json()).toMatchObject({ id: firstId, status: "PAID" });
+
+    const page = await server.inject({
+      method: "GET",
+      url: "/api/v1/invoices?page=1&pageSize=1&origin=MANUAL&sortBy=createdAt&sortOrder=asc",
+      headers: authorization(accessTokens.billing),
+    });
+    expect(page.statusCode).toBe(200);
+    expect(page.json()).toMatchObject({
+      page: 1,
+      pageSize: 1,
+      totalItems: 3,
+      totalPages: 3,
+      items: [{ id: firstId, origin: "MANUAL", status: "PAID" }],
+    });
+    expect(page.json<{ items: unknown[] }>().items[0]).not.toHaveProperty("lines");
+
+    const filtered = await server.inject({
+      method: "GET",
+      url: `/api/v1/invoices?status=PAID&search=${firstId}`,
+      headers: authorization(accessTokens.billing),
+    });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json()).toMatchObject({ totalItems: 1, items: [{ id: firstId, status: "PAID" }] });
+
+    const customerList = await server.inject({
+      method: "GET",
+      url: `/api/v1/invoices?page=1&pageSize=1&customerId=${userIds.customerB}`,
+      headers: authorization(accessTokens.customerA),
+    });
+    expect(customerList.statusCode).toBe(200);
+    expect(customerList.json()).toMatchObject({ totalItems: 2, items: [{ customerId: userIds.customerA }] });
+    const detail = await server.inject({
+      method: "GET",
+      url: `/api/v1/invoices/${firstId}`,
+      headers: authorization(accessTokens.customerA),
+    });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json()).toMatchObject({ id: firstId, status: "PAID", lines: [{ nameSnapshot: "Alpha invoice" }] });
+    expect((await server.inject({ method: "GET", url: `/api/v1/invoices/${foreignId}`, headers: authorization(accessTokens.customerA) })).statusCode).toBe(404);
+    expect((await server.inject({ method: "GET", url: `/api/v1/invoices/${foreignId}`, headers: authorization(accessTokens.admin) })).statusCode).toBe(200);
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/invoices/${secondId}/status`, headers: authorization(accessTokens.customerA), payload: { status: "VOID" } })).statusCode).toBe(403);
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/invoices/${secondId}/status`, headers: authorization(accessTokens.billing), payload: { status: "PAID" } })).statusCode).toBe(409);
+    expect((await server.inject({ method: "GET", url: "/api/v1/invoices", headers: authorization(accessTokens.customerA) })).statusCode).toBe(200);
+    expect((await server.inject({ method: "GET", url: "/api/v1/invoices" })).statusCode).toBe(401);
+  });
+
   it("rejects stock changed after cart validation without partial checkout writes", async () => {
     await addToCart("customerA", productIds.available, 2);
     await database
