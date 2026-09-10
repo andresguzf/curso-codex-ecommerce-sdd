@@ -39,15 +39,29 @@ describe("backoffice order management", () => {
     expect(api.listOrders).toHaveBeenCalledWith("ADMIN-token", expect.objectContaining({ page: 4, search: "cliente", status: "PROCESSING", invoicing: "NO_ACTIVE_INVOICE", sortBy: "total", sortOrder: "asc" }), expect.any(AbortSignal));
     fireEvent.change(screen.getByPlaceholderText("Número, nombre o correo del cliente"), { target: { value: "ORD-009" } }); fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(navigation.push).toHaveBeenLastCalledWith(expect.stringContaining("page=1&search=ORD-009"), { scroll: false });
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "CANCELLED" } }); fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-09-01" } }); fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-30" } }); fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
     expect(navigation.push).toHaveBeenLastCalledWith(expect.stringMatching(/page=1.*status=CANCELLED.*createdFrom=2026-09-01.*createdTo=2026-09-30/), { scroll: false });
   });
   it("validates dates and customer UUID before navigation", async () => {
     mount(<OrdersManagementPage />); await screen.findByText("ORD-001");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
     fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-10-01" } }); fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-01" } }); fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
     expect(screen.getByText("La fecha inicial no puede ser posterior a la fecha final.")).toBeInTheDocument(); expect(navigation.push).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "" } }); fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "" } }); fireEvent.change(screen.getByLabelText("ID de cliente"), { target: { value: "not-a-uuid" } }); fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
     expect(screen.getByText("El identificador del cliente debe ser un UUID válido.")).toBeInTheDocument();
+  });
+  it("toggles the right filter panel with one centered arrow control", async () => {
+    mount(<OrdersManagementPage />); await screen.findByText("ORD-001");
+    const showFilters = screen.getByRole("button", { name: "Mostrar filtros" });
+    expect(showFilters).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(showFilters);
+    expect(screen.getByRole("heading", { name: "Filtros y orden de órdenes" })).toBeInTheDocument();
+    const hideFilters = screen.getByRole("button", { name: "Ocultar filtros" });
+    expect(hideFilters).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(hideFilters);
+    expect(screen.queryByRole("heading", { name: "Filtros y orden de órdenes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mostrar filtros" })).toHaveAttribute("aria-expanded", "false");
   });
   it("shows Admin actions by state, confirms completion and validates cancellation reason", async () => {
     const invalidate = mount(<OrdersManagementPage />); await screen.findByText("ORD-001");

@@ -6,7 +6,7 @@ import {
   type CreateProductRequest,
   type ProductListItem,
 } from "@technology-ecommerce/api-schemas";
-import { TextField } from "@technology-ecommerce/ui";
+import { IconButton, TextField } from "@technology-ecommerce/ui";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -162,21 +162,8 @@ export function ProductForm({
       />
 
       <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-5">
-        <button
-          className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          disabled={isPending}
-          onClick={onCancel}
-          type="button"
-        >
-          Cancelar
-        </button>
-        <button
-          className="min-h-11 rounded-lg bg-[#15345b] px-5 py-2 font-bold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60"
-          disabled={isPending}
-          type="submit"
-        >
-          {isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"}
-        </button>
+        <IconButton className="border-slate-300 text-slate-800 hover:bg-slate-100 focus-visible:ring-blue-700" disabled={isPending} icon="x" label="Cancelar" onClick={onCancel} />
+        <IconButton className="border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={isPending} icon="check" label={isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"} type="submit" />
       </div>
     </form>
   );

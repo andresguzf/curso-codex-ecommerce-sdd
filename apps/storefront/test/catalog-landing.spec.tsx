@@ -347,6 +347,7 @@ describe("storefront catalog landing", () => {
       sortOrder: "asc",
     }));
     expect(screen.getByRole("searchbox", { name: "Buscar en el catálogo" })).toHaveValue("teclado");
+    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     expect(screen.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
     expect(screen.getByRole("combobox", { name: "Ordenar por" })).toHaveValue("price:asc");
   });
@@ -357,6 +358,7 @@ describe("storefront catalog landing", () => {
     renderCatalog();
     await waitFor(() => expect(getPublicProducts).toHaveBeenCalled());
 
+    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     fireEvent.change(screen.getByRole("combobox", { name: "Disponibilidad" }), {
       target: { value: "OUT_OF_STOCK" },
     });

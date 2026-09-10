@@ -10,6 +10,7 @@ import {
 import {
   DataTable,
   ErrorState,
+  IconButton,
   LoadingState,
   type DataTableColumn,
 } from "@technology-ecommerce/ui";
@@ -207,7 +208,7 @@ export function InventoryManagement({ productId }: Readonly<{ productId: string 
               </div>
               {direction === "REMOVE" ? <p className="m-0 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">El API rechazará el ajuste si supera las existencias disponibles.</p> : null}
               <div className="flex justify-end border-t border-slate-200 pt-5">
-                <button className="min-h-11 rounded-lg bg-[#15345b] px-5 py-3 font-bold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60" disabled={adjustmentMutation.isPending} type="submit">{adjustmentMutation.isPending ? "Registrando…" : "Registrar ajuste"}</button>
+                <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" busy={adjustmentMutation.isPending} disabled={adjustmentMutation.isPending} icon="check" label={adjustmentMutation.isPending ? "Registrando…" : "Registrar ajuste"} type="submit" />
               </div>
             </form>
           </section>

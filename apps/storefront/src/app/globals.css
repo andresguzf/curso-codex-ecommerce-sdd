@@ -11,3 +11,14 @@ body {
   color: #0f172a;
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes filter-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="filter-drawer"] > aside {
+    animation: filter-drawer-in 180ms ease-out;
+  }
+}

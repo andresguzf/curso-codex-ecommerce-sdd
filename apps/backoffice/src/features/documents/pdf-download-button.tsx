@@ -1,6 +1,7 @@
 "use client";
 
 import { savePdfDownload, type PdfDownload } from "@technology-ecommerce/api-client";
+import { IconButton } from "@technology-ecommerce/ui";
 import { useState } from "react";
 
 type PdfDownloadButtonProps = Readonly<{
@@ -26,9 +27,14 @@ export function PdfDownloadButton({ onDownload }: PdfDownloadButtonProps) {
   }
 
   return <div className="flex flex-wrap items-center gap-3">
-    <button type="button" onClick={() => { void download(); }} disabled={state === "pending"} aria-busy={state === "pending"} className="inline-flex min-h-10 items-center rounded-lg border border-blue-700 px-4 font-bold text-blue-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60">
-      {state === "pending" ? "Preparando PDF…" : "Descargar PDF"}
-    </button>
+    <IconButton
+      busy={state === "pending"}
+      className="border-blue-700 text-blue-800 hover:bg-blue-50 focus-visible:ring-blue-700"
+      disabled={state === "pending"}
+      icon="download"
+      label={state === "pending" ? "Preparando PDF…" : "Descargar PDF"}
+      onClick={() => { void download(); }}
+    />
     {message ? <p role={state === "error" ? "alert" : "status"} className={state === "error" ? "text-sm font-semibold text-red-700" : "text-sm font-semibold text-emerald-700"}>{message}</p> : null}
   </div>;
 }

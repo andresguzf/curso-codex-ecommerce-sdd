@@ -10,6 +10,8 @@ import {
   ConfirmationDialog,
   DataTable,
   ErrorState,
+  Icon,
+  IconButton,
   LoadingState,
   type DataTableColumn,
 } from "@technology-ecommerce/ui";
@@ -138,14 +140,14 @@ export function ProductManagement() {
     {
       cell: (product) => (
         <div className="flex min-w-64 flex-wrap gap-2">
-          <button className="rounded-md border border-slate-300 px-3 py-2 font-semibold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "edit", product }); }} type="button">Editar</button>
+          <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "edit", product }); }} />
           {product.status === "ACTIVE" ? (
-            <button className="rounded-md border border-amber-300 px-3 py-2 font-semibold text-amber-900 hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700" onClick={() => setConfirmation({ action: "deactivate", product })} type="button">Desactivar</button>
+            <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50 focus-visible:ring-amber-700" icon="power" label="Desactivar" onClick={() => setConfirmation({ action: "deactivate", product })} />
           ) : (
-            <button className="rounded-md border border-emerald-300 px-3 py-2 font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700" onClick={() => activate(product)} type="button">Activar</button>
+            <IconButton className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 focus-visible:ring-emerald-700" icon="power" label="Activar" onClick={() => activate(product)} />
           )}
-          <Link className="rounded-md border border-blue-300 px-3 py-2 font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" href={`/products/${product.id}/inventory`}>Inventario</Link>
-          <button className="rounded-md border border-red-300 px-3 py-2 font-semibold text-red-800 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700" onClick={() => setConfirmation({ action: "delete", product })} type="button">Eliminar</button>
+          <Link aria-label="Inventario" className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-blue-300 text-blue-800 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" href={`/products/${product.id}/inventory`} title="Inventario"><Icon name="eye" /></Link>
+          <IconButton className="border-red-300 text-red-800 hover:bg-red-50 focus-visible:ring-red-700" icon="trash" label="Eliminar" onClick={() => setConfirmation({ action: "delete", product })} />
         </div>
       ),
       header: "Acciones",
@@ -177,7 +179,7 @@ export function ProductManagement() {
             <h1 className="mb-0 mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Productos</h1>
             <p className="mb-0 mt-2 text-slate-600">Gestiona los datos comerciales; el stock se ajusta por separado.</p>
           </div>
-          <button className="min-h-11 rounded-lg bg-[#15345b] px-5 py-3 font-bold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "create" }); }} type="button">+ Nuevo producto</button>
+          <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" icon="plus" label="+ Nuevo producto" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "create" }); }} />
         </header>
 
         <div aria-atomic="true" aria-live="polite" className={`min-h-12 py-3 text-sm font-semibold ${notice?.includes("correctamente") || notice?.includes("lógicamente") ? "text-emerald-800" : "text-red-800"}`}>{notice}</div>

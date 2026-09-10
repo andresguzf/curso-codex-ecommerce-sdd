@@ -3,10 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  CollapsibleSidePanel,
   ConfirmationDialog,
   DataTable,
   ErrorState,
+  FilterDrawer,
   getPaginationItems,
+  IconButton,
   LoadingState,
   Navigation,
   Pagination,
@@ -29,6 +32,14 @@ describe("shared UI primitives", () => {
     expect(screen.getByRole("navigation", { name: "Navegación principal" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Inicio" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByLabelText("3 productos")).toHaveTextContent("3");
+  });
+
+  it("keeps icon-only actions discoverable with an accessible label and tooltip", () => {
+    render(<IconButton icon="trash" label="Eliminar" />);
+
+    const button = screen.getByRole("button", { name: "Eliminar" });
+    expect(button).toHaveAttribute("title", "Eliminar");
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("connects a form field to its hint and accessible error", () => {
@@ -115,6 +126,39 @@ describe("shared UI primitives", () => {
     expect(onCancel).toHaveBeenCalledOnce();
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
     expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("renders filters in a left horizontal drawer and closes with Escape", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <FilterDrawer onClose={onClose} open title="Filtros del catálogo">
+        <p>Disponibilidad</p>
+      </FilterDrawer>,
+    );
+
+    const drawer = screen.getByRole("dialog", { name: "Filtros del catálogo" });
+    expect(drawer).toHaveClass("left-0");
+    expect(drawer).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("keeps an administrative filter panel beside the content and collapses it by width", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <CollapsibleSidePanel onClose={onClose} open title="Filtros y orden">
+        <label>Estado<select aria-label="Estado"><option>Todos</option></select></label>
+      </CollapsibleSidePanel>,
+    );
+
+    const panel = screen.getByText("Filtros y orden").closest("aside");
+    expect(panel).toHaveAttribute("data-open", "true");
+    expect(panel).toHaveClass("w-[min(100%,19rem)]");
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("shows the first page, four following pages, the last page and one ellipsis", () => {
