@@ -27,6 +27,7 @@ import { configureApplication } from "../../src/application";
 import {
   cartItems,
   auditEntries,
+  invoiceLines,
   invoices,
   carts,
   idempotencyRecords,
@@ -1209,6 +1210,135 @@ describe("persistent public cart", () => {
     expect(response.json()).toMatchObject({ code: "ORDER_RESTOCK_OVERFLOW" });
     expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("PROCESSING");
     expect(await database.select().from(inventoryMovements).where(eq(inventoryMovements.type, "CANCELLATION"))).toHaveLength(0);
+  });
+
+  it("atomically invoices an order from historical snapshots without changing inventory", async () => {
+    await addToCart("customerA", productIds.available, 2);
+    const purchase = await checkoutRequest("customerA", "invoice-order-snapshot-001");
+    expect(purchase.statusCode).toBe(201);
+    const orderId = purchase.json<{ order: { id: string } }>().order.id;
+    const [historicalLine] = await database.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+    expect(historicalLine).toBeDefined();
+    const beforeBalances = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
+
+    await database
+      .update(products)
+      .set({ name: "Changed after checkout", price: "999.00", updatedAt: new Date() })
+      .where(eq(products.id, productIds.available));
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/api/v1/orders/${orderId}/invoice`,
+      headers: authorization(accessTokens.admin),
+    });
+    expect(response.statusCode).toBe(201);
+    const body = response.json<{
+      id: string;
+      number: string;
+      orderId: string;
+      origin: string;
+      status: string;
+      customerSnapshot: Record<string, unknown>;
+      lines: Array<Record<string, unknown>>;
+    }>();
+    expect(body).toMatchObject({
+      number: `INV-${body.id.toUpperCase()}`,
+      orderId,
+      origin: "ORDER",
+      status: "PAID",
+      customerSnapshot: { id: userIds.customerA },
+      lines: [
+        {
+          productId: productIds.available,
+          skuSnapshot: historicalLine?.skuSnapshot,
+          nameSnapshot: historicalLine?.nameSnapshot,
+          descriptionSnapshot: historicalLine?.nameSnapshot,
+          quantity: 2,
+          unitPrice: "100.00",
+          lineSubtotal: "200.00",
+          lineTotal: "200.00",
+          currency: "USD",
+        },
+      ],
+    });
+
+    const [storedOrder] = await database.select().from(orders).where(eq(orders.id, orderId));
+    const [storedInvoice] = await database.select().from(invoices).where(eq(invoices.id, body.id));
+    const storedLines = await database.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, body.id));
+    expect(storedOrder?.status).toBe("INVOICED");
+    expect(storedInvoice).toMatchObject({
+      createdByUserId: userIds.admin,
+      customerId: userIds.customerA,
+      orderId,
+      origin: "ORDER",
+      status: "PAID",
+    });
+    expect(storedLines).toHaveLength(1);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeBalances);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+
+    const orderAudits = await database
+      .select()
+      .from(auditEntries)
+      .where(and(eq(auditEntries.entityId, orderId), eq(auditEntries.action, "ORDER_INVOICED")));
+    const invoiceAudits = await database
+      .select()
+      .from(auditEntries)
+      .where(and(eq(auditEntries.entityId, body.id), eq(auditEntries.action, "INVOICE_CREATED_FROM_ORDER")));
+    expect(orderAudits).toHaveLength(1);
+    expect(invoiceAudits).toHaveLength(1);
+    expect(orderAudits[0]).toMatchObject({
+      actorUserId: userIds.admin,
+      changes: { before: { status: "PROCESSING" }, after: { status: "INVOICED" }, invoiceId: body.id },
+    });
+  });
+
+  it("allows Billing, rejects unauthorized access and creates only one active invoice under concurrency", async () => {
+    await addToCart("customerA", productIds.available, 1);
+    const purchase = await checkoutRequest("customerA", "invoice-order-concurrent-001");
+    const orderId = purchase.json<{ order: { id: string } }>().order.id;
+    const url = `/api/v1/orders/${orderId}/invoice`;
+    const beforeBalances = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
+
+    expect((await server.inject({ method: "POST", url })).statusCode).toBe(401);
+    expect(
+      (await server.inject({ method: "POST", url, headers: authorization(accessTokens.customerA) })).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: "/api/v1/orders/not-a-uuid/invoice",
+          headers: authorization(accessTokens.billing),
+        })
+      ).statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await server.inject({
+          method: "POST",
+          url: `/api/v1/orders/${randomUUID()}/invoice`,
+          headers: authorization(accessTokens.billing),
+        })
+      ).statusCode,
+    ).toBe(404);
+
+    const responses = await Promise.all([
+      server.inject({ method: "POST", url, headers: authorization(accessTokens.billing) }),
+      server.inject({ method: "POST", url, headers: authorization(accessTokens.billing) }),
+    ]);
+    expect(responses.map((result) => result.statusCode).sort()).toEqual([201, 409]);
+    expect(responses.find((result) => result.statusCode === 409)?.json()).toMatchObject({
+      code: "ORDER_ACTIVE_INVOICE",
+    });
+    const storedInvoices = await database.select().from(invoices).where(eq(invoices.orderId, orderId));
+    expect(storedInvoices).toHaveLength(1);
+    expect(storedInvoices[0]).toMatchObject({ createdByUserId: userIds.billing, status: "PAID" });
+    expect((await database.select().from(orders).where(eq(orders.id, orderId)))[0]?.status).toBe("INVOICED");
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeBalances);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
   });
 
   it("rejects stock changed after cart validation without partial checkout writes", async () => {

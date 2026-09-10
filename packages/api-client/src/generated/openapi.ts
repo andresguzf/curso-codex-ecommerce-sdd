@@ -143,6 +143,23 @@ export interface paths {
         patch: operations["updateUser"];
         trace?: never;
     };
+    "/api/v1/orders/{orderId}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically create an invoice from an eligible order and mark it invoiced */
+        post: operations["invoiceOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventory/{productId}/adjustments": {
         parameters: {
             query?: never;
@@ -576,6 +593,62 @@ export interface components {
             role?: "CUSTOMER" | "ADMIN" | "BILLING";
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE" | "BLOCKED";
+        };
+        InvoiceLineResponseDto: {
+            /** Format: uuid */
+            productId: string | null;
+            position: number;
+            skuSnapshot: string | null;
+            nameSnapshot: string;
+            descriptionSnapshot: string;
+            quantity: number;
+            unitPrice: string;
+            taxRate: string;
+            taxAmount: string;
+            lineSubtotal: string;
+            lineTotal: string;
+            /** @enum {string} */
+            currency: "USD";
+        };
+        InvoiceResponseDto: {
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** @enum {string} */
+            origin: "MANUAL" | "ORDER";
+            /** @enum {string} */
+            status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID";
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            customerId: string;
+            /** Format: uuid */
+            createdByUserId: string | null;
+            /** @enum {string} */
+            currency: "USD";
+            subtotal: string;
+            shippingTotal: string;
+            taxTotal: string;
+            total: string;
+            issuerSnapshot: {
+                [key: string]: unknown;
+            };
+            customerSnapshot: {
+                [key: string]: unknown;
+            };
+            lines: components["schemas"]["InvoiceLineResponseDto"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            dueAt: string | null;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            voidedAt: string | null;
         };
         InventoryAdjustmentRequestDto: {
             /**
@@ -1465,6 +1538,62 @@ export interface operations {
                 content?: never;
             };
             /** @description Duplicate email or last active administrator */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    invoiceOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceResponseDto"];
+                };
+            };
+            /** @description Invalid order identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only Admin or Billing can invoice orders */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid order state, missing payment or existing active invoice */
             409: {
                 headers: {
                     [name: string]: unknown;

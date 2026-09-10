@@ -522,6 +522,59 @@
         ]
       }
     },
+    "/api/v1/orders/{orderId}/invoice": {
+      "post": {
+        "operationId": "invoiceOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order identifier"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Only Admin or Billing can invoice orders"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "409": {
+            "description": "Invalid order state, missing payment or existing active invoice"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Atomically create an invoice from an eligible order and mark it invoiced",
+        "tags": [
+          "invoices",
+          "orders"
+        ]
+      }
+    },
     "/api/v1/inventory/{productId}/adjustments": {
       "post": {
         "operationId": "adjustProductInventory",
@@ -2214,6 +2267,192 @@
             ]
           }
         }
+      },
+      "InvoiceLineResponseDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "minimum": 1
+          },
+          "skuSnapshot": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameSnapshot": {
+            "type": "string"
+          },
+          "descriptionSnapshot": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "unitPrice": {
+            "type": "string"
+          },
+          "taxRate": {
+            "type": "string"
+          },
+          "taxAmount": {
+            "type": "string"
+          },
+          "lineSubtotal": {
+            "type": "string"
+          },
+          "lineTotal": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          }
+        },
+        "required": [
+          "productId",
+          "position",
+          "skuSnapshot",
+          "nameSnapshot",
+          "descriptionSnapshot",
+          "quantity",
+          "unitPrice",
+          "taxRate",
+          "taxAmount",
+          "lineSubtotal",
+          "lineTotal",
+          "currency"
+        ]
+      },
+      "InvoiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "ORDER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PENDING_PAYMENT",
+              "PAID",
+              "VOID"
+            ]
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ]
+          },
+          "subtotal": {
+            "type": "string"
+          },
+          "shippingTotal": {
+            "type": "string"
+          },
+          "taxTotal": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "issuerSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "customerSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLineResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "voidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "origin",
+          "status",
+          "orderId",
+          "customerId",
+          "createdByUserId",
+          "currency",
+          "subtotal",
+          "shippingTotal",
+          "taxTotal",
+          "total",
+          "issuerSnapshot",
+          "customerSnapshot",
+          "lines",
+          "createdAt",
+          "updatedAt",
+          "issuedAt",
+          "dueAt",
+          "paidAt",
+          "voidedAt"
+        ]
       },
       "InventoryAdjustmentRequestDto": {
         "type": "object",

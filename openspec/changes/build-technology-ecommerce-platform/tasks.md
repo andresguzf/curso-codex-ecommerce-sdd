@@ -72,7 +72,7 @@
 ## 8. Facturación
 
 - [x] 8.1 Implementar el agregado de factura con origen, estados, numeración única, snapshots y transiciones auditadas; verificar borrador, emisión pendiente, pago y anulación.
-- [ ] 8.2 Implementar conversión atómica de orden a factura y cambio a `INVOICED`; verificar que una orden no produce dos facturas activas y que el inventario no cambia.
+- [x] 8.2 Implementar conversión atómica de orden a factura y cambio a `INVOICED`; verificar que una orden no produce dos facturas activas y que el inventario no cambia.
 - [ ] 8.3 Implementar creación de factura manual para `ADMIN` y `BILLING`; verificar origen `MANUAL`, cliente y líneas válidas, ausencia de orden y cero movimientos de inventario.
 - [ ] 8.4 Implementar endpoints paginados de facturas con búsqueda, filtros, detalle y actualización de estado; verificar permisos administrativos y consulta exclusiva del cliente propietario.
 - [ ] 8.5 Crear las pantallas de facturas del back office, incluyendo conversión desde orden y formulario manual con React Hook Form y Zod; verificar flujos de Admin y Billing y acciones prohibidas para Customer.
