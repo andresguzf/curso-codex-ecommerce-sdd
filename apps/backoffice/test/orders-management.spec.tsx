@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSessionStore } from "../src/features/auth/session";
 import { OrdersManagementPage } from "../src/features/orders/orders-management";
 import { AdministrativeOrderDetailPage } from "../src/features/orders/order-detail";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), search: "" }));
-const api = vi.hoisted(() => ({ listOrders: vi.fn(), getOrder: vi.fn(), cancelOrder: vi.fn(), completeOrder: vi.fn() }));
+const api = vi.hoisted(() => ({ listOrders: vi.fn(), getOrder: vi.fn(), downloadOrderPdf: vi.fn(), cancelOrder: vi.fn(), completeOrder: vi.fn() }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/orders", useRouter: () => navigation, useSearchParams: () => new URLSearchParams(navigation.search) }));
 vi.mock("../src/features/orders/order-api", () => api);
 
@@ -24,6 +25,7 @@ beforeEach(() => {
   vi.clearAllMocks(); navigation.search = ""; session();
   api.listOrders.mockResolvedValue({ items: [base, invoiced], page: 1, pageSize: 20, totalItems: 2, totalPages: 1 }); api.getOrder.mockResolvedValue(detail);
   api.cancelOrder.mockResolvedValue({ ...base, status: "CANCELLED", cancelledAt: "2026-09-10T12:00:00Z" }); api.completeOrder.mockResolvedValue({ ...invoiced, status: "COMPLETED" });
+  api.downloadOrderPdf.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: "order-001.pdf" });
 });
 
 describe("backoffice order management", () => {
@@ -64,6 +66,17 @@ describe("backoffice order management", () => {
   it("renders immutable historical detail and eligible order actions for Billing", async () => {
     session("BILLING"); mount(<AdministrativeOrderDetailPage orderId={base.id} />);
     expect(await screen.findByText("Teclado histórico")).toBeInTheDocument(); expect(screen.getAllByText("Cliente histórico")).toHaveLength(2); expect(screen.getByText("Aprobado")).toBeInTheDocument(); expect(screen.getAllByText("Envío histórico")).toHaveLength(2); expect(screen.getByText(/Orden pendiente de facturación/)).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Completar" })).not.toBeInTheDocument(); expect(screen.getByText(/snapshot de la orden/)).toBeInTheDocument();
+  });
+  it("downloads an authorized order PDF and surfaces API errors", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:admin-order") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    mount(<AdministrativeOrderDetailPage orderId={base.id} />);
+    await screen.findByText("Teclado histórico");
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    await waitFor(() => expect(api.downloadOrderPdf).toHaveBeenCalledWith("ADMIN-token", base.id));
+    expect(screen.getByRole("status")).toHaveTextContent("PDF descargado correctamente.");
+    expect(click).toHaveBeenCalled();
   });
   it("does not request orders before authentication and redirects anonymous users", async () => {
     useSessionStore.setState({ notice: null, session: null, status: "anonymous" }); mount(<OrdersManagementPage />);

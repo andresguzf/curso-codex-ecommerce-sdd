@@ -8,4 +8,10 @@ export {
   createAuthSessionCoordinator,
   type AuthSessionChange,
 } from "./auth-session-coordinator";
+export {
+  createPdfDownload,
+  PdfDownloadError,
+  savePdfDownload,
+  type PdfDownload,
+} from "./pdf-download";
 export type { components, operations, paths } from "./generated/openapi";

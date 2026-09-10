@@ -8,9 +8,10 @@ import { InvoiceLifecycleService } from "./invoice-lifecycle.service";
 import { InvoiceQueryService } from "./invoice-query.service";
 import { ManualInvoiceController } from "./manual-invoice.controller";
 import { ManualInvoiceService } from "./manual-invoice.service";
+import { DocumentExportModule } from "../document-export/document-export.module";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, DocumentExportModule],
   controllers: [InvoiceFromOrderController, InvoiceController, ManualInvoiceController],
   providers: [
     InvoiceFromOrderService,

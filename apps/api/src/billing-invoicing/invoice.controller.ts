@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Query,
+  StreamableFile,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -26,6 +27,7 @@ import {
 import { z } from "zod";
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
+import { DocumentExportService } from "../document-export/document-export.service";
 import {
   AuthenticationGuard,
   CurrentUser,
@@ -113,6 +115,8 @@ export class InvoiceController {
     @Inject(InvoiceQueryService) private readonly queries: InvoiceQueryService,
     @Inject(InvoiceLifecycleService)
     private readonly lifecycle: InvoiceLifecycleService,
+    @Inject(DocumentExportService)
+    private readonly documents: DocumentExportService,
   ) {}
 
   @Get()
@@ -161,6 +165,19 @@ export class InvoiceController {
       });
     }
     return this.queries.detail(actor, invoiceId);
+  }
+
+  @Get(":invoiceId/pdf")
+  @Roles("CUSTOMER", "ADMIN", "BILLING")
+  @ApiOperation({ operationId: "downloadInvoicePdf", summary: "Download an authorized invoice PDF generated from historical snapshots" })
+  @ApiParam({ name: "invoiceId", format: "uuid" })
+  @ApiOkResponse({ description: "Invoice PDF", content: { "application/pdf": { schema: { type: "string", format: "binary" } } } })
+  @ApiBadRequestResponse({ description: "Invalid invoice identifier" })
+  @ApiNotFoundResponse({ description: "Invoice missing or not owned by the customer" })
+  async downloadPdf(@CurrentUser() actor: AuthenticatedUser, @Param("invoiceId") invoiceId: string): Promise<StreamableFile> {
+    if (!z.uuid().safeParse(invoiceId).success) throw new BadRequestException({ code: "REQUEST_VALIDATION_FAILED", message: "Invalid invoice identifier" });
+    const snapshot = await this.queries.detail(actor, invoiceId);
+    return new StreamableFile(this.documents.renderInvoice(snapshot), { type: "application/pdf", disposition: `attachment; filename="invoice-${invoiceId}.pdf"` });
   }
 
   @Patch(":invoiceId/status")

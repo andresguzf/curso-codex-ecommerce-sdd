@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Query, StreamableFile, UseGuards } from "@nestjs/common";
 import {
   ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiForbiddenResponse, ApiNotFoundResponse,
   ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiQuery, ApiTags, ApiUnauthorizedResponse,
@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
 import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
+import { DocumentExportService } from "../document-export/document-export.service";
+import type { OrderSnapshot } from "./order.aggregate";
 import { ORDER_STATUSES, type OrderStatus } from "./order.aggregate";
 import { CustomerOrdersService } from "./customer-orders.service";
 import { OrderAdministrationService } from "./order-administration.service";
@@ -96,6 +98,7 @@ export class CustomerOrdersController {
     @Inject(CustomerOrdersService) private readonly service: CustomerOrdersService,
     @Inject(OrderAdministrationService) private readonly administration: OrderAdministrationService,
     @Inject(OrderCancellationService) private readonly cancellation: OrderCancellationService,
+    @Inject(DocumentExportService) private readonly documents: DocumentExportService,
   ) {}
 
   @Post(":orderId/cancel")
@@ -164,5 +167,32 @@ export class CustomerOrdersController {
   detail(@CurrentUser() customer: AuthenticatedUser, @Param("orderId") orderId: string) {
     if (!z.uuid().safeParse(orderId).success) throw new BadRequestException({ code: "REQUEST_VALIDATION_FAILED", message: "Invalid order identifier" });
     return this.service.detail(customer, orderId);
+  }
+
+  @Get(":orderId/pdf")
+  @Roles("CUSTOMER", "ADMIN", "BILLING")
+  @ApiOperation({ operationId: "downloadOrderPdf", summary: "Download an authorized order PDF generated from historical snapshots" })
+  @ApiParam({ name: "orderId", format: "uuid" })
+  @ApiOkResponse({ description: "Order PDF", content: { "application/pdf": { schema: { type: "string", format: "binary" } } } })
+  @ApiNotFoundResponse({ description: "Order missing or not owned by the customer" })
+  @ApiBadRequestResponse({ description: "Invalid order identifier" })
+  async downloadPdf(@CurrentUser() actor: AuthenticatedUser, @Param("orderId") orderId: string): Promise<StreamableFile> {
+    if (!z.uuid().safeParse(orderId).success) throw new BadRequestException({ code: "REQUEST_VALIDATION_FAILED", message: "Invalid order identifier" });
+    const detail = await this.service.detail(actor, orderId);
+    const customerSnapshot = detail.customerSnapshot as OrderSnapshot["customerSnapshot"];
+    const snapshot: OrderSnapshot = {
+      ...detail,
+      customerId: customerSnapshot.id,
+      customerSnapshot,
+      currency: detail.currency as "USD",
+      shippingAddressSnapshot: detail.shippingAddressSnapshot as OrderSnapshot["shippingAddressSnapshot"],
+      shippingMethodSnapshot: detail.shippingMethodSnapshot as OrderSnapshot["shippingMethodSnapshot"],
+      paymentSnapshot: detail.paymentSnapshot as OrderSnapshot["paymentSnapshot"],
+      createdAt: detail.createdAt.toISOString(),
+      updatedAt: detail.updatedAt.toISOString(),
+      cancelledAt: detail.cancelledAt?.toISOString() ?? null,
+      items: detail.items.map((item) => ({ ...item, currency: item.currency as "USD" })),
+    };
+    return new StreamableFile(this.documents.renderOrder(snapshot), { type: "application/pdf", disposition: `attachment; filename="order-${orderId}.pdf"` });
   }
 }

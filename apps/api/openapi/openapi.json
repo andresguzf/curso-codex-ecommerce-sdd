@@ -810,6 +810,56 @@
         ]
       }
     },
+    "/api/v1/invoices/{invoiceId}/pdf": {
+      "get": {
+        "operationId": "downloadInvoicePdf",
+        "parameters": [
+          {
+            "name": "invoiceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid invoice identifier"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          },
+          "404": {
+            "description": "Invoice missing or not owned by the customer"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Download an authorized invoice PDF generated from historical snapshots",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
     "/api/v1/invoices/{invoiceId}/status": {
       "patch": {
         "operationId": "changeInvoiceStatus",
@@ -2181,6 +2231,56 @@
           }
         ],
         "summary": "Read historical detail: own order for Customer, any order for Admin or Billing",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/pdf": {
+      "get": {
+        "operationId": "downloadOrderPdf",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order identifier"
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "Role is not allowed for this operation"
+          },
+          "404": {
+            "description": "Order missing or not owned by the customer"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Download an authorized order PDF generated from historical snapshots",
         "tags": [
           "orders"
         ]

@@ -195,6 +195,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/{invoiceId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an authorized invoice PDF generated from historical snapshots */
+        get: operations["downloadInvoicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/{invoiceId}/status": {
         parameters: {
             query?: never;
@@ -514,6 +531,23 @@ export interface paths {
         };
         /** Read historical detail: own order for Customer, any order for Admin or Billing */
         get: operations["customerOrderDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{orderId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an authorized order PDF generated from historical snapshots */
+        get: operations["downloadOrderPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1867,6 +1901,56 @@ export interface operations {
             };
         };
     };
+    downloadInvoicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Invalid invoice identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice missing or not owned by the customer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     changeInvoiceStatus: {
         parameters: {
             query?: never;
@@ -2913,6 +2997,56 @@ export interface operations {
                 };
             };
             /** @description Invalid identifier or query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not allowed for this operation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order missing or not owned by the customer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    downloadOrderPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Invalid order identifier */
             400: {
                 headers: {
                     [name: string]: unknown;

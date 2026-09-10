@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { BillingInvoicingModule } from "./billing-invoicing/billing-invoicing.module";
 import { validateEnvironment } from "./config/environment";
 import { DatabaseModule } from "./database/database.module";
+import { DocumentExportModule } from "./document-export/document-export.module";
 import { HealthModule } from "./health/health.module";
 import { AuthModule } from "./identity-access/auth.module";
 import { InventoryControlModule } from "./inventory-control/inventory-control.module";
@@ -18,6 +19,7 @@ import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-ca
       validate: validateEnvironment,
     }),
     DatabaseModule,
+    DocumentExportModule,
     AuthModule,
     BillingInvoicingModule,
     InventoryControlModule,

@@ -21,6 +21,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { configureApplication } from "../../src/application";
 import {
+  invoiceLines,
+  invoices,
   orders,
   roleAssignments,
   users,
@@ -165,6 +167,7 @@ let database: NodePgDatabase<typeof schema>;
 let isolatedDatabaseCreated = false;
 let fixtures: Record<"admin" | "billing" | "customerA" | "customerB", Fixture>;
 let ownedOrderId: string;
+let ownedInvoiceId: string;
 let accessTokens: Record<keyof typeof fixtures, string>;
 
 function restoreEnvironment(): void {
@@ -314,6 +317,38 @@ describe("role and ownership authorization", () => {
     }
 
     ownedOrderId = order.id;
+    const [invoice] = await database
+      .insert(invoices)
+      .values({
+        origin: "MANUAL",
+        status: "DRAFT",
+        customerId: fixtures.customerA.id,
+        currency: "USD",
+        subtotal: "0.00",
+        shippingTotal: "0.00",
+        taxTotal: "0.00",
+        total: "0.00",
+        issuerSnapshot: {},
+        customerSnapshot: {},
+      })
+      .returning({ id: invoices.id });
+    if (!invoice) throw new Error("Authorization invoice fixture was not created");
+    ownedInvoiceId = invoice.id;
+    await database.insert(invoiceLines).values({
+      invoiceId: ownedInvoiceId,
+      productId: null,
+      position: 1,
+      skuSnapshot: null,
+      nameSnapshot: "Authorization invoice line",
+      descriptionSnapshot: "Authorization invoice line",
+      quantity: 1,
+      unitPrice: "0.00",
+      taxRate: "0.0000",
+      taxAmount: "0.00",
+      lineSubtotal: "0.00",
+      lineTotal: "0.00",
+      currency: "USD",
+    });
     accessTokens = {
       admin: await login(fixtures.admin.email),
       billing: await login(fixtures.billing.email),
@@ -393,5 +428,34 @@ describe("role and ownership authorization", () => {
       403,
       "AUTH_RESOURCE_FORBIDDEN",
     );
+  });
+
+  it("protects order and invoice PDF downloads by authentication and ownership", async () => {
+    for (const path of [
+      `/api/v1/orders/${ownedOrderId}/pdf`,
+      `/api/v1/invoices/${ownedInvoiceId}/pdf`,
+    ]) {
+      for (const actor of ["admin", "billing", "customerA"] as const) {
+        const response = await server.inject({
+          method: "GET",
+          url: path,
+          headers: { authorization: `Bearer ${accessTokens[actor]}` },
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.headers["content-type"]).toContain("application/pdf");
+        expect(response.headers["content-disposition"]).toContain("attachment");
+        expect(response.rawPayload.subarray(0, 8).toString("latin1")).toBe("%PDF-1.4");
+      }
+
+      const foreign = await server.inject({
+        method: "GET",
+        url: path,
+        headers: { authorization: `Bearer ${accessTokens.customerB}` },
+      });
+      expect(foreign.statusCode).toBe(404);
+      expect(foreign.rawPayload.toString("utf8")).not.toContain("Authorization invoice line");
+
+      await expectAccess(path, undefined, 401, "AUTH_INVALID_SESSION");
+    }
   });
 });

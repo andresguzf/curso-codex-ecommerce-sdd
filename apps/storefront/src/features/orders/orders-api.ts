@@ -1,4 +1,4 @@
-import { createApiClient } from "@technology-ecommerce/api-client";
+import { createApiClient, createPdfDownload, type PdfDownload } from "@technology-ecommerce/api-client";
 import { customerOrderDetailSchema, customerOrderPageSchema, type CustomerOrderDetail } from "@technology-ecommerce/api-schemas";
 
 const client = createApiClient({
@@ -41,4 +41,18 @@ export async function getMyOrder(token: string, orderId: string, signal?: AbortS
   });
   if (!result.data) throw new OrdersApiError(result.response.status);
   return customerOrderDetailSchema.parse(result.data);
+}
+
+export async function downloadMyOrderPdf(token: string, orderId: string): Promise<PdfDownload> {
+  const result = await client.GET("/api/v1/orders/{orderId}/pdf", {
+    ...requestOptions(token),
+    parseAs: "blob",
+    params: { path: { orderId } },
+  });
+  if (!result.data) throw new OrdersApiError(result.response.status);
+  try {
+    return createPdfDownload(result.response, result.data, `order-${orderId}.pdf`);
+  } catch {
+    throw new OrdersApiError(502);
+  }
 }

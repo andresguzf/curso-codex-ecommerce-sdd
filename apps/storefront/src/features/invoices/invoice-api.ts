@@ -1,4 +1,4 @@
-import { createApiClient } from "@technology-ecommerce/api-client";
+import { createApiClient, createPdfDownload, type PdfDownload } from "@technology-ecommerce/api-client";
 import {
   invoicePageSchema,
   invoiceResponseSchema,
@@ -71,4 +71,18 @@ export async function getMyInvoice(
   });
   if (!result.data) throw new CustomerInvoicesApiError(result.response.status);
   return invoiceResponseSchema.parse(result.data);
+}
+
+export async function downloadMyInvoicePdf(token: string, invoiceId: string): Promise<PdfDownload> {
+  const result = await client.GET("/api/v1/invoices/{invoiceId}/pdf", {
+    ...requestOptions(token),
+    parseAs: "blob",
+    params: { path: { invoiceId } },
+  });
+  if (!result.data) throw new CustomerInvoicesApiError(result.response.status);
+  try {
+    return createPdfDownload(result.response, result.data, `invoice-${invoiceId}.pdf`);
+  } catch {
+    throw new CustomerInvoicesApiError(502);
+  }
 }

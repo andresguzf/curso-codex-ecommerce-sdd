@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionStore } from "../src/features/auth/session";
+import { InvoiceDetailPage } from "../src/features/invoices/invoice-detail";
 import { InvoicesManagement } from "../src/features/invoices/invoice-management";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), search: "" }));
@@ -11,6 +13,8 @@ const api = vi.hoisted(() => ({
   createManualInvoice: vi.fn(),
   invoiceOrder: vi.fn(),
   changeInvoiceStatus: vi.fn(),
+  getInvoice: vi.fn(),
+  downloadInvoicePdf: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/invoices",
@@ -48,9 +52,9 @@ function session(role: "ADMIN" | "BILLING" | "CUSTOMER" = "ADMIN") {
   useSessionStore.setState({ notice: null, status: "authenticated", session: { accessToken: `${role}-token`, accessTokenExpiresAt: "2026-09-10T14:00:00Z", sessionExpiresAt: "2026-09-17T12:00:00Z", tokenType: "Bearer", user: { id: "746488d9-0de9-40ea-b346-a3e85ca2c28e", displayName: role, email: `${role.toLowerCase()}@example.com`, role } } });
 }
 
-function mount() {
+function mount(ui: React.ReactNode = <InvoicesManagement />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><InvoicesManagement /></QueryClientProvider>);
+  render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 beforeEach(() => {
@@ -61,6 +65,8 @@ beforeEach(() => {
   api.createManualInvoice.mockResolvedValue(detail);
   api.invoiceOrder.mockResolvedValue({ ...detail, origin: "ORDER", number: "INV-ORDER" });
   api.changeInvoiceStatus.mockResolvedValue({ ...detail, status: "PENDING_PAYMENT", number: "INV-001", issuedAt: "2026-09-10T12:00:00Z" });
+  api.getInvoice.mockResolvedValue(detail);
+  api.downloadInvoicePdf.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: "invoice-001.pdf" });
 });
 
 describe("backoffice invoice management", () => {
@@ -100,6 +106,18 @@ describe("backoffice invoice management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Facturar orden" }));
     await waitFor(() => expect(api.invoiceOrder).toHaveBeenCalledWith("BILLING-token", orderId));
     expect(await screen.findByText(/Orden convertida en factura/)).toBeInTheDocument();
+  });
+
+  it("downloads an authorized invoice PDF", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:admin-invoice") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    mount(<InvoiceDetailPage invoiceId={base.id} />);
+    await screen.findByText("Servicio");
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    await waitFor(() => expect(api.downloadInvoicePdf).toHaveBeenCalledWith("ADMIN-token", base.id));
+    expect(screen.getByRole("status")).toHaveTextContent("PDF descargado correctamente.");
+    expect(click).toHaveBeenCalled();
   });
 
 });

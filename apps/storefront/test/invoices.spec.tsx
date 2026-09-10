@@ -9,9 +9,9 @@ import { InvoiceDetailPage } from "../src/features/invoices/invoice-detail";
 import { InvoicesPage } from "../src/features/invoices/invoices-page";
 import { CustomerInvoicesApiError } from "../src/features/invoices/invoice-api";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "" }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), download: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }), useSearchParams: () => new URLSearchParams(mocks.search) }));
-vi.mock("../src/features/invoices/invoice-api", async (original) => ({ ...await original<object>(), getMyInvoices: mocks.list, getMyInvoice: mocks.detail }));
+vi.mock("../src/features/invoices/invoice-api", async (original) => ({ ...await original<object>(), getMyInvoices: mocks.list, getMyInvoice: mocks.detail, downloadMyInvoicePdf: mocks.download }));
 
 const session: AuthSession = {
   accessToken: "customer-token", accessTokenExpiresAt: "2026-09-09T23:00:00Z", sessionExpiresAt: "2026-09-16T23:00:00Z", tokenType: "Bearer",
@@ -36,6 +36,7 @@ beforeEach(() => {
   useSessionStore.setState({ session, status: "authenticated", notice: null });
   mocks.list.mockResolvedValue(page);
   mocks.detail.mockResolvedValue(invoice);
+  mocks.download.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: `invoice-${invoice.id}.pdf` });
 });
 
 describe("customer invoices", () => {
@@ -57,6 +58,21 @@ describe("customer invoices", () => {
     expect(screen.getByText("$205.00")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /emitir|pagada|anular/i })).not.toBeInTheDocument();
     expect(mocks.detail).toHaveBeenCalledWith("customer-token", invoice.id, expect.any(AbortSignal));
+  });
+
+  it("downloads the customer's invoice PDF and reports failures", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:invoice") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    mount(<InvoiceDetailPage invoiceId={invoice.id} />);
+    await screen.findByText("Teclado histórico");
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledWith("customer-token", invoice.id));
+    expect(screen.getByRole("status")).toHaveTextContent("PDF descargado correctamente.");
+    expect(click).toHaveBeenCalled();
+    mocks.download.mockRejectedValueOnce(new CustomerInvoicesApiError(500));
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron cargar tus facturas");
   });
 
   it("does not display invoice data after switching to another customer", async () => {

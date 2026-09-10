@@ -545,10 +545,18 @@ Especificación: [`document-export/spec.md`](openspec/changes/build-technology-e
 - Los documentos incluyen la identidad empresarial histórica correspondiente.
 - Regenerar un PDF no incorpora cambios posteriores de productos o clientes.
 - Las facturas `DRAFT` muestran una marca visible de borrador.
+
+La tarea 9.1 incorpora un adaptador PDF autocontenido y plantillas separadas para órdenes y facturas. El renderizador genera un PDF válido bajo demanda desde los snapshots históricos recibidos, limita el contenido a campos comerciales reconocidos, conserva la moneda `USD` y marca visiblemente las facturas `DRAFT`. La infraestructura queda desacoplada mediante un puerto para permitir sustituirla por un proveedor de objetos o worker en una fase posterior; los endpoints autorizados de descarga se implementarán en la tarea 9.2.
+
+La tarea 9.2 expone `GET /api/v1/orders/:orderId/pdf` y `GET /api/v1/invoices/:invoiceId/pdf`. Ambos endpoints requieren autenticación, permiten a `ADMIN` y `BILLING` consultar documentos administrativos y restringen a `CUSTOMER` al recurso propio; una orden o factura ajena responde como no encontrada. La respuesta usa `application/pdf`, descarga como archivo adjunto con nombre estable y se genera desde el snapshot histórico autorizado, sin revelar contenido en errores de propiedad.
 - `CUSTOMER` descarga únicamente documentos propios.
 - `ADMIN` y `BILLING` descargan documentos dentro de su ámbito autorizado.
 - Usuarios no autenticados o clientes ajenos reciben acceso denegado.
 - La primera versión genera PDFs bajo demanda mediante un adaptador reemplazable.
+
+La tarea 9.3 verifica que una factura `DRAFT` se identifica visiblemente como borrador y que su salida PDF permanece histórica y estable: regenerar el documento después de cambios en datos maestros relacionados produce el mismo archivo y conserva los snapshots originales de cliente, productos e importes. El renderizador no consulta el catálogo, usuarios ni el perfil vigente durante la regeneración.
+
+La tarea 9.4 añade botones `Descargar PDF` en los detalles de órdenes y facturas del storefront y del back office. Las acciones consumen los endpoints REST autorizados como `Blob`, validan `application/pdf`, respetan el nombre de archivo del servidor (con fallback seguro), disparan la descarga en el navegador y muestran estados de preparación, éxito o error sin exponer detalles internos.
 
 ## Modelo general del dominio
 

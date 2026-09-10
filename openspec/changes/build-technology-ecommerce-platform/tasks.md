@@ -80,10 +80,10 @@
 
 ## 9. Exportación de documentos
 
-- [ ] 9.1 Crear el adaptador backend de PDF y las plantillas de orden y factura basadas exclusivamente en snapshots; verificar contenido, formato y generación de ambos tipos de documento.
-- [ ] 9.2 Implementar endpoints autorizados para descargar PDFs de órdenes y facturas; verificar acceso de propietario, Admin, Billing, usuario no autenticado y cliente ajeno.
-- [ ] 9.3 Marcar facturas `DRAFT` como borrador y conservar la salida histórica al regenerar documentos; verificar PDFs antes y después de modificar datos maestros relacionados.
-- [ ] 9.4 Añadir acciones de descarga en storefront y back office con manejo de errores; verificar nombre de archivo, tipo MIME y descarga desde los roles permitidos.
+- [x] 9.1 Crear el adaptador backend de PDF y las plantillas de orden y factura basadas exclusivamente en snapshots; verificar contenido, formato y generación de ambos tipos de documento.
+- [x] 9.2 Implementar endpoints autorizados para descargar PDFs de órdenes y facturas; verificar acceso de propietario, Admin, Billing, usuario no autenticado y cliente ajeno.
+- [x] 9.3 Marcar facturas `DRAFT` como borrador y conservar la salida histórica al regenerar documentos; verificar PDFs antes y después de modificar datos maestros relacionados.
+- [x] 9.4 Añadir acciones de descarga en storefront y back office con manejo de errores; verificar nombre de archivo, tipo MIME y descarga desde los roles permitidos.
 
 ## 10. Auditoría, observabilidad y calidad integral
 

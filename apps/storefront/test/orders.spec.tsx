@@ -9,9 +9,9 @@ import { OrderDetailPage } from "../src/features/orders/order-detail";
 import { OrdersApiError } from "../src/features/orders/orders-api";
 import { SessionControls } from "../src/features/auth/session-controls";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "" }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), download: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }), useSearchParams: () => new URLSearchParams(mocks.search) }));
-vi.mock("../src/features/orders/orders-api", async (original) => ({ ...await original<object>(), getMyOrders: mocks.list, getMyOrder: mocks.detail }));
+vi.mock("../src/features/orders/orders-api", async (original) => ({ ...await original<object>(), getMyOrders: mocks.list, getMyOrder: mocks.detail, downloadMyOrderPdf: mocks.download }));
 
 const session: AuthSession = {
   accessToken: "customer-token", accessTokenExpiresAt: "2026-09-09T23:00:00Z", sessionExpiresAt: "2026-09-16T23:00:00Z", tokenType: "Bearer",
@@ -36,6 +36,7 @@ beforeEach(() => {
   useSessionStore.setState({ session, status: "authenticated", notice: null });
   mocks.list.mockResolvedValue({ items: [order], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 });
   mocks.detail.mockResolvedValue(order);
+  mocks.download.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: `order-${order.id}.pdf` });
 });
 
 describe("customer purchases", () => {
@@ -88,6 +89,20 @@ describe("customer purchases", () => {
     expect(screen.getByText("$205.00")).toBeInTheDocument();
     expect(screen.getByText("2 × $100.00")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /cancelar|facturar/i })).not.toBeInTheDocument();
+  });
+  it("downloads the authorized order PDF and reports a safe error", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:order") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    mount(<OrderDetailPage orderId={order.id} />);
+    await screen.findByText("Teclado histórico");
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalledWith("customer-token", order.id));
+    expect(screen.getByRole("status")).toHaveTextContent("PDF descargado correctamente.");
+    expect(click).toHaveBeenCalled();
+    mocks.download.mockRejectedValueOnce(new OrdersApiError(500));
+    await userEvent.click(screen.getByRole("button", { name: "Descargar PDF" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron cargar tus compras");
   });
   it("shows incomplete snapshots safely without dumping unknown fields", async () => {
     mocks.detail.mockResolvedValue({ ...order, paymentSnapshot: { secret: "HIDDEN", status: {} }, customerSnapshot: {}, shippingAddressSnapshot: {}, shippingMethodSnapshot: {} });

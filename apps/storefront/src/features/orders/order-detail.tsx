@@ -3,7 +3,10 @@
 import type { CustomerOrderDetail } from "@technology-ecommerce/api-schemas";
 import { LoadingState } from "@technology-ecommerce/ui";
 import Link from "next/link";
+import { useSessionStore } from "../auth/session";
 import { formatProductPrice } from "../catalog/catalog-format";
+import { downloadMyOrderPdf } from "./orders-api";
+import { PdfDownloadButton } from "../documents/pdf-download-button";
 import { OrdersAccessGate } from "./orders-access-gate";
 import { orderDate, OrdersError, OrderStatus } from "./order-presentation";
 import { useMyOrder } from "./use-orders";
@@ -13,12 +16,13 @@ export function OrderDetailPage({ orderId }: Readonly<{ orderId: string }>) {
 }
 
 export function OrderDetail({ orderId }: Readonly<{ orderId: string }>) {
+  const accessToken = useSessionStore((state) => state.session?.accessToken);
   const query = useMyOrder(orderId);
   if (query.isPending) return <LoadingState message="Cargando tu pedido…" />;
   if (query.isError) return <OrdersError error={query.error} retry={() => { void query.refetch(); }} returnTo={`/account/orders/${orderId}`} />;
   const order = query.data;
   return <>
-    <Link href="/account/orders" className="font-bold text-blue-700 underline">← Mis compras</Link>
+    <div className="flex flex-wrap items-center justify-between gap-4"><Link href="/account/orders" className="font-bold text-blue-700 underline">← Mis compras</Link>{accessToken ? <PdfDownloadButton onDownload={() => downloadMyOrderPdf(accessToken, orderId)} /> : null}</div>
     <article className="mt-7 overflow-hidden rounded-3xl border border-slate-200 bg-white">
       <header className="border-b border-slate-200 p-6 sm:p-9">
         <div className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-black tracking-tight sm:text-4xl">Detalle de tu pedido</h1><OrderStatus status={order.status} /></div>
