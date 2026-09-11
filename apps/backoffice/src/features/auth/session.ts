@@ -6,6 +6,8 @@ import { create } from "zustand";
 
 export const authClient = createAuthBrowserClient({
   baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1",
+  fetch: (input, init) =>
+    fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }),
 });
 
 type SessionStatus = "initializing" | "authenticated" | "anonymous";
