@@ -2,9 +2,29 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: planificación completada. Todavía no se ha implementado código funcional.
+> Estado actual: la planificación está completa y la implementación avanza por tareas OpenSpec. Ya existen storefront, backoffice, API, persistencia, autenticación, catálogo, inventario, carrito, checkout, órdenes, facturación, PDF, observabilidad, contenedores y CI funcionales; las ampliaciones posteriores continúan pendientes según `tasks.md`.
 
-La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Sus cuatro tipos de artefactos están completos y la validación estricta es exitosa.
+La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Sus cuatro tipos de artefactos están completos; la validación integral final corresponde a la tarea 11.5.
+
+## Puesta en marcha local
+
+La guía reproducible de instalación, variables de entorno, PostgreSQL, migraciones, seed, comandos, roles y simuladores está en [`docs/local-development.md`](docs/local-development.md).
+
+Resumen para desarrollo local:
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+docker volume create ecommerce_postgres_data
+cp infra/docker/.env.example infra/docker/.env
+cp apps/api/.env.example apps/api/.env
+docker compose --env-file infra/docker/.env -f infra/docker/compose.yaml up -d
+pnpm --filter @technology-ecommerce/api db:migrate
+pnpm --filter @technology-ecommerce/api db:seed
+pnpm dev
+```
+
+Antes de migrar, ajusta en los dos archivos `.env` la misma contraseña de PostgreSQL y define contraseñas locales de al menos 12 caracteres para las tres cuentas seed. Los archivos `.env` reales están excluidos de Git.
 
 ## Objetivo
 
@@ -37,7 +57,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 135 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Completo | 139 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -902,7 +922,7 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 20. Seed demostrativo, imágenes y navegación del catálogo.
 21. Productos destacados y categorías importantes.
 
-Cada una de las 135 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
+Cada una de las 139 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados.
 
 ## Fuera del alcance inicial
 
@@ -946,10 +966,10 @@ Estas funcionalidades pueden añadirse mediante cambios OpenSpec posteriores sin
 
 ## Continuar con la implementación
 
-La planificación está lista para revisión. La implementación debe iniciarse en una nueva solicitud mediante el flujo de aplicación:
+La implementación está en curso. Para continuar con la siguiente tarea pendiente se usa el flujo de aplicación:
 
 ```text
 $openspec-apply-change build-technology-ecommerce-platform
 ```
 
-El flujo de aplicación deberá ejecutar las tareas en orden, marcar el progreso en `tasks.md` y mantener las especificaciones como contrato de aceptación.
+El flujo de aplicación debe ejecutar las tareas en orden, marcar el progreso en `tasks.md` y mantener las especificaciones como contrato de aceptación. La guía operativa para levantar y comprobar el entorno implementado está en [`docs/local-development.md`](docs/local-development.md).
