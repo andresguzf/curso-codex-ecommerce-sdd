@@ -11,6 +11,7 @@ import {
   sql,
 } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import { auditEntries } from "../database/schema/audit";
 import {
@@ -145,20 +146,32 @@ export class UserAdministrationRepository {
           role: input.role,
           userId: user.id,
         })
-        .returning({ role: roleAssignments.role });
+        .returning({ id: roleAssignments.id, role: roleAssignments.role });
 
       if (!assignment) {
         throw new Error("PostgreSQL did not return the assigned role");
       }
 
       const createdUser = { ...user, role: assignment.role };
-      await transaction.insert(auditEntries).values({
-        action: "USER_CREATED",
-        actorUserId,
-        changes: { after: this.auditSnapshot(createdUser) },
-        entityId: user.id,
-        entityType: "USER",
-      });
+      await transaction.insert(auditEntries).values([
+        createAuditEntry({
+          action: "USER_CREATED",
+          actorUserId,
+          changes: { after: this.auditSnapshot(createdUser) },
+          entityId: user.id,
+          entityType: "USER",
+        }),
+        createAuditEntry({
+          action: "ROLE_ASSIGNED",
+          actorUserId,
+          changes: {
+            after: { role: assignment.role, userId: user.id },
+            before: null,
+          },
+          entityId: assignment.id,
+          entityType: "ROLE_ASSIGNMENT",
+        }),
+      ]);
 
       return createdUser;
     });
@@ -225,6 +238,7 @@ export class UserAdministrationRepository {
       }
 
       let role = current.role;
+      let changedRoleAssignmentId: string | undefined;
 
       if (input.role !== undefined && input.role !== current.role) {
         const [assignment] = await transaction
@@ -235,8 +249,12 @@ export class UserAdministrationRepository {
             updatedAt: now,
           })
           .where(eq(roleAssignments.userId, userId))
-          .returning({ role: roleAssignments.role });
-        role = assignment?.role ?? current.role;
+          .returning({ id: roleAssignments.id, role: roleAssignments.role });
+        if (!assignment) {
+          throw new Error("PostgreSQL did not return the changed role assignment");
+        }
+        changedRoleAssignmentId = assignment.id;
+        role = assignment.role;
       }
 
       if (nextStatus !== "ACTIVE") {
@@ -247,16 +265,33 @@ export class UserAdministrationRepository {
       }
 
       const result = { ...updatedUser, role };
-      await transaction.insert(auditEntries).values({
-        action: "USER_UPDATED",
-        actorUserId,
-        changes: {
-          after: this.auditSnapshot(result),
-          before: this.auditSnapshot(current),
-        },
-        entityId: userId,
-        entityType: "USER",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "USER_UPDATED",
+          actorUserId,
+          changes: {
+            after: this.auditSnapshot(result),
+            authenticationMaterialChanged: input.passwordHash !== undefined,
+            before: this.auditSnapshot(current),
+          },
+          entityId: userId,
+          entityType: "USER",
+        }),
+      );
+      if (changedRoleAssignmentId) {
+        await transaction.insert(auditEntries).values(
+          createAuditEntry({
+            action: "ROLE_CHANGED",
+            actorUserId,
+            changes: {
+              after: { role, userId },
+              before: { role: current.role, userId },
+            },
+            entityId: changedRoleAssignmentId,
+            entityType: "ROLE_ASSIGNMENT",
+          }),
+        );
+      }
 
       return result;
     });
@@ -291,20 +326,22 @@ export class UserAdministrationRepository {
         .update(sessions)
         .set({ revokedAt: now, updatedAt: now })
         .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
-      await transaction.insert(auditEntries).values({
-        action: "USER_DELETED",
-        actorUserId,
-        changes: {
-          after: {
-            ...this.auditSnapshot(current),
-            deletedAt: now.toISOString(),
-            status: "INACTIVE",
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "USER_DELETED",
+          actorUserId,
+          changes: {
+            after: {
+              ...this.auditSnapshot(current),
+              deletedAt: now.toISOString(),
+              status: "INACTIVE",
+            },
+            before: this.auditSnapshot(current),
           },
-          before: this.auditSnapshot(current),
-        },
-        entityId: userId,
-        entityType: "USER",
-      });
+          entityId: userId,
+          entityType: "USER",
+        }),
+      );
 
       return true;
     });

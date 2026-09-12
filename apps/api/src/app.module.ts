@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
 import { BillingInvoicingModule } from "./billing-invoicing/billing-invoicing.module";
+import { AuditObservabilityModule } from "./audit-observability/audit-observability.module";
 import { validateEnvironment } from "./config/environment";
 import { DatabaseModule } from "./database/database.module";
 import { DocumentExportModule } from "./document-export/document-export.module";
@@ -18,6 +19,7 @@ import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-ca
       isGlobal: true,
       validate: validateEnvironment,
     }),
+    AuditObservabilityModule,
     DatabaseModule,
     DocumentExportModule,
     AuthModule,

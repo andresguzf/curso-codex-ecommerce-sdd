@@ -38,8 +38,12 @@ async function generateOpenApi(): Promise<void> {
 }
 
 generateOpenApi().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : "Unknown OpenAPI error";
-
-  console.error(`[openapi] ${message}`);
+  console.error(
+    JSON.stringify({
+      errorType: error instanceof Error ? error.name : "UnknownError",
+      event: "openapi.generation.failed",
+      level: "error",
+    }),
+  );
   process.exitCode = 1;
 });

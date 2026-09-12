@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { asc, eq } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import {
   auditEntries,
@@ -118,19 +119,21 @@ export class InvoiceLifecycleService {
           voidedAt: next.voidedAt ? new Date(next.voidedAt) : null,
         })
         .where(eq(invoices.id, invoiceId));
-      await transaction.insert(auditEntries).values({
-        actorUserId: actor.id,
-        action: "INVOICE_STATUS_CHANGED",
-        entityType: "INVOICE",
-        entityId: invoiceId,
-        changes: {
-          before: {
-            status: aggregate.snapshot.status,
-            number: aggregate.snapshot.number,
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          actorUserId: actor.id,
+          action: "INVOICE_STATUS_CHANGED",
+          entityType: "INVOICE",
+          entityId: invoiceId,
+          changes: {
+            before: {
+              status: aggregate.snapshot.status,
+              number: aggregate.snapshot.number,
+            },
+            after: { status: next.status, number: next.number },
           },
-          after: { status: next.status, number: next.number },
-        },
-      });
+        }),
+      );
 
       return next;
     });

@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, eq, ne } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import { auditEntries, invoiceLines, invoices, orderItems, orders, payments } from "../database/schema";
 import type { AuthenticatedUser } from "../identity-access/auth.types";
@@ -161,7 +162,7 @@ export class InvoiceFromOrderService {
         .set({ status: "INVOICED", updatedAt: now })
         .where(eq(orders.id, orderId));
       await transaction.insert(auditEntries).values([
-        {
+        createAuditEntry({
           actorUserId: actor.id,
           action: "INVOICE_CREATED_FROM_ORDER",
           entityType: "INVOICE",
@@ -175,8 +176,8 @@ export class InvoiceFromOrderService {
               status: snapshot.status,
             },
           },
-        },
-        {
+        }),
+        createAuditEntry({
           actorUserId: actor.id,
           action: "ORDER_INVOICED",
           entityType: "ORDER",
@@ -186,7 +187,7 @@ export class InvoiceFromOrderService {
             after: { status: "INVOICED" },
             invoiceId: snapshot.id,
           },
-        },
+        }),
       ]);
 
       return snapshot;

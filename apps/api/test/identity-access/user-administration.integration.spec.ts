@@ -393,19 +393,35 @@ describe("administrative user lifecycle", () => {
         action: auditEntries.action,
         actorUserId: auditEntries.actorUserId,
         changes: auditEntries.changes,
+        createdAt: auditEntries.createdAt,
+        entityId: auditEntries.entityId,
+        entityType: auditEntries.entityType,
       })
       .from(auditEntries)
       .orderBy(asc(auditEntries.createdAt));
 
-    expect(entries.map((entry) => entry.action)).toEqual([
-      "USER_CREATED",
-      "USER_UPDATED",
-      "USER_UPDATED",
-      "USER_UPDATED",
-      "USER_DELETED",
-    ]);
-    expect(entries.every((entry) => Boolean(entry.actorUserId))).toBe(true);
-    expect(JSON.stringify(entries)).not.toContain("password");
-    expect(JSON.stringify(entries)).not.toContain("hash");
+    const actions = entries.map((entry) => entry.action);
+    expect(actions.filter((action) => action === "USER_CREATED")).toHaveLength(1);
+    expect(actions.filter((action) => action === "USER_UPDATED")).toHaveLength(3);
+    expect(actions.filter((action) => action === "USER_DELETED")).toHaveLength(1);
+    expect(actions.filter((action) => action === "ROLE_ASSIGNED")).toHaveLength(1);
+    expect(actions.filter((action) => action === "ROLE_CHANGED")).toHaveLength(1);
+    expect(
+      entries.every(
+        (entry) =>
+          Boolean(entry.actorUserId) &&
+          entry.entityId.length > 0 &&
+          entry.entityType.length > 0 &&
+          entry.createdAt instanceof Date,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(entries)).not.toMatch(/password|hash|token|secret/i);
+    expect(entries.find(({ action }) => action === "ROLE_CHANGED")).toMatchObject({
+      entityType: "ROLE_ASSIGNMENT",
+      changes: {
+        before: { role: "BILLING" },
+        after: { role: "ADMIN" },
+      },
+    });
   });
 });

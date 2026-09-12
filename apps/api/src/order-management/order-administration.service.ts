@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, count, desc, eq, exists, gte, ilike, lte, ne, not, or, sql } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import { auditEntries, invoices, orders } from "../database/schema";
 import type { AuthenticatedUser } from "../identity-access/auth.types";
@@ -54,10 +55,15 @@ export class OrderAdministrationService {
         code: "ORDER_DEDICATED_WORKFLOW_REQUIRED", message: "Use the invoice or cancellation workflow to change this status",
       });
       const [updated] = await transaction.update(orders).set({ status, updatedAt: new Date() }).where(eq(orders.id, id)).returning(summaryColumns);
-      await transaction.insert(auditEntries).values({
-        actorUserId: actor.id, action: "ORDER_STATUS_CHANGED", entityType: "ORDER", entityId: id,
-        changes: { before: { status: order.status }, after: { status } },
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          actorUserId: actor.id,
+          action: "ORDER_STATUS_CHANGED",
+          entityType: "ORDER",
+          entityId: id,
+          changes: { before: { status: order.status }, after: { status } },
+        }),
+      );
       return updated;
     });
   }

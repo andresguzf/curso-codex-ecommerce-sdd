@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import type { DatabaseTransaction } from "../database/database.service";
 import {
@@ -196,24 +197,26 @@ export class InventoryStockRepository {
         throw new Error("PostgreSQL did not return the inventory movement");
       }
 
-      await transaction.insert(auditEntries).values({
-        action:
-          movementType === "SALE"
-            ? "INVENTORY_DEDUCTED"
-            : "INVENTORY_RESTORED",
-        actorUserId: reference.actorUserId,
-        changes: {
-          after: { availableQuantity: balance.availableQuantity },
-          before: { availableQuantity: current.availableQuantity },
-          movementId: movement.id,
-          quantityDelta,
-          reason: reference.reason,
-          referenceId: reference.referenceId,
-          referenceType: reference.referenceType,
-        },
-        entityId: balance.productId,
-        entityType: "INVENTORY_BALANCE",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action:
+            movementType === "SALE"
+              ? "INVENTORY_DEDUCTED"
+              : "INVENTORY_RESTORED",
+          actorUserId: reference.actorUserId,
+          changes: {
+            after: { availableQuantity: balance.availableQuantity },
+            before: { availableQuantity: current.availableQuantity },
+            movementId: movement.id,
+            quantityDelta,
+            reason: reference.reason,
+            referenceId: reference.referenceId,
+            referenceType: reference.referenceType,
+          },
+          entityId: balance.productId,
+          entityType: "INVENTORY_BALANCE",
+        }),
+      );
 
       changes.push({ ...balance, movementId: movement.id });
     }

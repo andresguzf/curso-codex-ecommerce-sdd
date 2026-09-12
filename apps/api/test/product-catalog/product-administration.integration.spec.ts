@@ -341,7 +341,14 @@ describe("administrative product lifecycle", () => {
       .from(productImages)
       .where(eq(productImages.productId, existing.id));
     const actions = await database
-      .select({ action: auditEntries.action })
+      .select({
+        action: auditEntries.action,
+        actorUserId: auditEntries.actorUserId,
+        changes: auditEntries.changes,
+        createdAt: auditEntries.createdAt,
+        entityId: auditEntries.entityId,
+        entityType: auditEntries.entityType,
+      })
       .from(auditEntries)
       .where(eq(auditEntries.entityId, existing.id))
       .orderBy(asc(auditEntries.createdAt));
@@ -354,6 +361,17 @@ describe("administrative product lifecycle", () => {
       "PRODUCT_ACTIVATED",
       "PRODUCT_DELETED",
     ]);
+    expect(
+      actions.every(
+        (entry) =>
+          entry.actorUserId === userIds.admin &&
+          entry.entityId === existing.id &&
+          entry.entityType === "PRODUCT" &&
+          entry.createdAt instanceof Date &&
+          Object.keys(entry.changes).length > 0,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(actions)).not.toMatch(/password|token|secret/i);
   });
 
   it("lists public and administrative products with SQL filters, ordering and totals", async () => {
@@ -749,7 +767,14 @@ describe("administrative product lifecycle", () => {
       )
       .orderBy(asc(inventoryMovements.createdAt));
     const inventoryAudits = await database
-      .select({ action: auditEntries.action })
+      .select({
+        action: auditEntries.action,
+        actorUserId: auditEntries.actorUserId,
+        changes: auditEntries.changes,
+        createdAt: auditEntries.createdAt,
+        entityId: auditEntries.entityId,
+        entityType: auditEntries.entityType,
+      })
       .from(auditEntries)
       .where(
         and(
@@ -772,10 +797,20 @@ describe("administrative product lifecycle", () => {
         reason: "Damaged units",
       },
     ]);
-    expect(inventoryAudits).toEqual([
-      { action: "INVENTORY_ADJUSTED" },
-      { action: "INVENTORY_ADJUSTED" },
+    expect(inventoryAudits.map(({ action }) => action)).toEqual([
+      "INVENTORY_ADJUSTED",
+      "INVENTORY_ADJUSTED",
     ]);
+    expect(
+      inventoryAudits.every(
+        (entry) =>
+          entry.actorUserId === userIds.admin &&
+          entry.entityId === product.id &&
+          entry.entityType === "INVENTORY_BALANCE" &&
+          entry.createdAt instanceof Date &&
+          Object.keys(entry.changes).length > 0,
+      ),
+    ).toBe(true);
   });
 
   it("atomically prevents two purchases from consuming the same last unit and restores it", async () => {

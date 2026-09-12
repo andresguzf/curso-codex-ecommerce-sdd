@@ -8,6 +8,7 @@ import {
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import {
   auditEntries,
@@ -246,23 +247,25 @@ export class ManualInvoiceService {
           updatedAt: now,
         })),
       );
-      await transaction.insert(auditEntries).values({
-        actorUserId: actor.id,
-        action: "MANUAL_INVOICE_CREATED",
-        entityType: "INVOICE",
-        entityId: snapshot.id,
-        changes: {
-          before: null,
-          after: {
-            customerId: customer.id,
-            lineCount: snapshot.lines.length,
-            orderId: null,
-            origin: "MANUAL",
-            status: "DRAFT",
-            total: snapshot.total,
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          actorUserId: actor.id,
+          action: "MANUAL_INVOICE_CREATED",
+          entityType: "INVOICE",
+          entityId: snapshot.id,
+          changes: {
+            before: null,
+            after: {
+              customerId: customer.id,
+              lineCount: snapshot.lines.length,
+              orderId: null,
+              origin: "MANUAL",
+              status: "DRAFT",
+              total: snapshot.total,
+            },
           },
-        },
-      });
+        }),
+      );
 
       return snapshot;
     });

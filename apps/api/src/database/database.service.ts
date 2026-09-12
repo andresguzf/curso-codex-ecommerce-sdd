@@ -41,17 +41,29 @@ export class DatabaseService
     });
     this.client = drizzle({ client: this.pool, schema });
 
-    this.pool.on("error", (error) => {
+    this.pool.on("error", () => {
       this.logger.error(
-        "An idle PostgreSQL connection ended unexpectedly; the pool will reconnect on the next query",
-        error.stack,
+        JSON.stringify({
+          event: "database.pool.connection_lost",
+          level: "error",
+          message:
+            "An idle PostgreSQL connection ended unexpectedly; the pool will reconnect on the next query",
+          timestamp: new Date().toISOString(),
+        }),
       );
     });
   }
 
   async onApplicationBootstrap(): Promise<void> {
     const databaseName = await this.getDatabaseName();
-    this.logger.log(`PostgreSQL connection verified for ${databaseName}`);
+    this.logger.log(
+      JSON.stringify({
+        databaseName,
+        event: "database.connection.verified",
+        level: "info",
+        timestamp: new Date().toISOString(),
+      }),
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

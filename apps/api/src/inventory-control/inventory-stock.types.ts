@@ -4,7 +4,7 @@ export type InventoryStockItem = Readonly<{
 }>;
 
 export type InventoryStockReference = Readonly<{
-  actorUserId?: string;
+  actorUserId: string;
   reason: string;
   referenceId: string;
   referenceType: string;
@@ -24,4 +24,3 @@ export type InventoryShortage = Readonly<{
   productId: string;
   requestedQuantity: number;
 }>;
-

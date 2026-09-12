@@ -3,6 +3,10 @@ import { ConfigService } from "@nestjs/config";
 import cookie from "@fastify/cookie";
 import type { FastifyInstance } from "fastify";
 
+import {
+  getRequestCorrelationId,
+  resolveCorrelationId,
+} from "../audit-observability/request-context";
 import type { EnvironmentVariables } from "../config/environment";
 
 const ORIGIN_FORBIDDEN_RESPONSE = {
@@ -22,7 +26,11 @@ export function configureHttpSecurity(app: INestApplication): void {
     const origin = request.headers.origin;
 
     if (origin && !allowedOrigins.has(origin)) {
-      await reply.code(403).send(ORIGIN_FORBIDDEN_RESPONSE);
+      await reply.code(403).send({
+        ...ORIGIN_FORBIDDEN_RESPONSE,
+        correlationId:
+          getRequestCorrelationId(request) ?? resolveCorrelationId(undefined),
+      });
     }
   });
   app.enableCors({

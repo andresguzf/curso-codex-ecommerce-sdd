@@ -22,7 +22,12 @@ import {
 } from "vitest";
 
 import { configureApplication } from "../../src/application";
-import { roleAssignments, sessions, users } from "../../src/database/schema";
+import {
+  auditEntries,
+  roleAssignments,
+  sessions,
+  users,
+} from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import {
   hashPassword,
@@ -305,9 +310,11 @@ describe("authentication sessions", () => {
   it("registers an active customer atomically and allows subsequent login", async () => {
     const email = "new-public-customer@example.com";
     const password = "NewCustomerPassword123!";
+    const correlationId = "75938e87-435c-4f0a-9d4f-30420321a1da";
     const response = await server.inject({
       method: "POST",
       url: "/api/v1/auth/register",
+      headers: { "x-correlation-id": correlationId },
       payload: {
         email: `  ${email.toUpperCase()}  `,
         displayName: "  New public customer  ",
@@ -316,6 +323,7 @@ describe("authentication sessions", () => {
     });
 
     expect(response.statusCode).toBe(201);
+    expect(response.headers["x-correlation-id"]).toBe(correlationId);
     expect(response.json()).toMatchObject({
       email,
       displayName: "New public customer",
@@ -324,6 +332,7 @@ describe("authentication sessions", () => {
 
     const [registered] = await database
       .select({
+        id: users.id,
         passwordHash: users.passwordHash,
         role: roleAssignments.role,
         status: users.status,
@@ -336,6 +345,38 @@ describe("authentication sessions", () => {
     expect(registered?.passwordHash).toMatch(/^\$argon2id\$/);
     expect(await verifyPassword(password, registered?.passwordHash ?? "")).toBe(
       true,
+    );
+
+    const audits = registered
+      ? await database
+          .select({
+            action: auditEntries.action,
+            actorUserId: auditEntries.actorUserId,
+            changes: auditEntries.changes,
+            correlationId: auditEntries.correlationId,
+            createdAt: auditEntries.createdAt,
+            entityId: auditEntries.entityId,
+            entityType: auditEntries.entityType,
+          })
+          .from(auditEntries)
+          .where(eq(auditEntries.actorUserId, registered.id))
+      : [];
+    expect(audits.map(({ action }) => action).sort()).toEqual([
+      "ROLE_ASSIGNED",
+      "USER_REGISTERED",
+    ]);
+    expect(
+      audits.every(
+        (audit) =>
+          audit.actorUserId === registered?.id &&
+          audit.correlationId === correlationId &&
+          audit.entityId.length > 0 &&
+          audit.entityType.length > 0 &&
+          audit.createdAt instanceof Date,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(audits)).not.toMatch(
+      /NewCustomerPassword123|password|token|secret/i,
     );
 
     const loginResponse = await login(email, password);
@@ -414,11 +455,23 @@ describe("authentication sessions", () => {
 
     expect(wrongPassword.statusCode).toBe(401);
     expect(unknownUser.statusCode).toBe(401);
-    expect(wrongPassword.json()).toEqual(unknownUser.json());
-    expect(wrongPassword.json()).toMatchObject({
+    const wrongBody = wrongPassword.json<Record<string, unknown>>();
+    const unknownBody = unknownUser.json<Record<string, unknown>>();
+    expect({ code: wrongBody.code, message: wrongBody.message }).toEqual({
+      code: unknownBody.code,
+      message: unknownBody.message,
+    });
+    expect(wrongBody).toMatchObject({
       code: "AUTH_INVALID_CREDENTIALS",
       message: "Invalid email or password",
     });
+    expect(wrongBody.correlationId).toBe(
+      wrongPassword.headers["x-correlation-id"],
+    );
+    expect(unknownBody.correlationId).toBe(
+      unknownUser.headers["x-correlation-id"],
+    );
+    expect(wrongBody.correlationId).not.toBe(unknownBody.correlationId);
   });
 
   it("rotates the refresh credential and rejects replay of the previous one", async () => {
@@ -616,6 +669,9 @@ describe("authentication sessions", () => {
     expect(allowed.headers["access-control-allow-credentials"]).toBe("true");
     expect(rejected.statusCode).toBe(403);
     expect(rejected.json()).toMatchObject({ code: "ORIGIN_FORBIDDEN" });
+    expect(rejected.json()).toMatchObject({
+      correlationId: rejected.headers["x-correlation-id"],
+    });
     expect(csrfBootstrap.statusCode).toBe(200);
     expect(csrfBootstrap.headers["access-control-allow-origin"]).toBe(
       "https://backoffice.example.com",

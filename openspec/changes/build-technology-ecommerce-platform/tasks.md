@@ -87,18 +87,18 @@
 
 ## 10. Auditoría, observabilidad y calidad integral
 
-- [ ] 10.1 Implementar auditoría para usuarios, roles, productos, inventario, órdenes y facturas sin registrar secretos; verificar actor, acción, referencia, fecha y cambios relevantes en cada operación sensible.
-- [ ] 10.2 Implementar correlation IDs, logs estructurados, manejo uniforme de errores y métricas básicas; verificar propagación del identificador y ausencia de contraseñas, tokens o datos sensibles en logs.
-- [ ] 10.3 Añadir pruebas de contrato que comparen OpenAPI, cliente generado y respuestas reales; verificar que CI falla cuando el contrato cambia sin regenerar el cliente.
-- [ ] 10.4 Añadir pruebas end-to-end de registro, login, catálogo, carrito anónimo persistente, fusión al autenticar, checkout protegido, historial, administración, facturación desde orden y factura manual; verificar el flujo completo en una base aislada.
-- [ ] 10.5 Añadir pruebas end-to-end negativas para escalamiento de rol, acceso cruzado entre clientes y operaciones de `BILLING` fuera de la administración de órdenes y facturas; verificar respuestas de autorización sin fuga de datos.
-- [ ] 10.6 Ejecutar lint, typecheck, pruebas unitarias, integración, componentes, end-to-end y builds de producción; corregir fallos hasta que la suite completa sea exitosa.
+- [x] 10.1 Implementar auditoría para usuarios, roles, productos, inventario, órdenes y facturas sin registrar secretos; verificar actor, acción, referencia, fecha y cambios relevantes en cada operación sensible.
+- [x] 10.2 Implementar correlation IDs, logs estructurados, manejo uniforme de errores y métricas básicas; verificar propagación del identificador y ausencia de contraseñas, tokens o datos sensibles en logs.
+- [x] 10.3 Añadir pruebas de contrato que comparen OpenAPI, cliente generado y respuestas reales; verificar que CI falla cuando el contrato cambia sin regenerar el cliente.
+- [x] 10.4 Añadir pruebas end-to-end de registro, login, catálogo, carrito anónimo persistente, fusión al autenticar, checkout protegido, historial, administración, facturación desde orden y factura manual; verificar el flujo completo en una base aislada.
+- [x] 10.5 Añadir pruebas end-to-end negativas para escalamiento de rol, acceso cruzado entre clientes y operaciones de `BILLING` fuera de la administración de órdenes y facturas; verificar respuestas de autorización sin fuga de datos.
+- [x] 10.6 Ejecutar lint, typecheck, pruebas unitarias, integración, componentes, end-to-end y builds de producción; corregir fallos hasta que la suite completa sea exitosa.
 
 ## 11. Empaquetado y preparación de despliegue
 
-- [ ] 11.1 Crear imágenes y configuraciones de despliegue independientes para storefront, back office y API; verificar builds reproducibles y arranque separado de cada aplicación.
-- [ ] 11.2 Configurar migraciones previas al arranque, health checks y readiness del API y PostgreSQL; verificar un despliegue desde base vacía y recuperación ante una migración fallida.
-- [ ] 11.3 Configurar CI con instalación bloqueada, caché, controles de calidad, pruebas y builds por aplicación afectada; verificar una ejecución completa y una ejecución incremental.
+- [x] 11.1 Crear imágenes y configuraciones de despliegue independientes para storefront, back office y API; verificar builds reproducibles y arranque separado de cada aplicación.
+- [x] 11.2 Configurar migraciones previas al arranque, health checks y readiness del API y PostgreSQL; verificar un despliegue desde base vacía y recuperación ante una migración fallida.
+- [x] 11.3 Configurar CI con instalación bloqueada, caché, controles de calidad, pruebas y builds por aplicación afectada; verificar una ejecución completa y una ejecución incremental.
 - [ ] 11.4 Documentar variables de entorno, comandos locales, seed, migraciones, roles iniciales y límites de pagos/facturación simulados; verificar que un entorno nuevo puede levantarse siguiendo únicamente esa documentación.
 - [ ] 11.5 Validar la implementación contra todos los escenarios OpenSpec y ejecutar `openspec validate build-technology-ecommerce-platform --strict`; registrar cualquier desviación y verificar estado válido antes de solicitar archivo del cambio.
 

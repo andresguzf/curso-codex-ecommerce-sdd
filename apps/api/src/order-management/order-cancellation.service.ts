@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Inject, Inj
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import { auditEntries, invoices, orders } from "../database/schema";
 import type { AuthenticatedUser } from "../identity-access/auth.types";
@@ -58,10 +59,20 @@ export class OrderCancellationService {
       const [cancelled] = await transaction.update(orders).set({ status: "CANCELLED", cancelledAt: now, updatedAt: now })
         .where(eq(orders.id, orderId)).returning(summaryColumns);
       if (!cancelled) throw new Error("PostgreSQL did not return the cancelled order");
-      await transaction.insert(auditEntries).values({
-        actorUserId: actor.id, entityType: "ORDER", entityId: orderId, action: "ORDER_CANCELLED",
-        changes: { before: { status: order.status }, after: { status: "CANCELLED" }, reason: parsed.data.reason, movementIds: movements.map((movement) => movement.movementId) },
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          actorUserId: actor.id,
+          entityType: "ORDER",
+          entityId: orderId,
+          action: "ORDER_CANCELLED",
+          changes: {
+            before: { status: order.status },
+            after: { status: "CANCELLED" },
+            reason: parsed.data.reason,
+            movementIds: movements.map((movement) => movement.movementId),
+          },
+        }),
+      );
       return cancelled;
     });
   }

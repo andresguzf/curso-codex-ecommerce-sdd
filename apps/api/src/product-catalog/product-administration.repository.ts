@@ -12,6 +12,7 @@ import {
   sql,
 } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import {
   auditEntries,
@@ -208,13 +209,15 @@ export class ProductAdministrationRepository {
         currency: SYSTEM_CURRENCY,
         image: input.image,
       };
-      await transaction.insert(auditEntries).values({
-        action: "PRODUCT_CREATED",
-        actorUserId,
-        changes: { after: this.auditSnapshot(created) },
-        entityId: product.id,
-        entityType: "PRODUCT",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "PRODUCT_CREATED",
+          actorUserId,
+          changes: { after: this.auditSnapshot(created) },
+          entityId: product.id,
+          entityType: "PRODUCT",
+        }),
+      );
 
       return created;
     });
@@ -275,16 +278,18 @@ export class ProductAdministrationRepository {
         currency: SYSTEM_CURRENCY,
         image,
       };
-      await transaction.insert(auditEntries).values({
-        action: "PRODUCT_UPDATED",
-        actorUserId,
-        changes: {
-          after: this.auditSnapshot(result),
-          before: this.auditSnapshot(current),
-        },
-        entityId: productId,
-        entityType: "PRODUCT",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "PRODUCT_UPDATED",
+          actorUserId,
+          changes: {
+            after: this.auditSnapshot(result),
+            before: this.auditSnapshot(current),
+          },
+          entityId: productId,
+          entityType: "PRODUCT",
+        }),
+      );
       return result;
     });
   }
@@ -316,16 +321,21 @@ export class ProductAdministrationRepository {
         currency: SYSTEM_CURRENCY,
         image: current.image,
       };
-      await transaction.insert(auditEntries).values({
-        action: status === "ACTIVE" ? "PRODUCT_ACTIVATED" : "PRODUCT_DEACTIVATED",
-        actorUserId,
-        changes: {
-          after: this.auditSnapshot(result),
-          before: this.auditSnapshot(current),
-        },
-        entityId: productId,
-        entityType: "PRODUCT",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action:
+            status === "ACTIVE"
+              ? "PRODUCT_ACTIVATED"
+              : "PRODUCT_DEACTIVATED",
+          actorUserId,
+          changes: {
+            after: this.auditSnapshot(result),
+            before: this.auditSnapshot(current),
+          },
+          entityId: productId,
+          entityType: "PRODUCT",
+        }),
+      );
       return result;
     });
   }
@@ -346,20 +356,22 @@ export class ProductAdministrationRepository {
         .update(products)
         .set({ deletedAt: now, status: "INACTIVE", updatedAt: now })
         .where(eq(products.id, productId));
-      await transaction.insert(auditEntries).values({
-        action: "PRODUCT_DELETED",
-        actorUserId,
-        changes: {
-          after: {
-            ...this.auditSnapshot(current),
-            deletedAt: now.toISOString(),
-            status: "INACTIVE",
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "PRODUCT_DELETED",
+          actorUserId,
+          changes: {
+            after: {
+              ...this.auditSnapshot(current),
+              deletedAt: now.toISOString(),
+              status: "INACTIVE",
+            },
+            before: this.auditSnapshot(current),
           },
-          before: this.auditSnapshot(current),
-        },
-        entityId: productId,
-        entityType: "PRODUCT",
-      });
+          entityId: productId,
+          entityType: "PRODUCT",
+        }),
+      );
       return true;
     });
   }

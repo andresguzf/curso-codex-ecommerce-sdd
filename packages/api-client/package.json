@@ -19,6 +19,7 @@
     "generate:check": "openapi-typescript ../../apps/api/openapi/openapi.json -o src/generated/openapi.ts --check",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run --passWithNoTests",
+    "test:contract": "vitest run test/generated-contract.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@technology-ecommerce/config-eslint": "workspace:*",
     "@technology-ecommerce/config-typescript": "workspace:*",
+    "@types/node": "26.4.0",
     "eslint": "9.39.5",
     "openapi-typescript": "7.13.0",
     "typescript": "5.9.3",

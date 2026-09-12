@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq, isNull } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
 import {
   auditEntries,
@@ -112,19 +113,21 @@ export class InventoryAdjustmentRepository {
         throw new Error("PostgreSQL did not return the inventory movement");
       }
 
-      await transaction.insert(auditEntries).values({
-        action: "INVENTORY_ADJUSTED",
-        actorUserId,
-        changes: {
-          after: { availableQuantity: balance.availableQuantity },
-          before: { availableQuantity: current.availableQuantity },
-          movementId: movement.id,
-          quantityDelta: input.quantityDelta,
-          reason: input.reason,
-        },
-        entityId: productId,
-        entityType: "INVENTORY_BALANCE",
-      });
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "INVENTORY_ADJUSTED",
+          actorUserId,
+          changes: {
+            after: { availableQuantity: balance.availableQuantity },
+            before: { availableQuantity: current.availableQuantity },
+            movementId: movement.id,
+            quantityDelta: input.quantityDelta,
+            reason: input.reason,
+          },
+          entityId: productId,
+          entityType: "INVENTORY_BALANCE",
+        }),
+      );
 
       return { ...balance, movement: { ...movement, actorUserId, type: "ADJUSTMENT" } };
     });

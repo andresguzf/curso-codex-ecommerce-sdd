@@ -56,13 +56,23 @@ async function main(): Promise<void> {
   });
 
   console.info(
-    `[database-seed] synchronized ${result.users} users, ${result.roleAssignments} role assignments, and ${result.products} catalog products`,
+    JSON.stringify({
+      event: "database.seed.completed",
+      level: "info",
+      products: result.products,
+      roleAssignments: result.roleAssignments,
+      users: result.users,
+    }),
   );
 }
 
 void main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : "Unknown seed error";
-
-  console.error(`[database-seed] ${message}`);
+  console.error(
+    JSON.stringify({
+      errorType: error instanceof Error ? error.name : "UnknownError",
+      event: "database.seed.failed",
+      level: "error",
+    }),
+  );
   process.exitCode = 1;
 });

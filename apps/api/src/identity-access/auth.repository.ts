@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
+import { auditEntries } from "../database/schema/audit";
 import {
   roleAssignments,
   sessions,
@@ -42,10 +44,21 @@ export class AuthRepository {
   }
 
   async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
-    await this.database.client
-      .update(users)
-      .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(users.id, userId));
+    await this.database.client.transaction(async (transaction) => {
+      await transaction
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      await transaction.insert(auditEntries).values(
+        createAuditEntry({
+          action: "USER_PASSWORD_REHASHED",
+          actorUserId: userId,
+          changes: { authenticationMaterialChanged: true },
+          entityId: userId,
+          entityType: "USER",
+        }),
+      );
+    });
   }
 
   async createCustomer(input: {
@@ -75,11 +88,38 @@ export class AuthRepository {
       const [assignment] = await transaction
         .insert(roleAssignments)
         .values({ userId: user.id, role: "CUSTOMER" })
-        .returning({ role: roleAssignments.role });
+        .returning({ id: roleAssignments.id, role: roleAssignments.role });
 
       if (!assignment) {
         throw new Error("PostgreSQL did not return the customer role assignment");
       }
+
+      await transaction.insert(auditEntries).values([
+        createAuditEntry({
+          action: "USER_REGISTERED",
+          actorUserId: user.id,
+          changes: {
+            after: {
+              displayName: user.displayName,
+              email: user.email,
+              role: assignment.role,
+              status: "ACTIVE",
+            },
+          },
+          entityId: user.id,
+          entityType: "USER",
+        }),
+        createAuditEntry({
+          action: "ROLE_ASSIGNED",
+          actorUserId: user.id,
+          changes: {
+            after: { role: assignment.role, userId: user.id },
+            before: null,
+          },
+          entityId: assignment.id,
+          entityType: "ROLE_ASSIGNMENT",
+        }),
+      ]);
 
       return { ...user, role: assignment.role };
     });

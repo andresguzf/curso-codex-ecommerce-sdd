@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
+import { createAuditEntry } from "../audit-observability/audit-entry";
 import type { DatabaseTransaction } from "../database/database.service";
-import { orderItems, orders } from "../database/schema";
+import { auditEntries, orderItems, orders } from "../database/schema";
 import { OrderAggregate, type OrderCommercialSnapshot } from "./order.aggregate";
 
 @Injectable()
@@ -32,6 +33,25 @@ export class OrderService {
       currency: line.currency,
       createdAt: new Date(createdAt),
     })));
+    await transaction.insert(auditEntries).values(
+      createAuditEntry({
+        action: "ORDER_CREATED",
+        actorUserId: order.customerId,
+        changes: {
+          after: {
+            currency: order.currency,
+            customerId: order.customerId,
+            itemCount: items.length,
+            number: order.number,
+            status: order.status,
+            total: order.total,
+          },
+          before: null,
+        },
+        entityId: order.id,
+        entityType: "ORDER",
+      }),
+    );
     return aggregate;
   }
 }

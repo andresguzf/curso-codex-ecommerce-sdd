@@ -1,0 +1,57 @@
+name: technology-ecommerce-apps
+
+services:
+  storefront:
+    image: "technology-ecommerce-storefront:${IMAGE_TAG:-local}"
+    build:
+      context: ../..
+      dockerfile: apps/storefront/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:3001}"
+        NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:3001/api/v1}"
+        NEXT_PUBLIC_BACKOFFICE_URL: "${PUBLIC_BACKOFFICE_URL:-http://localhost:3002}"
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${STOREFRONT_BIND_ADDRESS:-127.0.0.1}:${STOREFRONT_PORT:-3000}:3000"
+
+  backoffice:
+    image: "technology-ecommerce-backoffice:${IMAGE_TAG:-local}"
+    build:
+      context: ../..
+      dockerfile: apps/backoffice/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: "${PUBLIC_API_BASE_URL:-http://localhost:3001}"
+        NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:3001/api/v1}"
+        NEXT_PUBLIC_STOREFRONT_URL: "${PUBLIC_STOREFRONT_URL:-http://localhost:3000}"
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${BACKOFFICE_BIND_ADDRESS:-127.0.0.1}:${BACKOFFICE_PORT:-3002}:3002"
+
+  api:
+    image: "technology-ecommerce-api:${IMAGE_TAG:-local}"
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    init: true
+    restart: unless-stopped
+    environment:
+      AUTH_ACCESS_TOKEN_SECRET: "${AUTH_ACCESS_TOKEN_SECRET:-}"
+      AUTH_COOKIE_SAME_SITE: "${AUTH_COOKIE_SAME_SITE:-lax}"
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3002}"
+      DATABASE_URL: "${DATABASE_URL:-}"
+      HOST: 0.0.0.0
+      IMAGE_STORAGE_LOCAL_ROOT: /app/.local-storage/images
+      IMAGE_STORAGE_PUBLIC_BASE_URL: "${IMAGE_STORAGE_PUBLIC_BASE_URL:-http://localhost:3001/api/v1/media/images}"
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3001}:3001"
+    volumes:
+      - api-images:/app/.local-storage/images
+
+volumes:
+  api-images:
+    name: "${API_IMAGES_VOLUME:-technology_ecommerce_api_images}"

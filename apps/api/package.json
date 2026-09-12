@@ -8,11 +8,14 @@
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "db:migrate:deploy": "node dist/database/migrate.js",
     "db:seed": "tsx src/database/seed/cli.ts",
     "lint": "eslint . --max-warnings=0",
     "openapi:generate": "nest build && node dist/openapi/generate.js",
     "start": "node dist/main.js",
     "test": "vitest run",
+    "test:contract": "vitest run test/openapi/*.spec.ts",
+    "test:e2e": "vitest run test/e2e/*.spec.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.spec.json"
   },
   "dependencies": {
@@ -40,6 +43,8 @@
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "26.4.0",
     "@types/pg": "8.23.1",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "dotenv": "17.4.2",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.5",

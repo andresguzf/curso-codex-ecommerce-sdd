@@ -279,11 +279,20 @@ describe("invoice lifecycle persistence", () => {
         action: auditEntries.action,
         actorUserId: auditEntries.actorUserId,
         changes: auditEntries.changes,
+        createdAt: auditEntries.createdAt,
+        entityId: auditEntries.entityId,
+        entityType: auditEntries.entityType,
       })
       .from(auditEntries)
       .where(eq(auditEntries.entityId, draft.id))
       .orderBy(asc(auditEntries.createdAt));
-    expect(audits).toEqual([
+    expect(
+      audits.map(({ action, actorUserId, changes }) => ({
+        action,
+        actorUserId,
+        changes,
+      })),
+    ).toEqual([
       {
         action: "INVOICE_STATUS_CHANGED",
         actorUserId: admin.id,
@@ -309,6 +318,15 @@ describe("invoice lifecycle persistence", () => {
         },
       },
     ]);
+    expect(
+      audits.every(
+        (audit) =>
+          audit.entityId === draft.id &&
+          audit.entityType === "INVOICE" &&
+          audit.createdAt instanceof Date,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(audits)).not.toMatch(/password|token|secret/i);
   });
 
   it("assigns different numbers when two drafts are issued concurrently", async () => {

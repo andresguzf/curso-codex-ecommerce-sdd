@@ -4,11 +4,15 @@
   "private": true,
   "packageManager": "pnpm@10.33.4",
   "scripts": {
+    "ci:affected": "turbo run lint typecheck test build --affected && pnpm contract:check",
+    "ci:full": "turbo run lint typecheck test build && pnpm contract:check",
     "dev": "turbo dev",
     "build": "turbo build",
+    "contract:check": "pnpm --filter @technology-ecommerce/api-client generate:check && pnpm --filter @technology-ecommerce/api-client test:contract && pnpm --filter @technology-ecommerce/api test:contract",
     "lint": "turbo lint",
     "openapi:check": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate:check",
     "openapi:generate": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate",
+    "test:e2e": "pnpm --filter @technology-ecommerce/api test:e2e",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
   },

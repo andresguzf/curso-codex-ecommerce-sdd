@@ -934,6 +934,35 @@ describe("persistent public cart", () => {
     expect(balance?.availableQuantity).toBe(3);
     expect(closedCart?.status).toBe("CHECKED_OUT");
     expect(closedCart?.closedAt).toBeInstanceOf(Date);
+
+    const [orderAudit] = await database
+      .select({
+        action: auditEntries.action,
+        actorUserId: auditEntries.actorUserId,
+        changes: auditEntries.changes,
+        createdAt: auditEntries.createdAt,
+        entityId: auditEntries.entityId,
+        entityType: auditEntries.entityType,
+      })
+      .from(auditEntries)
+      .where(
+        and(
+          eq(auditEntries.action, "ORDER_CREATED"),
+          eq(auditEntries.entityId, storedOrders[0]!.id),
+        ),
+      );
+    expect(orderAudit).toMatchObject({
+      action: "ORDER_CREATED",
+      actorUserId: userIds.customerA,
+      entityId: storedOrders[0]!.id,
+      entityType: "ORDER",
+      changes: {
+        before: null,
+        after: { status: "PROCESSING", total: "205.00" },
+      },
+    });
+    expect(orderAudit?.createdAt).toBeInstanceOf(Date);
+    expect(JSON.stringify(orderAudit)).not.toMatch(/password|token|secret/i);
   });
 
   it("preserves the actual checkout order snapshots after product and customer edits", async () => {
@@ -1085,7 +1114,15 @@ describe("persistent public cart", () => {
     const results = await Promise.all([patch("billing", "COMPLETED"), patch("billing", "COMPLETED")]);
     expect(results.map((result) => result.statusCode).sort()).toEqual([200, 409]);
     expect((await database.select().from(orders).where(eq(orders.id, id)))[0]?.status).toBe("COMPLETED");
-    const audits = await database.select().from(auditEntries).where(eq(auditEntries.entityId, id));
+    const audits = await database
+      .select()
+      .from(auditEntries)
+      .where(
+        and(
+          eq(auditEntries.entityId, id),
+          eq(auditEntries.action, "ORDER_STATUS_CHANGED"),
+        ),
+      );
     expect(audits).toHaveLength(1);
     expect(audits[0]).toMatchObject({ action: "ORDER_STATUS_CHANGED", actorUserId: userIds.billing, changes: { before: { status: "INVOICED" }, after: { status: "COMPLETED" } } });
     expect(await database.select().from(payments)).toEqual(beforePayments);
