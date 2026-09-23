@@ -58,6 +58,7 @@ type Role = "ADMIN" | "BILLING" | "CUSTOMER";
 type ProductResponse = Readonly<{
   id: string;
   sku: string;
+  slug: string | null;
   name: string;
   description: string;
   price: string;
@@ -216,6 +217,7 @@ describe("administrative product lifecycle", () => {
     expect(createdResponse.statusCode).toBe(201);
     expect(created).toMatchObject({
       currency: "USD",
+      slug: "notebook-pro-14",
       image: productPayload.image,
       price: "1299.90",
       sku: "NOTEBOOK-001",
@@ -246,6 +248,54 @@ describe("administrative product lifecycle", () => {
       url: `/api/v1/products/${created.id}`,
     });
     expect(hiddenFromPublic.statusCode).toBe(404);
+  });
+
+  it("resolves concurrent slug collisions and preserves slugs when names change", async () => {
+    const requests = [1, 2].map((number) => server.inject({
+      method: "POST",
+      url: "/api/v1/products",
+      headers: authorization(tokens.admin),
+      payload: {
+        ...productPayload,
+        sku: `SLUG-RACE-${number}`,
+        image: { ...productPayload.image, storageKey: `products/slug-race-${number}/cover.webp` },
+      },
+    }));
+    const created = await Promise.all(requests);
+    expect(created.map((response) => response.statusCode)).toEqual([201, 201]);
+    const slugs = created.map((response) => response.json<ProductResponse>().slug).sort();
+    expect(slugs).toEqual(["notebook-pro-14-2", "notebook-pro-14-3"]);
+
+    const product = created[0]!.json<ProductResponse>();
+    const renamed = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/products/${product.id}`,
+      headers: authorization(tokens.admin),
+      payload: { name: "Nombre completamente nuevo" },
+    });
+    expect(renamed.json<ProductResponse>().slug).toBe(product.slug);
+
+    const explicitCollision = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/products/${product.id}`,
+      headers: authorization(tokens.admin),
+      payload: { slug: "notebook-pro-14" },
+    });
+    expect(explicitCollision.statusCode).toBe(409);
+    expect(explicitCollision.json()).toMatchObject({ code: "PRODUCT_SLUG_ALREADY_EXISTS" });
+
+    const explicitChange = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/products/${product.id}`,
+      headers: authorization(tokens.admin),
+      payload: { slug: "  Nuevo & Slug  " },
+    });
+    expect(explicitChange.statusCode).toBe(200);
+    expect(explicitChange.json<ProductResponse>().slug).toBe("nuevo-slug");
+    for (const response of created) {
+      await database.update(products).set({ deletedAt: new Date(), status: "INACTIVE" })
+        .where(eq(products.id, response.json<ProductResponse>().id));
+    }
   });
 
   it("rejects invalid money, stock mutation and duplicate SKU", async () => {

@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { CartActionFeedback } from "../cart/cart-action-feedback";
 import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProducts } from "./catalog-api";
 import { CatalogFilters, type CatalogFilterValues } from "./catalog-filters";
@@ -21,7 +20,7 @@ export function CatalogLanding() {
     queryFn: () => getPublicProducts(query),
     queryKey: ["catalog", "public", query],
   });
-  const { addProduct, feedback, isAdding } = useAddToCart();
+  const { addProduct, isAdding } = useAddToCart();
 
   function navigateWith(updates: Record<string, string | undefined>) {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -48,14 +47,20 @@ export function CatalogLanding() {
     });
   }
 
+  function handleHeroSearch(search: string) {
+    const params = new URLSearchParams({ page: "1" });
+    if (search) params.set("search", search);
+    router.push(`${pathname}?${params.toString()}#catalog`, { scroll: true });
+  }
+
   return (
     <main className="min-h-screen bg-[#f8fafc]">
       <CatalogHero
         initialSearchValue={query.search ?? ""}
         key={`hero-search:${query.search ?? ""}`}
-        onSearch={(search) => navigateWith({ search: search || undefined })}
+        onSearch={handleHeroSearch}
       />
-      <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20">
+      <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20" id="catalog">
         <div className="mb-9 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Catálogo activo</p>
@@ -82,10 +87,6 @@ export function CatalogLanding() {
           })}
           query={query}
         />
-
-        <div className="mb-6">
-          <CartActionFeedback feedback={feedback} />
-        </div>
 
         {productsQuery.isPending ? <LoadingState message="Cargando productos disponibles…" /> : null}
         {productsQuery.isError ? (

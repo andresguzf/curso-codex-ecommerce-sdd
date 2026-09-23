@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { loginRequestSchema, type LoginRequest } from "@technology-ecommerce/api-schemas";
+import { useFlashStore } from "@technology-ecommerce/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,8 +14,7 @@ import { broadcastSessionChange } from "./session-provider";
 export function BackofficeLoginForm() {
   const router = useRouter();
   const setSession = useSessionStore((state) => state.setSession);
-  const setNotice = useSessionStore((state) => state.setNotice);
-  const notice = useSessionStore((state) => state.notice);
+  const showFlash = useFlashStore((state) => state.showFlash);
   const [message, setMessage] = useState<string>();
   const { formState, handleSubmit, register } = useForm<LoginRequest>({
     resolver: zodResolver(loginRequestSchema),
@@ -23,7 +23,6 @@ export function BackofficeLoginForm() {
 
   const onSubmit = handleSubmit(async (input) => {
     setMessage(undefined);
-    setNotice(null);
     try {
       const session = await authClient.login(input);
       if (!isBackofficeRole(session.user.role)) {
@@ -31,7 +30,7 @@ export function BackofficeLoginForm() {
         return;
       }
       setSession(session);
-      setNotice("Sesión administrativa iniciada correctamente.");
+      showFlash("success", "Sesión administrativa iniciada correctamente.");
       broadcastSessionChange("session-changed");
       router.replace(backofficeDestinationFor(session.user.role));
     } catch (error) {
@@ -52,7 +51,7 @@ export function BackofficeLoginForm() {
         <input id="password" type="password" autoComplete="current-password" {...register("password")} aria-invalid={Boolean(formState.errors.password)} aria-describedby={formState.errors.password ? "password-error" : undefined} className={fieldClass} />
         {formState.errors.password ? <p id="password-error" role="alert" className="mt-2 text-sm text-red-700">{formState.errors.password.message}</p> : null}
       </div>
-      <div aria-live="polite" aria-atomic="true" className={`min-h-6 text-sm font-medium ${message ? "text-red-700" : "text-blue-700"}`}>{message ?? notice}</div>
+      <div aria-live="polite" aria-atomic="true" className="min-h-6 text-sm font-medium text-red-700">{message}</div>
       <button disabled={formState.isSubmitting} className="flex w-full items-center justify-between rounded-lg bg-[#15345b] px-5 py-4 font-bold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60">
         <span>{formState.isSubmitting ? "Validando acceso…" : "Entrar al panel"}</span><span aria-hidden="true">→</span>
       </button>

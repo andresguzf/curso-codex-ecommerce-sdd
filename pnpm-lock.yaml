@@ -360,6 +360,10 @@ importers:
   packages/config-typescript: {}
 
   packages/ui:
+    dependencies:
+      zustand:
+        specifier: ^5.0.15
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)
     devDependencies:
       '@technology-ecommerce/config-eslint':
         specifier: workspace:*

@@ -13,6 +13,7 @@ import {
   Icon,
   IconButton,
   LoadingState,
+  useFlashStore,
   type DataTableColumn,
 } from "@technology-ecommerce/ui";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import {
   listAdministrativeProducts,
   updateProduct,
   updateProductStatus,
+  ProductApiError,
 } from "./product-api";
 import { ProductForm } from "./product-form";
 
@@ -51,7 +53,7 @@ export function ProductManagement() {
   const { session, status } = useSessionStore();
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
   const [form, setForm] = useState<FormState>();
-  const [notice, setNotice] = useState<string>();
+  const showFlash = useFlashStore((state) => state.showFlash);
   const page = pageSchema.parse(searchParams.get("page") ?? "1");
   const accessToken = session?.accessToken ?? "";
   const isAdmin = session?.user.role === "ADMIN";
@@ -80,38 +82,43 @@ export function ProductManagement() {
       }
       return createProduct(accessToken, input);
     },
-    onError: (error: Error) => setNotice(error.message),
-    onSuccess: async () => {
+    onError: (error: Error) => showFlash("error", error instanceof ProductApiError ? error.message : "No pudimos guardar el producto. Inténtalo nuevamente."),
+    onSuccess: () => {
       const action = form?.mode === "edit" ? "actualizado" : "creado";
-      await queryClient.invalidateQueries({ queryKey: productQueryKey });
       setForm(undefined);
-      setNotice(`Producto ${action} correctamente.`);
+      showFlash("success", `Producto ${action} correctamente.`);
+      void queryClient.invalidateQueries({ queryKey: productQueryKey });
     },
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ product, status: nextStatus }: { product: ProductListItem; status: "ACTIVE" | "INACTIVE" }) =>
       updateProductStatus(accessToken, product.id, { status: nextStatus }),
-    onError: (error: Error) => setNotice(error.message),
-    onSuccess: async (_product, variables) => {
-      await queryClient.invalidateQueries({ queryKey: productQueryKey });
+    onError: (error: Error) => {
       setConfirmation(undefined);
-      setNotice(`Producto ${variables.status === "ACTIVE" ? "activado" : "desactivado"} correctamente.`);
+      showFlash("error", error instanceof ProductApiError ? error.message : "No pudimos cambiar el estado del producto. Inténtalo nuevamente.");
+    },
+    onSuccess: (_product, variables) => {
+      setConfirmation(undefined);
+      showFlash("success", `Producto ${variables.status === "ACTIVE" ? "activado" : "desactivado"} correctamente.`);
+      void queryClient.invalidateQueries({ queryKey: productQueryKey });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (product: ProductListItem) => deleteProduct(accessToken, product.id),
-    onError: (error: Error) => setNotice(error.message),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: productQueryKey });
+    onError: (error: Error) => {
       setConfirmation(undefined);
-      setNotice("Producto eliminado lógicamente.");
+      showFlash("error", error instanceof ProductApiError ? error.message : "No pudimos eliminar el producto. Inténtalo nuevamente.");
+    },
+    onSuccess: () => {
+      setConfirmation(undefined);
+      showFlash("success", "Producto eliminado lógicamente.");
+      void queryClient.invalidateQueries({ queryKey: productQueryKey });
     },
   });
 
   function activate(product: ProductListItem) {
-    setNotice(undefined);
     statusMutation.mutate({ product, status: "ACTIVE" });
   }
 
@@ -140,7 +147,7 @@ export function ProductManagement() {
     {
       cell: (product) => (
         <div className="flex min-w-64 flex-wrap gap-2">
-          <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "edit", product }); }} />
+          <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setForm({ mode: "edit", product }); }} />
           {product.status === "ACTIVE" ? (
             <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50 focus-visible:ring-amber-700" icon="power" label="Desactivar" onClick={() => setConfirmation({ action: "deactivate", product })} />
           ) : (
@@ -179,10 +186,8 @@ export function ProductManagement() {
             <h1 className="mb-0 mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Productos</h1>
             <p className="mb-0 mt-2 text-slate-600">Gestiona los datos comerciales; el stock se ajusta por separado.</p>
           </div>
-          <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" icon="plus" label="+ Nuevo producto" onClick={() => { saveMutation.reset(); setNotice(undefined); setForm({ mode: "create" }); }} />
+          <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" icon="plus" label="+ Nuevo producto" onClick={() => { saveMutation.reset(); setForm({ mode: "create" }); }} />
         </header>
-
-        <div aria-atomic="true" aria-live="polite" className={`min-h-12 py-3 text-sm font-semibold ${notice?.includes("correctamente") || notice?.includes("lógicamente") ? "text-emerald-800" : "text-red-800"}`}>{notice}</div>
 
         {form ? (
           <section aria-labelledby="product-form-title" className="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
@@ -215,7 +220,6 @@ export function ProductManagement() {
         onCancel={() => setConfirmation(undefined)}
         onConfirm={() => {
           if (!confirmation) return;
-          setNotice(undefined);
           if (confirmation.action === "delete") deleteMutation.mutate(confirmation.product);
           else statusMutation.mutate({ product: confirmation.product, status: "INACTIVE" });
         }}

@@ -3340,6 +3340,10 @@
             "example": "NOTEBOOK-001",
             "maxLength": 64
           },
+          "slug": {
+            "type": "string",
+            "maxLength": 220
+          },
           "name": {
             "type": "string",
             "example": "Notebook Pro 14",
@@ -3382,6 +3386,10 @@
           },
           "sku": {
             "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true
           },
           "name": {
             "type": "string"
@@ -3427,6 +3435,7 @@
         "required": [
           "id",
           "sku",
+          "slug",
           "name",
           "description",
           "price",
@@ -3444,6 +3453,10 @@
           "sku": {
             "type": "string",
             "maxLength": 64
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 220
           },
           "name": {
             "type": "string",

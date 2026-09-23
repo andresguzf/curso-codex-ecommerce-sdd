@@ -50,6 +50,13 @@
       "when": 1788903106996,
       "tag": "0006_demonic_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790179259612,
+      "tag": "0007_opposite_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

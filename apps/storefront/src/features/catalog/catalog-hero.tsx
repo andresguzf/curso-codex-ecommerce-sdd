@@ -19,16 +19,15 @@ export function CatalogHero({
       <Image
         alt=""
         aria-hidden="true"
-        className="object-cover object-[62%_center]"
+        className="object-cover object-[64%_center] opacity-80 lg:opacity-90"
         fill
-        priority
+        preload
         sizes="100vw"
         src="/images/hero-gaming-keyboard.png"
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,20,38,0.98)_0%,rgba(8,20,38,0.91)_42%,rgba(8,20,38,0.48)_72%,rgba(8,20,38,0.2)_100%)]" />
-      <div aria-hidden="true" className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(34,211,238,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.15)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:linear-gradient(to_right,black,transparent_58%)]" />
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[minmax(0,1fr)_22rem] lg:px-10 lg:py-28">
-        <div className="max-w-3xl">
+      <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,20,38,0.96),rgba(8,20,38,0.82))] lg:bg-[linear-gradient(90deg,rgba(8,20,38,0.98)_0%,rgba(8,20,38,0.9)_38%,rgba(8,20,38,0.18)_100%)]" />
+      <div className="relative mx-auto flex min-h-[30rem] max-w-7xl items-center px-6 py-16 sm:min-h-[34rem] lg:min-h-[36rem] lg:px-10 lg:py-24">
+        <div className="w-full max-w-3xl">
           <p className="mb-5 flex items-center gap-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
             <span aria-hidden="true" className="h-px w-10 bg-cyan-300" />
             Tecnología seleccionada
@@ -36,7 +35,7 @@ export function CatalogHero({
           <h1 id="catalog-hero-title" className="m-0 max-w-3xl text-balance text-5xl font-black leading-[0.96] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
             El equipo correcto cambia tu ritmo.
           </h1>
-          <p className="mb-0 mt-7 max-w-2xl text-lg leading-8 text-slate-300">
+          <p className="mb-0 mt-7 max-w-2xl text-lg leading-8 text-slate-200">
             Descubre notebooks, monitores y periféricos elegidos para trabajar,
             crear y jugar sin perder tiempo entre especificaciones vacías.
           </p>
@@ -54,25 +53,6 @@ export function CatalogHero({
               Buscar productos
             </button>
           </form>
-        </div>
-
-        <div className="hidden self-end border-l border-cyan-300/30 pl-7 lg:block" aria-label="Áreas del catálogo">
-          <p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Señal de selección</p>
-          <ul className="mt-5 grid list-none gap-5 p-0">
-            {[
-              ["01", "Trabajo", "Rendimiento sostenido"],
-              ["02", "Creación", "Imagen y precisión"],
-              ["03", "Juego", "Respuesta inmediata"],
-            ].map(([number, label, detail]) => (
-              <li className="grid grid-cols-[2rem_1fr] gap-3" key={number}>
-                <span className="font-mono text-xs text-cyan-300">{number}</span>
-                <span>
-                  <strong className="block text-sm">{label}</strong>
-                  <span className="mt-1 block text-xs text-slate-400">{detail}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </section>

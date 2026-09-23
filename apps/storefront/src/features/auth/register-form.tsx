@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { registerRequestSchema, type RegisterRequest } from "@technology-ecommerce/api-schemas";
+import { useFlashStore } from "@technology-ecommerce/ui";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -17,7 +18,7 @@ export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setSession = useSessionStore((state) => state.setSession);
-  const setNotice = useSessionStore((state) => state.setNotice);
+  const showFlash = useFlashStore((state) => state.showFlash);
   const [formMessage, setFormMessage] = useState<string>();
   const { formState, handleSubmit, register } = useForm<RegisterRequest>({
     resolver: zodResolver(registerRequestSchema),
@@ -31,7 +32,8 @@ export function RegisterForm() {
       const session = await authClient.login({ email: input.email, password: input.password });
       const claim = await claimAnonymousCart(session.accessToken);
       setSession(session);
-      setNotice(
+      showFlash(
+        claim.adjustedProductIds.length ? "warning" : "success",
         claim.adjustedProductIds.length
           ? "Cuenta creada. Ajustamos algunas cantidades del carrito al stock disponible."
           : "Cuenta creada y sesión iniciada correctamente.",

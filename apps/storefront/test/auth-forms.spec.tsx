@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 
 import { LoginForm } from "../src/features/auth/login-form";
 import { RegisterForm } from "../src/features/auth/register-form";
@@ -26,6 +27,7 @@ describe("storefront authentication", () => {
       cart: {} as never,
     });
     useSessionStore.setState({ notice: null, session: null, status: "anonymous" });
+    useFlashStore.getState().dismissFlash();
   });
 
   it("announces invalid login fields accessibly", async () => {
@@ -85,10 +87,10 @@ describe("storefront authentication", () => {
   it("revokes logout, clears memory and announces the result", async () => {
     vi.spyOn(authClient, "logout").mockResolvedValue();
     useSessionStore.getState().setSession({ accessToken: "access-token", tokenType: "Bearer", accessTokenExpiresAt: "2026-09-02T10:15:00.000Z", sessionExpiresAt: "2026-09-09T10:15:00.000Z", user: { id: "3296f1d5-5a1d-4b94-9caa-b26878f447e4", email: "ana@example.com", displayName: "Ana Díaz", role: "CUSTOMER" } });
-    render(<SessionControls />);
+    render(<><SessionControls /><FlashRegion appearance="storefront" /></>);
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
     await waitFor(() => expect(useSessionStore.getState().status).toBe("anonymous"));
     expect(useSessionStore.getState().session).toBeNull();
-    expect(screen.getByText("Sesión cerrada correctamente.")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("Sesión cerrada correctamente.").closest('[aria-live="polite"]')).toBeInTheDocument();
   });
 });

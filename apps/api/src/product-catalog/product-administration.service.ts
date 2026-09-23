@@ -10,6 +10,7 @@ import {
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
 import { ProductAdministrationRepository } from "./product-administration.repository";
+import { normalizeSlug } from "./slug";
 import type {
   AdministrativeProduct,
   CreateAdministrativeProduct,
@@ -118,8 +119,10 @@ export class ProductAdministrationService {
   }
 
   private normalize(input: CreateAdministrativeProduct): CreateAdministrativeProduct {
+    this.validatedSlug(input.slug ?? input.name);
     return {
       ...input,
+      ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
       description: input.description.trim(),
       image: {
         storageKey: input.image.storageKey.trim(),
@@ -148,6 +151,7 @@ export class ProductAdministrationService {
       ...(input.sku === undefined
         ? {}
         : { sku: input.sku.trim().toUpperCase() }),
+      ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
     };
   }
 
@@ -159,6 +163,12 @@ export class ProductAdministrationService {
         message: "A product with this SKU already exists",
       });
     }
+    if (constraint === "products_slug_unique") {
+      throw new ConflictException({
+        code: "PRODUCT_SLUG_ALREADY_EXISTS",
+        message: "A product with this slug already exists",
+      });
+    }
     if (constraint === "product_images_storage_key_unique") {
       throw new ConflictException({
         code: "PRODUCT_IMAGE_ALREADY_ASSIGNED",
@@ -166,6 +176,17 @@ export class ProductAdministrationService {
       });
     }
     throw error;
+  }
+
+  private validatedSlug(value: string): string {
+    try {
+      return normalizeSlug(value);
+    } catch {
+      throw new BadRequestException({
+        code: "PRODUCT_SLUG_INVALID",
+        message: "A product slug must contain letters or numbers",
+      });
+    }
   }
 
   private assertAdministrativeView(actor?: AuthenticatedUser): void {

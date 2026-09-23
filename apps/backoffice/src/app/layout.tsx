@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { BackofficeShell } from "@/features/layout/backoffice-shell";
+
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -15,7 +17,11 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="es">
-      <body><Providers>{children}</Providers></body>
+      <body>
+        <Providers>
+          <BackofficeShell>{children}</BackofficeShell>
+        </Providers>
+      </body>
     </html>
   );
 }

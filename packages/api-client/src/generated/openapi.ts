@@ -877,6 +877,7 @@ export interface components {
         CreateProductRequestDto: {
             /** @example NOTEBOOK-001 */
             sku: string;
+            slug?: string;
             /** @example Notebook Pro 14 */
             name: string;
             description: string;
@@ -893,6 +894,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             sku: string;
+            slug: string | null;
             name: string;
             description: string;
             /** @example 1299990.00 */
@@ -914,6 +916,7 @@ export interface components {
         };
         UpdateProductRequestDto: {
             sku?: string;
+            slug?: string;
             name?: string;
             description?: string;
             price?: string;

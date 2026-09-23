@@ -16,7 +16,6 @@ const cartAction = vi.hoisted(() => ({
 vi.mock("../src/features/cart/use-add-to-cart", () => ({
   useAddToCart: () => ({
     addProduct: cartAction.addProduct,
-    feedback: null,
     isAdding: false,
     isSessionInitializing: false,
   }),

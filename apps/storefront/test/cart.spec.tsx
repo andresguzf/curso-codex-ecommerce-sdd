@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ActiveCart } from "@technology-ecommerce/api-schemas";
+import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -89,6 +90,7 @@ function renderCart() {
   return render(
     <QueryClientProvider client={queryClient}>
       <CartPage />
+      <FlashRegion appearance="storefront" />
     </QueryClientProvider>,
   );
 }
@@ -98,7 +100,8 @@ describe("storefront cart", () => {
     vi.mocked(getCart).mockReset();
     vi.mocked(removeCartItem).mockReset();
     vi.mocked(updateCartItem).mockReset();
-    useCartUiStore.setState({ notice: null, removalItemId: null });
+    useCartUiStore.setState({ removalItemId: null });
+    useFlashStore.getState().dismissFlash();
     useSessionStore.setState({
       notice: null,
       session: {
@@ -187,9 +190,7 @@ describe("storefront cart", () => {
       expect(screen.getByText("2", { selector: "output" })).toBeInTheDocument();
       expect(screen.getAllByText("$200.00")).toHaveLength(3);
     });
-    expect(
-      screen.getByText("Cantidad y total actualizados."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Cantidad y total actualizados.").closest('[aria-live="polite"]')).toBeInTheDocument();
   });
 
   it("does not allow a quantity greater than current stock", async () => {
@@ -244,8 +245,33 @@ describe("storefront cart", () => {
     expect(
       await screen.findByRole("heading", { name: "Encuentra tu próximo equipo" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Producto eliminado del carrito.",
-    );
+    expect(screen.getByText("Producto eliminado del carrito.").closest('[aria-live="polite"]')).toBeInTheDocument();
+  });
+
+  it("reports a rejected quantity while keeping the previous total", async () => {
+    vi.mocked(getCart).mockResolvedValue(cart(1, 4));
+    vi.mocked(updateCartItem).mockRejectedValue(new Error("private server detail"));
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole("button", { name: "Aumentar cantidad de Teclado Relay 75" }));
+
+    expect(await screen.findByText("No pudimos actualizar tu carrito. Inténtalo nuevamente.")).toBeInTheDocument();
+    expect(screen.queryByText("private server detail")).not.toBeInTheDocument();
+    expect(screen.getByText("1", { selector: "output" })).toBeInTheDocument();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
+  });
+
+  it("reports removal failure after closing the confirmation", async () => {
+    vi.mocked(getCart).mockResolvedValue(cart());
+    vi.mocked(removeCartItem).mockRejectedValue(new Error("private server detail"));
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole("button", { name: /Quitar .+ del carrito/ }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Quitar producto" }));
+
+    expect(await screen.findByText("No pudimos actualizar tu carrito. Inténtalo nuevamente.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(removeCartItem).toHaveBeenCalledOnce();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
   });
 });

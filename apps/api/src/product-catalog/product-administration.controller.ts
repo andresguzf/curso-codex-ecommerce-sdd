@@ -68,6 +68,7 @@ const createProductSchema = z
     name: z.string().trim().min(1).max(200),
     price: moneySchema,
     sku: z.string().trim().min(1).max(64),
+    slug: z.string().trim().min(1).max(220).optional(),
     status: z.enum(PRODUCT_STATUSES).default("INACTIVE"),
   })
   .strict();
@@ -78,6 +79,7 @@ const updateProductSchema = z
     name: z.string().trim().min(1).max(200).optional(),
     price: moneySchema.optional(),
     sku: z.string().trim().min(1).max(64).optional(),
+    slug: z.string().trim().min(1).max(220).optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -96,6 +98,8 @@ class ProductImageReferenceDto {
 class CreateProductRequestDto {
   @ApiProperty({ example: "NOTEBOOK-001", maxLength: 64 })
   sku!: string;
+
+  @ApiPropertyOptional({ maxLength: 220 }) slug?: string;
 
   @ApiProperty({ example: "Notebook Pro 14", maxLength: 200 })
   name!: string;
@@ -116,6 +120,8 @@ class CreateProductRequestDto {
 class UpdateProductRequestDto {
   @ApiPropertyOptional({ maxLength: 64 })
   sku?: string;
+
+  @ApiPropertyOptional({ maxLength: 220 }) slug?: string;
 
   @ApiPropertyOptional({ maxLength: 200 })
   name?: string;
@@ -138,6 +144,7 @@ class UpdateProductStatusRequestDto {
 class AdministrativeProductResponseDto {
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() sku!: string;
+  @ApiProperty({ nullable: true, type: String }) slug!: string | null;
   @ApiProperty() name!: string;
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;

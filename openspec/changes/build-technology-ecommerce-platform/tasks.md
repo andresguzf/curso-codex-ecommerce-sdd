@@ -99,23 +99,24 @@
 - [x] 11.1 Crear imágenes y configuraciones de despliegue independientes para storefront, back office y API; verificar builds reproducibles y arranque separado de cada aplicación.
 - [x] 11.2 Configurar migraciones previas al arranque, health checks y readiness del API y PostgreSQL; verificar un despliegue desde base vacía y recuperación ante una migración fallida.
 - [x] 11.3 Configurar CI con instalación bloqueada, caché, controles de calidad, pruebas y builds por aplicación afectada; verificar una ejecución completa y una ejecución incremental.
-- [ ] 11.4 Documentar variables de entorno, comandos locales, seed, migraciones, roles iniciales y límites de pagos/facturación simulados; verificar que un entorno nuevo puede levantarse siguiendo únicamente esa documentación.
-- [ ] 11.5 Validar la implementación contra todos los escenarios OpenSpec y ejecutar `openspec validate build-technology-ecommerce-platform --strict`; registrar cualquier desviación y verificar estado válido antes de solicitar archivo del cambio.
+- [x] 11.4 Documentar variables de entorno, comandos locales, seed, migraciones, roles iniciales y límites de pagos/facturación simulados; verificar que un entorno nuevo puede levantarse siguiendo únicamente esa documentación.
+- [x] 11.5 Validar la implementación contra todos los escenarios OpenSpec y ejecutar `openspec validate build-technology-ecommerce-platform --strict`; registrar cualquier desviación y verificar estado válido antes de solicitar archivo del cambio.
 
 ## 12. Layouts, navegación y retroalimentación compartida
 
-- [ ] 12.1 Implementar `StorefrontShell` con header, navbar superior, área principal, footer, nombre de tienda y logo SVG; verificar persistencia del layout, regiones semánticas y navegación responsive mediante pruebas de componentes.
-- [ ] 12.2 Integrar en el navbar del storefront inicio, acciones de cuenta y login/logout según sesión y badge con la suma de unidades del carrito público; verificar persistencia y actualización en estados visitante, cliente autenticado, carrito vacío y carrito con múltiples cantidades.
-- [ ] 12.3 Implementar `BackofficeShell` con navegación lateral izquierda colapsable y opciones condicionadas por `ADMIN` y `BILLING`; verificar expansión, colapso, teclado, pantalla pequeña y ausencia de enlaces no autorizados.
-- [ ] 12.4 Implementar el hero del storefront con imagen tecnológica semitransparente, contenido legible y buscador conectado al catálogo; verificar contraste, adaptación responsive y navegación a la primera página de resultados con la URL correcta.
-- [ ] 12.5 Implementar un sistema compartido de mensajes flash accesibles para éxito, error, advertencia e información; verificar región `aria-live`, deduplicación y mensajes de login, logout y mutaciones sin usar `useEffect` para inferir eventos.
-- [ ] 12.6 Implementar un diálogo de confirmación reutilizable con Tailwind para operaciones destructivas; verificar foco inicial y de retorno, cierre por teclado, cancelación sin solicitud y bloqueo de envíos duplicados.
-- [ ] 12.7 Integrar mensajes flash y confirmaciones en CRUD de productos, categorías, etiquetas y usuarios y en agregar, actualizar o eliminar líneas del carrito; verificar cada operación exitosa, fallida y cancelada mediante pruebas de componentes.
+- [x] 12.1 Implementar `StorefrontShell` con header, navbar superior, área principal, footer, nombre de tienda y logo SVG; verificar persistencia del layout, regiones semánticas y navegación responsive mediante pruebas de componentes.
+- [x] 12.2 Integrar en el navbar del storefront inicio, acciones de cuenta y login/logout según sesión y badge con la suma de unidades del carrito público; verificar persistencia y actualización en estados visitante, cliente autenticado, carrito vacío y carrito con múltiples cantidades.
+- [x] 12.3 Implementar `BackofficeShell` con navegación lateral izquierda colapsable y opciones condicionadas por `ADMIN` y `BILLING`; verificar expansión, colapso, teclado, pantalla pequeña y ausencia de enlaces no autorizados.
+- [x] 12.4 Implementar el hero del storefront con imagen tecnológica semitransparente, contenido legible y buscador conectado al catálogo; verificar contraste, adaptación responsive y navegación a la primera página de resultados con la URL correcta.
+- [x] 12.5 Implementar un sistema compartido de mensajes flash accesibles para éxito, error, advertencia e información; verificar región `aria-live`, deduplicación y mensajes de login, logout y mutaciones sin usar `useEffect` para inferir eventos.
+- [x] 12.6 Implementar un diálogo de confirmación reutilizable con Tailwind para operaciones destructivas; verificar foco inicial y de retorno, cierre por teclado, cancelación sin solicitud y bloqueo de envíos duplicados.
+- [x] 12.7 Integrar mensajes flash y confirmaciones en el CRUD de productos y en agregar, actualizar o eliminar líneas del carrito; verificar operaciones exitosas, fallidas y canceladas mediante pruebas de componentes, sin duplicar avisos existentes.
+- [x] 12.8 Crear la interfaz administrativa de usuarios sobre el CRUD REST existente, con búsqueda y paginación, formularios de creación y edición, cambio de rol o estado, mensajes flash y confirmación antes de desactivar o eliminar lógicamente; verificar permisos `ADMIN`, operaciones exitosas, fallidas y canceladas mediante pruebas de componentes.
 
 ## 13. Categorías, etiquetas y slugs
 
-- [ ] 13.1 Añadir migraciones para categorías, etiquetas, relación producto-etiqueta, categoría principal y slug de producto con índices, unicidad y eliminación lógica; verificar migración desde cero y restricciones con pruebas PostgreSQL.
-- [ ] 13.2 Implementar normalización y resolución determinista de slugs sin regenerarlos automáticamente al cambiar nombres; verificar caracteres especiales, colisiones, edición explícita y unicidad concurrente.
+- [x] 13.1 Añadir migraciones para categorías, etiquetas, relación producto-etiqueta, categoría principal y slug de producto con índices, unicidad y eliminación lógica; verificar migración desde cero y restricciones con pruebas PostgreSQL.
+- [x] 13.2 Implementar normalización y resolución determinista de slugs sin regenerarlos automáticamente al cambiar nombres; verificar caracteres especiales, colisiones, edición explícita y unicidad concurrente.
 - [ ] 13.3 Implementar CRUD REST autorizado de categorías y etiquetas con búsqueda, filtros, orden y paginación; verificar OpenAPI, validaciones, permisos `ADMIN` y conservación de referencias al desactivar o eliminar lógicamente.
 - [ ] 13.4 Extender productos y catálogo con categoría, etiquetas, slug y detalle público por slug; verificar creación, edición, filtros combinados y rechazo de clasificaciones inactivas en nuevas asignaciones.
 - [ ] 13.5 Crear pantallas administrativas paginadas para categorías y etiquetas con búsqueda superior, filtros colapsables y formularios React Hook Form más Zod; verificar CRUD, mensajes flash y confirmaciones contra el API.

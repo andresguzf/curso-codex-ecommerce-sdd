@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { StorefrontShell } from "@/features/layout/storefront-shell";
+
 import "./globals.css";
 import { StorefrontProviders } from "./providers";
 
@@ -15,7 +17,11 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="es">
-      <body><StorefrontProviders>{children}</StorefrontProviders></body>
+      <body>
+        <StorefrontProviders>
+          <StorefrontShell>{children}</StorefrontShell>
+        </StorefrontProviders>
+      </body>
     </html>
   );
 }

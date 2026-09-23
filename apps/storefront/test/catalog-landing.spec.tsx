@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ActiveCart, ProductListItem, ProductPage } from "@technology-ecommerce/api-schemas";
+import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionStore } from "../src/features/auth/session";
 import { addCartItem, CartApiError, getCart } from "../src/features/cart/cart-api";
-import { useCartUiStore } from "../src/features/cart/cart-ui-store";
 import { CatalogLanding } from "../src/features/catalog/catalog-landing";
 import { getPublicProducts } from "../src/features/catalog/catalog-api";
 
@@ -105,6 +105,7 @@ function renderCatalog() {
   const ui = (
     <QueryClientProvider client={queryClient}>
       <CatalogLanding />
+      <FlashRegion appearance="storefront" />
     </QueryClientProvider>
   );
   const rendered = render(ui);
@@ -135,7 +136,7 @@ describe("storefront catalog landing", () => {
     navigation.push.mockReset();
     navigation.searchParams = new URLSearchParams();
     useSessionStore.setState({ notice: null, session: null, status: "anonymous" });
-    useCartUiStore.setState({ notice: null, removalItemId: null });
+    useFlashStore.getState().dismissFlash();
   });
 
   it("renders the hero and only active products returned by the public catalog", async () => {
@@ -244,9 +245,9 @@ describe("storefront catalog landing", () => {
       1,
     );
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/cart"));
-    expect(useCartUiStore.getState().notice).toBe(
-      "Teclado Relay fue agregado al carrito.",
-    );
+    expect(useFlashStore.getState().flash).toEqual({
+      tone: "success", message: "Teclado Relay fue agregado al carrito.",
+    });
   });
 
   it("adds an available product to a visitor cart without redirecting to login", async () => {
@@ -280,9 +281,9 @@ describe("storefront catalog landing", () => {
     expect(addCartItem).toHaveBeenCalledWith(undefined, availableProduct.id, 1);
     expect(navigation.push).not.toHaveBeenCalledWith("/login");
     expect(navigation.push).toHaveBeenCalledWith("/cart");
-    expect(useCartUiStore.getState().notice).toBe(
-      "Teclado Relay fue agregado al carrito.",
-    );
+    expect(useFlashStore.getState().flash).toEqual({
+      tone: "success", message: "Teclado Relay fue agregado al carrito.",
+    });
   });
 
   it("shows the current availability when stock changes", async () => {
@@ -306,14 +307,13 @@ describe("storefront catalog landing", () => {
       name: "Agregar Teclado Relay al carrito",
     }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Solo hay 4 unidades disponibles.",
-    );
+    expect(await screen.findByText("Solo hay 4 unidades disponibles.")).toBeInTheDocument();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
     expect(navigation.push).not.toHaveBeenCalledWith("/cart");
   });
 
   it("navigates with the hero search in the URL and resets the page", async () => {
-    navigation.searchParams = new URLSearchParams("page=4");
+    navigation.searchParams = new URLSearchParams("page=4&availability=OUT_OF_STOCK&minPrice=100");
     vi.mocked(getPublicProducts).mockResolvedValue(page([]));
     renderCatalog();
     await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ page: 4 })));
@@ -324,9 +324,10 @@ describe("storefront catalog landing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buscar productos" }));
 
     expect(navigation.push).toHaveBeenCalledWith(
-      "/?page=1&search=monitor",
-      { scroll: false },
+      "/?page=1&search=monitor#catalog",
+      { scroll: true },
     );
+    expect(screen.getByRole("region", { name: "Equipos listos para elegir" })).toHaveAttribute("id", "catalog");
   });
 
   it("restores search, filters, order and page from the URL on reload", async () => {

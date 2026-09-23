@@ -9,10 +9,13 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  categories,
   inventoryBalances,
   inventoryMovements,
   productImages,
+  productTags,
   products,
+  tags,
   users,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
@@ -113,6 +116,51 @@ describe("catalog and inventory persistence constraints", () => {
         constraint: "products_sku_unique",
       },
     });
+  });
+
+  it("migrates classifications, slugs and product-tag associations from zero", async () => {
+    const [category] = await database.insert(categories).values({
+      name: "Portátiles",
+      slug: "portatiles",
+    }).returning({ id: categories.id });
+    const [tag] = await database.insert(tags).values({
+      name: "Trabajo remoto",
+      slug: "trabajo-remoto",
+    }).returning({ id: tags.id });
+    if (!category || !tag) throw new Error("Classification insert failed");
+
+    const [product] = await database.insert(products).values({
+      sku: "CLASSIFIED-001",
+      slug: "portatil-pro",
+      categoryId: category.id,
+      name: "Portátil Pro",
+      description: "Clasificado",
+      price: "100.00",
+    }).returning({ id: products.id });
+    if (!product) throw new Error("Product insert failed");
+    await database.insert(productTags).values({ productId: product.id, tagId: tag.id });
+
+    await expect(database.insert(categories).values({ name: "PORTÁTILES", slug: "otro-slug" }))
+      .rejects.toMatchObject({ cause: { code: "23505", constraint: "categories_name_unique" } });
+    await expect(database.insert(tags).values({ name: "Otra etiqueta", slug: "trabajo-remoto" }))
+      .rejects.toMatchObject({ cause: { code: "23505", constraint: "tags_slug_unique" } });
+    await expect(database.insert(products).values({
+      sku: "CLASSIFIED-002", slug: "portatil-pro", name: "Otro", description: "Otro", price: "1.00",
+    })).rejects.toMatchObject({ cause: { code: "23505", constraint: "products_slug_unique" } });
+    await expect(database.insert(productTags).values({ productId: product.id, tagId: tag.id }))
+      .rejects.toMatchObject({ cause: { code: "23505", constraint: "product_tags_product_tag_unique" } });
+    await expect(database.insert(products).values({
+      sku: "CLASSIFIED-003", categoryId: randomUUID(), name: "Sin categoría", description: "Otro", price: "1.00",
+    })).rejects.toMatchObject({ cause: { code: "23503" } });
+
+    await database.update(categories).set({ status: "INACTIVE", deletedAt: new Date() })
+      .where(eq(categories.id, category.id));
+    await database.update(tags).set({ status: "INACTIVE", deletedAt: new Date() })
+      .where(eq(tags.id, tag.id));
+    const [storedProduct] = await database.select().from(products).where(eq(products.id, product.id));
+    const [storedTag] = await database.select().from(productTags).where(eq(productTags.productId, product.id));
+    expect(storedProduct?.categoryId).toBe(category.id);
+    expect(storedTag?.tagId).toBe(tag.id);
   });
 
   it("accepts zero-priced products and rejects negative prices", async () => {

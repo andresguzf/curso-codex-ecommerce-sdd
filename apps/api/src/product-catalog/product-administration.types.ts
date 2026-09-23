@@ -10,6 +10,7 @@ export type ProductImageReference = Readonly<{
 export type AdministrativeProduct = Readonly<{
   id: string;
   sku: string;
+  slug: string | null;
   name: string;
   description: string;
   price: string;
@@ -68,6 +69,7 @@ export type ProductPage = Readonly<{
 
 export type CreateAdministrativeProduct = Readonly<{
   sku: string;
+  slug?: string;
   name: string;
   description: string;
   price: string;
@@ -77,6 +79,7 @@ export type CreateAdministrativeProduct = Readonly<{
 
 export type UpdateAdministrativeProduct = Readonly<{
   sku?: string;
+  slug?: string;
   name?: string;
   description?: string;
   price?: string;

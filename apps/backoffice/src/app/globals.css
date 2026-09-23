@@ -60,6 +60,11 @@ html[data-theme="dark"] .bg-amber-50 {
   background-color: #3f3215;
 }
 
+html[data-theme="dark"] .bg-amber-100,
+html[data-theme="dark"] .bg-orange-50 {
+  background-color: #3f3215;
+}
+
 html[data-theme="dark"] .bg-red-50 {
   background-color: #3d1d2a;
 }
@@ -108,6 +113,10 @@ html[data-theme="dark"] .text-red-700 {
 }
 
 html[data-theme="dark"] .text-amber-900 {
+  color: #f5cf70;
+}
+
+html[data-theme="dark"] .text-orange-900 {
   color: #f5cf70;
 }
 

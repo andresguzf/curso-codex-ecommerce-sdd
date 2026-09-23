@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { loginRequestSchema, type LoginRequest } from "@technology-ecommerce/api-schemas";
+import { useFlashStore } from "@technology-ecommerce/ui";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -17,7 +18,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setSession = useSessionStore((state) => state.setSession);
-  const setNotice = useSessionStore((state) => state.setNotice);
+  const showFlash = useFlashStore((state) => state.showFlash);
   const [formMessage, setFormMessage] = useState<string>();
   const { formState, handleSubmit, register } = useForm<LoginRequest>({
     resolver: zodResolver(loginRequestSchema),
@@ -32,7 +33,8 @@ export function LoginForm() {
         ? await claimAnonymousCart(session.accessToken)
         : null;
       setSession(session);
-      setNotice(
+      showFlash(
+        claim?.adjustedProductIds.length ? "warning" : "success",
         claim?.adjustedProductIds.length
           ? "Sesión iniciada. Ajustamos algunas cantidades del carrito al stock disponible."
           : "Sesión iniciada correctamente.",

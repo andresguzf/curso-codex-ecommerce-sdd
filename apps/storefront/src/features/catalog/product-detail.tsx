@@ -4,14 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
 import Link from "next/link";
 
-import { CartActionFeedback } from "../cart/cart-action-feedback";
 import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
 import { ProductImage } from "./product-image";
 
 export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
-  const { addProduct, feedback, isAdding } = useAddToCart();
+  const { addProduct, isAdding } = useAddToCart();
   const productQuery = useQuery({
     queryFn: () => getPublicProduct(productId),
     queryKey: ["catalog", "public", "product", productId],
@@ -104,9 +103,6 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
                   ? "Agregando al carrito…"
                   : "Agregar al carrito"}
             </button>
-            <div className="mt-4">
-              <CartActionFeedback feedback={feedback} />
-            </div>
             <p className="mb-0 mt-4 text-center text-xs leading-5 text-slate-500">
               La disponibilidad se volverá a validar al agregar y al finalizar la compra.
             </p>

@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionStore } from "../src/features/auth/session";
 import { ProductManagement } from "../src/features/products/product-management";
+import { ProductApiError } from "../src/features/products/product-api";
 
 const navigation = vi.hoisted(() => ({
   push: vi.fn(),
@@ -23,7 +25,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => navigation,
   useSearchParams: () => navigation.searchParams,
 }));
-vi.mock("../src/features/products/product-api", () => api);
+vi.mock("../src/features/products/product-api", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../src/features/products/product-api")>(),
+  ...api,
+}));
 
 const activeProduct = {
   createdAt: "2026-09-04T12:00:00.000Z",
@@ -49,13 +54,14 @@ const inactiveProduct = {
 function renderManagement() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-  render(<QueryClientProvider client={queryClient}><ProductManagement /></QueryClientProvider>);
+  render(<QueryClientProvider client={queryClient}><ProductManagement /><FlashRegion appearance="backoffice" /></QueryClientProvider>);
   return { invalidate };
 }
 
 describe("product administration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useFlashStore.getState().dismissFlash();
     api.listAdministrativeProducts.mockResolvedValue({
       items: [activeProduct, inactiveProduct],
       page: 1,
@@ -143,5 +149,64 @@ describe("product administration", () => {
     fireEvent.click(within(activeRow!).getByRole("button", { name: "Eliminar" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar" }));
     expect(api.deleteProduct).not.toHaveBeenCalled();
+  });
+
+  it("shows a safe flash error and keeps the form when creation fails", async () => {
+    api.createProduct.mockRejectedValueOnce(new ProductApiError(409));
+    renderManagement();
+    fireEvent.click(screen.getByRole("button", { name: "+ Nuevo producto" }));
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "DUPLICATE-01" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Producto repetido" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Descripción de prueba" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "299.90" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+
+    expect(await screen.findByText("Ya existe un producto con ese SKU o referencia de imagen.")).toBeInTheDocument();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
+    expect(screen.getByRole("heading", { name: "Crear producto" })).toBeInTheDocument();
+  });
+
+  it("keeps an edit open and hides internal errors when saving fails", async () => {
+    api.updateProduct.mockRejectedValueOnce(new Error("private server detail"));
+    renderManagement();
+    const activeRow = (await screen.findByText("Teclado Nova 75")).closest("tr");
+    fireEvent.click(within(activeRow!).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Nova 75 Pro" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await screen.findByText("No pudimos guardar el producto. Inténtalo nuevamente.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Editar Teclado Nova 75" })).toBeInTheDocument();
+    expect(screen.queryByText("private server detail")).not.toBeInTheDocument();
+  });
+
+  it("cancels deactivation and reports a rejected status change", async () => {
+    api.updateProductStatus.mockRejectedValueOnce(new Error("private server detail"));
+    renderManagement();
+    const activeRow = (await screen.findByText("Teclado Nova 75")).closest("tr");
+    fireEvent.click(within(activeRow!).getByRole("button", { name: "Desactivar" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar" }));
+    expect(api.updateProductStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(within(activeRow!).getByRole("button", { name: "Desactivar" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Desactivar producto" }));
+    expect(await screen.findByText("No pudimos cambiar el estado del producto. Inténtalo nuevamente.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
+  });
+
+  it("does not delete on cancellation and reports a failed deletion without a duplicate notice", async () => {
+    api.deleteProduct.mockRejectedValueOnce(new ProductApiError(403));
+    renderManagement();
+    const activeRow = (await screen.findByText("Teclado Nova 75")).closest("tr");
+    fireEvent.click(within(activeRow!).getByRole("button", { name: "Eliminar" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancelar" }));
+    expect(api.deleteProduct).not.toHaveBeenCalled();
+
+    fireEvent.click(within(activeRow!).getByRole("button", { name: "Eliminar" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Eliminar producto" }));
+    expect(await screen.findByText("No tienes permisos para administrar productos.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(useFlashStore.getState().flash?.tone).toBe("error");
+    expect(screen.getAllByText("No tienes permisos para administrar productos.")).toHaveLength(1);
   });
 });

@@ -31,10 +31,12 @@ import type {
   UpdateAdministrativeProduct,
 } from "./product-administration.types";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import { normalizeSlug, slugCandidate } from "./slug";
 
 const productSelection = {
   id: products.id,
   sku: products.sku,
+  slug: products.slug,
   name: products.name,
   description: products.description,
   price: products.price,
@@ -56,6 +58,7 @@ const productListSelection = {
 type ProductSelectionRow = Readonly<{
   id: string;
   sku: string;
+  slug: string | null;
   name: string;
   description: string;
   price: string;
@@ -183,6 +186,26 @@ export class ProductAdministrationRepository {
     input: CreateAdministrativeProduct,
     actorUserId: string,
   ): Promise<AdministrativeProduct> {
+    const baseSlug = normalizeSlug(input.slug ?? input.name);
+    for (let attempt = 1; attempt <= 1000; attempt += 1) {
+      try {
+        return await this.createWithSlug(
+          input,
+          slugCandidate(baseSlug, attempt),
+          actorUserId,
+        );
+      } catch (error) {
+        if (input.slug || !this.isSlugCollision(error) || attempt === 1000) throw error;
+      }
+    }
+    throw new Error("Could not allocate product slug");
+  }
+
+  private createWithSlug(
+    input: CreateAdministrativeProduct,
+    slug: string,
+    actorUserId: string,
+  ): Promise<AdministrativeProduct> {
     return this.database.client.transaction(async (transaction) => {
       const [product] = await transaction
         .insert(products)
@@ -192,6 +215,7 @@ export class ProductAdministrationRepository {
           name: input.name,
           price: input.price,
           sku: input.sku,
+          slug,
           status: input.status,
         })
         .returning();
@@ -248,6 +272,7 @@ export class ProductAdministrationRepository {
           ...(input.name === undefined ? {} : { name: input.name }),
           ...(input.price === undefined ? {} : { price: input.price }),
           ...(input.sku === undefined ? {} : { sku: input.sku }),
+          ...(input.slug === undefined ? {} : { slug: input.slug }),
           updatedAt: now,
         })
         .where(eq(products.id, productId))
@@ -380,6 +405,7 @@ export class ProductAdministrationRepository {
     return {
       id: row.id,
       sku: row.sku,
+      slug: row.slug,
       name: row.name,
       description: row.description,
       price: row.price,
@@ -399,6 +425,7 @@ export class ProductAdministrationRepository {
     return {
       id: product.id,
       sku: product.sku,
+      slug: product.slug,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -419,6 +446,7 @@ export class ProductAdministrationRepository {
     return {
       id: product.id,
       sku: product.sku,
+      slug: product.slug,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -429,5 +457,16 @@ export class ProductAdministrationRepository {
       updatedAt: product.updatedAt.toISOString(),
       deletedAt: product.deletedAt?.toISOString() ?? null,
     };
+  }
+
+  private isSlugCollision(error: unknown): boolean {
+    let current: unknown = error;
+    for (let depth = 0; depth < 3 && current; depth += 1) {
+      if (typeof current === "object" && "constraint" in current) {
+        return current.constraint === "products_slug_unique";
+      }
+      current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+    }
+    return false;
   }
 }

@@ -3,6 +3,7 @@ export { ConfirmationDialog } from "./confirmation-dialog";
 export { CollapsibleSidePanel } from "./collapsible-side-panel";
 export { DataTable, type DataTableColumn } from "./data-table";
 export { FilterDrawer } from "./filter-drawer";
+export { FlashRegion, useFlashStore, type FlashMessage, type FlashTone } from "./flash";
 export { Icon, IconButton, type IconName } from "./icon-button";
 export { TextField, type TextFieldProps } from "./form-field";
 export { Navigation, type NavigationItem } from "./navigation";

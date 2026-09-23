@@ -1,19 +1,13 @@
 "use client";
 
-import { ConfirmationDialog, ErrorState, LoadingState } from "@technology-ecommerce/ui";
+import { ConfirmationDialog, ErrorState, LoadingState, useFlashStore } from "@technology-ecommerce/ui";
 import Link from "next/link";
-import { useState } from "react";
 
 import { CartApiError } from "./cart-api";
 import { CartLine } from "./cart-line";
 import { CartSummary } from "./cart-summary";
 import { useCartUiStore } from "./cart-ui-store";
 import { useCart } from "./use-cart";
-
-type CartFeedback = Readonly<{
-  message: string;
-  tone: "error" | "success";
-}>;
 
 function errorMessage(error: unknown): string {
   return error instanceof CartApiError
@@ -22,9 +16,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function CartPage() {
-  const [feedback, setFeedback] = useState<CartFeedback | null>(null);
-  const notice = useCartUiStore((state) => state.notice);
-  const clearNotice = useCartUiStore((state) => state.clearNotice);
+  const showFlash = useFlashStore((state) => state.showFlash);
   const removalItemId = useCartUiStore((state) => state.removalItemId);
   const cancelRemoval = useCartUiStore((state) => state.cancelRemoval);
   const requestRemoval = useCartUiStore((state) => state.requestRemoval);
@@ -40,29 +32,23 @@ export function CartPage() {
   );
 
   async function changeQuantity(itemId: string, quantity: number): Promise<void> {
-    clearNotice();
-    setFeedback(null);
     try {
       await updateItem({ itemId, quantity });
-      setFeedback({
-        message: "Cantidad y total actualizados.",
-        tone: "success",
-      });
+      showFlash("success", "Cantidad y total actualizados.");
     } catch (error) {
-      setFeedback({ message: errorMessage(error), tone: "error" });
+      showFlash("error", errorMessage(error));
     }
   }
 
   async function confirmRemoval(): Promise<void> {
     if (!removalItemId) return;
-    clearNotice();
-    setFeedback(null);
     try {
       await removeItem(removalItemId);
       cancelRemoval();
-      setFeedback({ message: "Producto eliminado del carrito.", tone: "success" });
+      showFlash("success", "Producto eliminado del carrito.");
     } catch (error) {
-      setFeedback({ message: errorMessage(error), tone: "error" });
+      cancelRemoval();
+      showFlash("error", errorMessage(error));
     }
   }
 
@@ -86,20 +72,6 @@ export function CartPage() {
             Ajusta unidades y revisa disponibilidad. Los precios y el stock se validan nuevamente al comprar.
           </p>
         </header>
-
-        <div
-          aria-live="polite"
-          className={
-            feedback || notice
-              ? feedback?.tone !== "error"
-                ? "mt-7 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900"
-                : "mt-7 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-900"
-              : "sr-only"
-          }
-          role={feedback?.tone === "error" ? "alert" : "status"}
-        >
-          {feedback?.message ?? notice}
-        </div>
 
         {cartQuery.isPending ? (
           <LoadingState className="mt-8" message="Cargando tu selección…" />
