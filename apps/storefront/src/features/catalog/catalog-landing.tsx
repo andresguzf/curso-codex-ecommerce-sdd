@@ -40,6 +40,8 @@ export function CatalogLanding() {
   function handleApplyFilters(values: CatalogFilterValues) {
     navigateWith({
       availability: values.availability,
+      categoryId: values.categoryId,
+      tagIds: values.tagIds?.join(","),
       maxPrice: values.maxPrice,
       minPrice: values.minPrice,
       sortBy: values.sortBy,
@@ -76,10 +78,12 @@ export function CatalogLanding() {
         </div>
 
         <CatalogFilters
-          key={`filters:${query.availability ?? "all"}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.sortBy}:${query.sortOrder}`}
+          key={`filters:${query.categoryId ?? "all"}:${query.tagIds?.join(",") ?? ""}:${query.availability ?? "all"}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.sortBy}:${query.sortOrder}`}
           onApply={handleApplyFilters}
           onClear={() => navigateWith({
             availability: undefined,
+            categoryId: undefined,
+            tagIds: undefined,
             maxPrice: undefined,
             minPrice: undefined,
             sortBy: undefined,

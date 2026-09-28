@@ -272,6 +272,9 @@ describe("authorization boundaries over HTTP", () => {
       "CUSTOMER",
     );
 
+    const categoryCreation = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(adminSession.accessToken), payload: { name: "Autorización E2E", slug: "autorizacion-e2e" } });
+    expect(categoryCreation.statusCode).toBe(201);
+    const categoryId = categoryCreation.json<{ id: string }>().id;
     const productCreation = await server.inject({
       method: "POST",
       url: "/api/v1/products",
@@ -282,6 +285,7 @@ describe("authorization boundaries over HTTP", () => {
         price: "89.90",
         sku: "AUTHZ-E2E-001",
         status: "ACTIVE",
+        categoryId,
       },
     });
     expect(productCreation.statusCode).toBe(201);
@@ -582,5 +586,78 @@ describe("authorization boundaries over HTTP", () => {
     ).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: invoice.id })]),
     );
+  });
+
+  it("scopes wishlist REST operations to the customer and paginates without duplicates", async () => {
+    const path = "/api/v1/wishlist";
+    for (const accessToken of [adminSession.accessToken, billingSession.accessToken]) {
+      for (const request of [
+        { method: "GET" as const, url: path },
+        { method: "POST" as const, url: `${path}/items`, payload: { productId: product.id } },
+        { method: "DELETE" as const, url: `${path}/items/${product.id}` },
+      ]) {
+        const response = await server.inject({ ...request, headers: authorization(accessToken) });
+        expect(response.statusCode).toBe(403);
+      }
+    }
+    expect((await server.inject({ method: "GET", url: path })).statusCode).toBe(401);
+
+    const unknownProductId = randomUUID();
+    const nonexistent = await server.inject({
+      method: "POST", url: `${path}/items`,
+      headers: authorization(ownerSession.accessToken),
+      payload: { productId: unknownProductId },
+    });
+    expect(nonexistent.statusCode).toBe(404);
+    expect(nonexistent.json<{ code: string }>().code).toBe("PRODUCT_NOT_FOUND");
+
+    const first = await server.inject({
+      method: "POST", url: `${path}/items`,
+      headers: authorization(ownerSession.accessToken),
+      payload: { productId: product.id },
+    });
+    const duplicate = await server.inject({
+      method: "POST", url: `${path}/items`,
+      headers: authorization(ownerSession.accessToken),
+      payload: { productId: product.id },
+    });
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toEqual({ productId: product.id, added: true });
+    expect(duplicate.statusCode).toBe(200);
+    expect(duplicate.json()).toEqual({ productId: product.id, added: false });
+
+    const ownPage = await server.inject({
+      method: "GET", url: `${path}?page=1&pageSize=1`,
+      headers: authorization(ownerSession.accessToken),
+    });
+    expect(ownPage.statusCode).toBe(200);
+    expect(ownPage.json()).toMatchObject({
+      page: 1, pageSize: 1, totalItems: 1, totalPages: 1,
+      items: [{ productId: product.id, product: { id: product.id, name: product.name } }],
+    });
+    const nextPage = await server.inject({
+      method: "GET", url: `${path}?page=2&pageSize=1`,
+      headers: authorization(ownerSession.accessToken),
+    });
+    expect(nextPage.json()).toMatchObject({ page: 2, pageSize: 1, totalItems: 1, totalPages: 1, items: [] });
+    const otherPage = await server.inject({
+      method: "GET", url: path,
+      headers: authorization(foreignCustomerSession.accessToken),
+    });
+    expect(otherPage.json()).toMatchObject({ totalItems: 0, items: [] });
+
+    const foreignRemoval = await server.inject({
+      method: "DELETE", url: `${path}/items/${product.id}`,
+      headers: authorization(foreignCustomerSession.accessToken),
+    });
+    expect(foreignRemoval.statusCode).toBe(404);
+    const ownerRemoval = await server.inject({
+      method: "DELETE", url: `${path}/items/${product.id}`,
+      headers: authorization(ownerSession.accessToken),
+    });
+    expect(ownerRemoval.statusCode).toBe(204);
+    expect((await server.inject({
+      method: "GET", url: path, headers: authorization(ownerSession.accessToken),
+    })).json()).toMatchObject({ totalItems: 0, items: [] });
   });
 });

@@ -20,11 +20,14 @@ const validInput = {
   price: "1299990.00",
   sku: "NOTEBOOK-001",
 };
-const validProduct = { ...validInput, currency: "USD" as const };
+const validProduct = { ...validInput, currency: "USD" as const, slug: "notebook-pro", category: null, tags: [] };
 
 describe("product HTTP schemas", () => {
   it("accepts fixed-precision product input and rejects stock or float values", () => {
     expect(createProductRequestSchema.safeParse(validInput).success).toBe(true);
+    expect(createProductRequestSchema.safeParse({ ...validInput, image: undefined, slug: "notebook-pro", categoryId: "8f732799-c098-45c1-961e-332c6becd13a", tagIds: ["62ac275e-bbf6-43ab-8885-e5588bd24c87"] }).success).toBe(true);
+    expect(createProductRequestSchema.safeParse({ ...validInput, slug: "" }).success).toBe(false);
+    expect(createProductRequestSchema.safeParse({ ...validInput, categoryId: "invalid" }).success).toBe(false);
     expect(
       productImageReferenceSchema.safeParse({
         storageKey: "defaults/products/monitor/placeholder.svg",
@@ -44,6 +47,8 @@ describe("product HTTP schemas", () => {
 
   it("requires a non-empty patch and validates administrative responses", () => {
     expect(updateProductRequestSchema.safeParse({}).success).toBe(false);
+    expect(updateProductRequestSchema.safeParse({ tagIds: [] }).success).toBe(true);
+    expect(updateProductRequestSchema.safeParse({ image: { url: "only-url" } }).success).toBe(false);
     expect(
       administrativeProductSchema.safeParse({
         ...validProduct,
@@ -54,6 +59,7 @@ describe("product HTTP schemas", () => {
         deletedAt: null,
       }).success,
     ).toBe(true);
+    expect(administrativeProductSchema.safeParse({ ...validProduct, id: "8f732799-c098-45c1-961e-332c6becd13a", status: "ACTIVE", createdAt: "2026-09-03T12:00:00.000Z", updatedAt: "2026-09-03T12:00:00.000Z", deletedAt: null, tags: undefined }).success).toBe(false);
   });
 
   it("validates product list criteria, bounds and paginated responses", () => {

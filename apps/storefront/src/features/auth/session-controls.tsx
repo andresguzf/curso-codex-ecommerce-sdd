@@ -59,6 +59,12 @@ export function SessionControls() {
                 >
                   Mis facturas
                 </Link>
+                <Link
+                  className="rounded-full px-3 py-2 text-sm font-bold text-blue-700 underline focus-visible:outline-2 focus-visible:outline-blue-700"
+                  href="/account/wishlist"
+                >
+                  Mis deseos
+                </Link>
               </>
             ) : null}
             <button

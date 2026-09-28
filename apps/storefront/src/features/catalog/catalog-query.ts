@@ -6,6 +6,8 @@ import {
 
 export type CatalogQuery = {
   availability?: ProductAvailability;
+  categoryId?: string;
+  tagIds?: string[];
   maxPrice?: string;
   minPrice?: string;
   page: number;
@@ -25,6 +27,8 @@ type SearchParamsReader = Pick<URLSearchParams, "get">;
 export function parseCatalogQuery(searchParams: SearchParamsReader): CatalogQuery {
   const parsed = productListQuerySchema.safeParse({
     availability: searchParams.get("availability") || undefined,
+    categoryId: searchParams.get("categoryId") || undefined,
+    tagIds: searchParams.get("tagIds")?.split(",").filter(Boolean),
     maxPrice: searchParams.get("maxPrice") || undefined,
     minPrice: searchParams.get("minPrice") || undefined,
     page: searchParams.get("page") || 1,
@@ -41,6 +45,8 @@ export function parseCatalogQuery(searchParams: SearchParamsReader): CatalogQuer
 
   return {
     availability: parsed.data.availability,
+    ...(parsed.data.categoryId ? { categoryId: parsed.data.categoryId } : {}),
+    ...(parsed.data.tagIds ? { tagIds: parsed.data.tagIds } : {}),
     maxPrice: parsed.data.maxPrice,
     minPrice: parsed.data.minPrice,
     page: parsed.data.page,

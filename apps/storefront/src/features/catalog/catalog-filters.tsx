@@ -1,13 +1,15 @@
 "use client";
 
 import { FilterDrawer } from "@technology-ecommerce/ui";
+import { useQuery } from "@tanstack/react-query";
+import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
 import { useState, type FormEvent } from "react";
 
 import type { CatalogQuery } from "./catalog-query";
 
 export type CatalogFilterValues = Pick<
   CatalogQuery,
-  "availability" | "maxPrice" | "minPrice" | "sortBy" | "sortOrder"
+  "availability" | "categoryId" | "tagIds" | "maxPrice" | "minPrice" | "sortBy" | "sortOrder"
 >;
 
 const sortOptions = [
@@ -28,6 +30,8 @@ export function CatalogFilters({
   query: CatalogQuery;
 }>) {
   const [open, setOpen] = useState(false);
+  const categoriesQuery = useQuery({ enabled: open, queryKey: ["classifications", "active-categories"], queryFn: ({ signal }) => getActiveCategories(signal) });
+  const tagsQuery = useQuery({ enabled: open, queryKey: ["classifications", "active-tags"], queryFn: ({ signal }) => getActiveTags(signal) });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +66,8 @@ export function CatalogFilters({
         availabilityValue === "IN_STOCK" || availabilityValue === "OUT_OF_STOCK"
           ? availabilityValue
           : undefined,
+      categoryId: data.get("categoryId")?.toString() || undefined,
+      tagIds: data.getAll("tagIds").map(String).slice(0, 20),
       maxPrice,
       minPrice,
       sortBy: sort.sortBy,
@@ -76,6 +82,8 @@ export function CatalogFilters({
   }
 
   const activeFilterCount = [
+    query.categoryId,
+    query.tagIds?.length ? "tags" : undefined,
     query.availability,
     query.minPrice,
     query.maxPrice,
@@ -103,12 +111,41 @@ export function CatalogFilters({
           ) : null}
         </button>
         <p className="m-0 text-sm font-semibold text-slate-600">
-          Ajusta disponibilidad, precio y orden desde el panel lateral.
+          Ajusta categoría, etiquetas, disponibilidad, precio y orden desde el panel lateral.
         </p>
       </div>
 
       <FilterDrawer onClose={() => setOpen(false)} open={open} title="Filtros del catálogo">
         <form className="grid gap-5" onSubmit={handleSubmit}>
+          <label className="grid gap-2 text-sm font-bold text-slate-800">
+            Categoría
+            {categoriesQuery.data ? <select className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15" defaultValue={query.categoryId ?? ""} name="categoryId">
+              <option value="">Todas las categorías</option>
+              {query.categoryId && !categoriesQuery.data.some((category) => category.id === query.categoryId) ? <option value={query.categoryId}>Categoría no disponible</option> : null}
+              {categoriesQuery.data.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select> : null}
+          </label>
+          {categoriesQuery.isPending ? <p className="m-0 text-xs text-slate-600">Cargando categorías…</p> : null}
+          {categoriesQuery.isError ? <p className="m-0 text-xs text-red-700" role="alert">No se pudieron cargar las categorías.</p> : null}
+
+          <fieldset className="grid gap-2 rounded-xl border border-slate-300 p-3">
+            <legend className="px-1 text-sm font-bold text-slate-800">Etiquetas</legend>
+            {tagsQuery.data?.map((tag) => (
+              <label className="flex min-h-9 items-center gap-2 text-sm text-slate-800" key={tag.id}>
+                <input className="size-4 accent-blue-700" defaultChecked={query.tagIds?.includes(tag.id)} name="tagIds" type="checkbox" value={tag.id} />
+                {tag.name}
+              </label>
+            ))}
+            {query.tagIds?.filter((id) => !tagsQuery.data?.some((tag) => tag.id === id)).map((id) => (
+              <label className="flex min-h-9 items-center gap-2 text-sm text-slate-600" key={id}>
+                <input className="size-4 accent-blue-700" defaultChecked name="tagIds" type="checkbox" value={id} />
+                Etiqueta no disponible
+              </label>
+            ))}
+            {tagsQuery.data?.length === 0 ? <p className="m-0 text-xs text-slate-600">No hay etiquetas activas.</p> : null}
+            {tagsQuery.isPending ? <p className="m-0 text-xs text-slate-600">Cargando etiquetas…</p> : null}
+            {tagsQuery.isError ? <p className="m-0 text-xs text-red-700" role="alert">No se pudieron cargar las etiquetas.</p> : null}
+          </fieldset>
           <label className="grid gap-2 text-sm font-bold text-slate-800">
             Disponibilidad
             <select
@@ -166,7 +203,7 @@ export function CatalogFilters({
           </label>
 
           <div className="flex gap-2">
-            <button className="min-h-11 flex-1 rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" type="submit">
+            <button className="min-h-11 flex-1 rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 disabled:opacity-50" disabled={!categoriesQuery.data || !tagsQuery.data} type="submit">
               Aplicar
             </button>
             <button className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" onClick={handleClear} type="button">

@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
   or,
@@ -14,11 +15,15 @@ import {
 
 import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
+import type { DatabaseTransaction } from "../database/database.service";
 import {
   auditEntries,
+  categories,
   inventoryBalances,
   productImages,
+  productTags,
   products,
+  tags,
 } from "../database/schema";
 import type {
   AdministrativeProduct,
@@ -28,6 +33,7 @@ import type {
   ProductPage,
   ProductDetail,
   ProductStatus,
+  ProductClassificationSummary,
   UpdateAdministrativeProduct,
 } from "./product-administration.types";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
@@ -35,6 +41,7 @@ import { normalizeSlug, slugCandidate } from "./slug";
 
 const productSelection = {
   id: products.id,
+  categoryId: products.categoryId,
   sku: products.sku,
   slug: products.slug,
   name: products.name,
@@ -57,6 +64,7 @@ const productListSelection = {
 
 type ProductSelectionRow = Readonly<{
   id: string;
+  categoryId: string | null;
   sku: string;
   slug: string | null;
   name: string;
@@ -69,6 +77,14 @@ type ProductSelectionRow = Readonly<{
   deletedAt: Date | null;
   imageStorageKey: string;
   imageUrl: string;
+}>;
+
+export class ProductCategoryRequiredError extends Error {}
+export class ProductClassificationUnavailableError extends Error {}
+
+type Classifications = Readonly<{
+  category: ProductClassificationSummary | null;
+  tags: ProductClassificationSummary[];
 }>;
 
 @Injectable()
@@ -91,6 +107,13 @@ export class ProductAdministrationRepository {
       );
     }
     if (query.status) conditions.push(eq(products.status, query.status));
+    if (query.categoryId) {
+      conditions.push(eq(products.categoryId, query.categoryId));
+      if (query.view === "public") conditions.push(sql`exists (select 1 from categories c where c.id = ${products.categoryId} and c.status = 'ACTIVE' and c.deleted_at is null)`);
+    }
+    if (query.tagIds?.length) {
+      conditions.push(sql`exists (select 1 from product_tags pt inner join tags t on t.id = pt.tag_id where pt.product_id = ${products.id} and ${inArray(sql`pt.tag_id`, query.tagIds)} ${query.view === "public" ? sql`and t.status = 'ACTIVE' and t.deleted_at is null` : sql``})`);
+    }
     if (query.minPrice) conditions.push(gte(products.price, query.minPrice));
     if (query.maxPrice) conditions.push(lte(products.price, query.maxPrice));
     if (query.availability === "IN_STOCK") {
@@ -132,8 +155,9 @@ export class ProductAdministrationRepository {
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
 
+    const classifications = await this.loadClassifications(rows.map((row) => row.id));
     return {
-      items: rows.map((row) => this.toListItem(row)),
+      items: rows.map((row) => this.toListItem(row, classifications.get(row.id))),
       page: query.page,
       pageSize: query.pageSize,
       totalItems,
@@ -149,7 +173,9 @@ export class ProductAdministrationRepository {
       .where(and(eq(products.id, productId), isNull(products.deletedAt)))
       .limit(1);
 
-    return row ? this.toProduct(row) : undefined;
+    if (!row) return undefined;
+    const classifications = await this.loadClassifications([row.id]);
+    return this.toProduct(row, classifications.get(row.id));
   }
 
   async findDetailById(
@@ -174,12 +200,27 @@ export class ProductAdministrationRepository {
       .limit(1);
 
     if (!row) return undefined;
-    const product = this.toListItem(row);
+    const classifications = await this.loadClassifications([row.id]);
+    const product = this.toListItem(row, classifications.get(row.id));
     return {
       ...product,
       availability:
         product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK",
     };
+  }
+
+  async findPublicDetailBySlug(slug: string): Promise<ProductDetail | undefined> {
+    const [row] = await this.database.client
+      .select(productListSelection)
+      .from(products)
+      .innerJoin(productImages, eq(productImages.productId, products.id))
+      .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
+      .where(and(eq(products.slug, slug), eq(products.status, "ACTIVE"), isNull(products.deletedAt)))
+      .limit(1);
+    if (!row) return undefined;
+    const classifications = await this.loadClassifications([row.id]);
+    const product = this.toListItem(row, classifications.get(row.id));
+    return { ...product, availability: product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK" };
   }
 
   async create(
@@ -207,10 +248,12 @@ export class ProductAdministrationRepository {
     actorUserId: string,
   ): Promise<AdministrativeProduct> {
     return this.database.client.transaction(async (transaction) => {
+      await this.validateAssignments(transaction, input.categoryId ?? null, input.tagIds ?? [], input.status === "ACTIVE");
       const [product] = await transaction
         .insert(products)
         .values({
           currency: SYSTEM_CURRENCY,
+          categoryId: input.categoryId ?? null,
           description: input.description,
           name: input.name,
           price: input.price,
@@ -227,11 +270,16 @@ export class ProductAdministrationRepository {
         storageKey: input.image.storageKey,
         url: input.image.url,
       });
+      if (input.tagIds?.length) await transaction.insert(productTags).values(input.tagIds.map((tagId, sortOrder) => ({ productId: product.id, tagId, sortOrder })));
+
+      const classifications = await this.loadClassifications([product.id], transaction);
 
       const created: AdministrativeProduct = {
         ...product,
         currency: SYSTEM_CURRENCY,
         image: input.image,
+        category: classifications.get(product.id)?.category ?? null,
+        tags: classifications.get(product.id)?.tags ?? [],
       };
       await transaction.insert(auditEntries).values(
         createAuditEntry({
@@ -261,7 +309,11 @@ export class ProductAdministrationRepository {
         .limit(1);
 
       if (!currentRow) return undefined;
-      const current = this.toProduct(currentRow);
+      const before = await this.loadClassifications([productId], transaction);
+      const current = this.toProduct(currentRow, before.get(productId));
+      if (input.categoryId !== undefined || input.tagIds !== undefined) {
+        await this.validateAssignments(transaction, input.categoryId === undefined ? null : input.categoryId, input.tagIds ?? [], currentRow.status === "ACTIVE" && input.categoryId !== undefined);
+      }
       const now = new Date();
       const [updated] = await transaction
         .update(products)
@@ -273,6 +325,7 @@ export class ProductAdministrationRepository {
           ...(input.price === undefined ? {} : { price: input.price }),
           ...(input.sku === undefined ? {} : { sku: input.sku }),
           ...(input.slug === undefined ? {} : { slug: input.slug }),
+          ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
           updatedAt: now,
         })
         .where(eq(products.id, productId))
@@ -298,10 +351,18 @@ export class ProductAdministrationRepository {
         image = updatedImage;
       }
 
+      if (input.tagIds !== undefined) {
+        await transaction.delete(productTags).where(eq(productTags.productId, productId));
+        if (input.tagIds.length) await transaction.insert(productTags).values(input.tagIds.map((tagId, sortOrder) => ({ productId, tagId, sortOrder })));
+      }
+      const classifications = await this.loadClassifications([productId], transaction);
+
       const result: AdministrativeProduct = {
         ...updated,
         currency: SYSTEM_CURRENCY,
         image,
+        category: classifications.get(productId)?.category ?? null,
+        tags: classifications.get(productId)?.tags ?? [],
       };
       await transaction.insert(auditEntries).values(
         createAuditEntry({
@@ -333,7 +394,11 @@ export class ProductAdministrationRepository {
         .limit(1);
       if (!currentRow) return undefined;
 
-      const current = this.toProduct(currentRow);
+      const before = await this.loadClassifications([productId], transaction);
+      const current = this.toProduct(currentRow, before.get(productId));
+      if (status === "ACTIVE" && currentRow.status !== "ACTIVE") {
+        await this.validateAssignments(transaction, currentRow.categoryId, [], true);
+      }
       const [updated] = await transaction
         .update(products)
         .set({ status, updatedAt: new Date() })
@@ -345,6 +410,8 @@ export class ProductAdministrationRepository {
         ...updated,
         currency: SYSTEM_CURRENCY,
         image: current.image,
+        category: current.category,
+        tags: current.tags,
       };
       await transaction.insert(auditEntries).values(
         createAuditEntry({
@@ -375,7 +442,8 @@ export class ProductAdministrationRepository {
         .limit(1);
       if (!currentRow) return false;
 
-      const current = this.toProduct(currentRow);
+      const before = await this.loadClassifications([productId], transaction);
+      const current = this.toProduct(currentRow, before.get(productId));
       const now = new Date();
       await transaction
         .update(products)
@@ -401,11 +469,57 @@ export class ProductAdministrationRepository {
     });
   }
 
-  private toProduct(row: ProductSelectionRow): AdministrativeProduct {
+  private async validateAssignments(
+    transaction: DatabaseTransaction,
+    categoryId: string | null,
+    tagIds: readonly string[],
+    categoryRequired: boolean,
+  ): Promise<void> {
+    if (categoryRequired && !categoryId) throw new ProductCategoryRequiredError();
+    if (categoryId) {
+      const [category] = await transaction.select({ id: categories.id })
+        .from(categories)
+        .where(and(eq(categories.id, categoryId), eq(categories.status, "ACTIVE"), isNull(categories.deletedAt)))
+        .for("share")
+        .limit(1);
+      if (!category) throw new ProductClassificationUnavailableError();
+    }
+    if (tagIds.length) {
+      const found = await transaction.select({ id: tags.id })
+        .from(tags)
+        .where(and(inArray(tags.id, [...tagIds]), eq(tags.status, "ACTIVE"), isNull(tags.deletedAt)))
+        .for("share");
+      if (found.length !== tagIds.length) throw new ProductClassificationUnavailableError();
+    }
+  }
+
+  private async loadClassifications(
+    productIds: string[],
+    client: DatabaseTransaction | DatabaseService["client"] = this.database.client,
+  ): Promise<Map<string, Classifications>> {
+    const result = new Map<string, Classifications>();
+    if (!productIds.length) return result;
+    const categoryRows = await client.select({ productId: products.id, id: categories.id, name: categories.name, slug: categories.slug, status: categories.status })
+      .from(products).leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(inArray(products.id, productIds));
+    for (const row of categoryRows) {
+      result.set(row.productId, { category: row.id && row.name && row.slug && row.status ? { id: row.id, name: row.name, slug: row.slug, status: row.status } : null, tags: [] });
+    }
+    const tagRows = await client.select({ productId: productTags.productId, id: tags.id, name: tags.name, slug: tags.slug, status: tags.status })
+      .from(productTags).innerJoin(tags, eq(productTags.tagId, tags.id))
+      .where(inArray(productTags.productId, productIds))
+      .orderBy(asc(productTags.sortOrder), asc(tags.id));
+    for (const row of tagRows) result.get(row.productId)?.tags.push({ id: row.id, name: row.name, slug: row.slug, status: row.status });
+    return result;
+  }
+
+  private toProduct(row: ProductSelectionRow, classifications?: Classifications): AdministrativeProduct {
     return {
       id: row.id,
       sku: row.sku,
       slug: row.slug,
+      category: classifications?.category ?? null,
+      tags: classifications?.tags ?? [],
       name: row.name,
       description: row.description,
       price: row.price,
@@ -420,12 +534,15 @@ export class ProductAdministrationRepository {
 
   private toListItem(
     row: ProductSelectionRow & { stockAvailable: number },
+    classifications?: Classifications,
   ): ProductListItem {
-    const product = this.toProduct(row);
+    const product = this.toProduct(row, classifications);
     return {
       id: product.id,
       sku: product.sku,
       slug: product.slug,
+      category: product.category,
+      tags: product.tags,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -447,6 +564,8 @@ export class ProductAdministrationRepository {
       id: product.id,
       sku: product.sku,
       slug: product.slug,
+      category: product.category,
+      tags: product.tags,
       name: product.name,
       description: product.description,
       price: product.price,

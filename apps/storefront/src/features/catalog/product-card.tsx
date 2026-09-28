@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { formatProductPrice } from "./catalog-format";
 import { ProductImage } from "./product-image";
+import { WishlistButton } from "../wishlist/wishlist-button";
 
 export function ProductCard({
   isAdding,
@@ -30,6 +31,7 @@ export function ProductCard({
         <span className="absolute left-4 top-4 rounded-full bg-[#081426]/90 px-3 py-1.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
           {product.sku}
         </span>
+        <div className="absolute right-4 top-4"><WishlistButton productId={product.id} productName={product.name} /></div>
       </div>
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-4">

@@ -37,6 +37,10 @@ import {
 } from "./product-administration.types";
 
 const uuidSchema = z.string().uuid();
+const slugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(220);
+const tagIdsSchema = z.string().transform((value) => value.split(",")).pipe(
+  z.array(uuidSchema).min(1).max(20).refine((ids) => new Set(ids).size === ids.length),
+);
 const moneySchema = z
   .string()
   .trim()
@@ -44,6 +48,8 @@ const moneySchema = z
 const productListQuerySchema = z
   .object({
     availability: z.enum(PRODUCT_AVAILABILITIES).optional(),
+    categoryId: uuidSchema.optional(),
+    tagIds: tagIdsSchema.optional(),
     maxPrice: moneySchema.optional(),
     minPrice: moneySchema.optional(),
     page: z.coerce.number().int().min(1).default(1),
@@ -70,9 +76,19 @@ class ProductListImageDto {
   @ApiProperty() url!: string;
 }
 
+class ProductClassificationDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] }) status!: "ACTIVE" | "INACTIVE";
+}
+
 class ProductListItemDto {
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() sku!: string;
+  @ApiProperty({ nullable: true, type: String }) slug!: string | null;
+  @ApiProperty({ nullable: true, type: "object", properties: { id: { type: "string", format: "uuid" }, name: { type: "string" }, slug: { type: "string" }, status: { type: "string", enum: ["ACTIVE", "INACTIVE"] } } }) category!: ProductClassificationDto | null;
+  @ApiProperty({ type: [ProductClassificationDto] }) tags!: ProductClassificationDto[];
   @ApiProperty() name!: string;
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;
@@ -119,6 +135,8 @@ export class ProductListingController {
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "pageSize", required: false, type: Number })
   @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({ name: "categoryId", required: false, type: String, format: "uuid" })
+  @ApiQuery({ name: "tagIds", required: false, type: String, description: "Comma-separated tag UUIDs; matches any selected tag" })
   @ApiQuery({ enum: PRODUCT_STATUSES, name: "status", required: false })
   @ApiQuery({
     enum: PRODUCT_AVAILABILITIES,
@@ -142,6 +160,19 @@ export class ProductListingController {
     }
 
     return this.products.list(result.data, request.authUser);
+  }
+
+  @Get("slug/:slug")
+  @UseGuards(OptionalAuthenticationGuard)
+  @ApiOperation({ operationId: "getProductBySlug", summary: "Read a public product detail by stable slug" })
+  @ApiParam({ name: "slug", type: String })
+  @ApiOkResponse({ type: ProductDetailResponseDto })
+  @ApiBadRequestResponse({ description: "Invalid product slug" })
+  @ApiNotFoundResponse({ description: "Product not found or not publicly visible" })
+  getBySlug(@Param("slug") slug: string): Promise<ProductDetail> {
+    const result = slugSchema.safeParse(slug);
+    if (!result.success) throw new BadRequestException({ code: "REQUEST_VALIDATION_FAILED", message: "The product slug is invalid" });
+    return this.products.getPublicDetailBySlug(result.data);
   }
 
   @Get(":productId")

@@ -13,6 +13,16 @@ export {
   type RegisterRequest,
 } from "./auth";
 export {
+  addWishlistItemRequestSchema,
+  addWishlistItemResultSchema,
+  wishlistItemSchema,
+  wishlistPageSchema,
+  wishlistProductSchema,
+  type AddWishlistItemResult,
+  type WishlistItem,
+  type WishlistPage,
+} from "./wishlist";
+export {
   apiErrorDetailSchema,
   apiErrorSchema,
   paginationMetadataSchema,
@@ -54,6 +64,31 @@ export {
 } from "./checkout";
 export { healthResponseSchema, type HealthResponse } from "./health";
 export {
+  categoryFormSchema,
+  categoryPageSchema,
+  categorySchema,
+  classificationListQuerySchema,
+  classificationSortFieldSchema,
+  classificationStatusSchema,
+  createCategoryRequestSchema,
+  createTagRequestSchema,
+  tagFormSchema,
+  tagPageSchema,
+  tagSchema,
+  updateCategoryRequestSchema,
+  updateTagRequestSchema,
+  type Category,
+  type CategoryFormValues,
+  type CreateCategoryRequest,
+  type CreateTagRequest,
+  type ClassificationListQuery,
+  type ClassificationStatus,
+  type Tag,
+  type TagFormValues,
+  type UpdateCategoryRequest,
+  type UpdateTagRequest,
+} from "./classifications";
+export {
   inventoryAdjustmentMovementSchema,
   inventoryAdjustmentRequestSchema,
   inventoryAdjustmentResponseSchema,
@@ -71,7 +106,9 @@ export {
 } from "./inventory";
 export {
   administrativeProductSchema,
+  createProductImageReferenceSchema,
   createProductRequestSchema,
+  productClassificationSchema,
   productAvailabilitySchema,
   productDetailSchema,
   productImageReferenceSchema,
@@ -81,6 +118,7 @@ export {
   productPageSchema,
   productSortFieldSchema,
   productStatusSchema,
+  productSlugSchema,
   updateProductRequestSchema,
   updateProductStatusRequestSchema,
   type AdministrativeProduct,

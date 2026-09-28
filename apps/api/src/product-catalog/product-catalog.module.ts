@@ -6,11 +6,16 @@ import { ProductAdministrationController } from "./product-administration.contro
 import { ProductAdministrationRepository } from "./product-administration.repository";
 import { ProductAdministrationService } from "./product-administration.service";
 import { ProductListingController } from "./product-listing.controller";
+import { CategoryController, TagController } from "./classification.controller";
+import { ClassificationRepository } from "./classification.repository";
+import { ClassificationService } from "./classification.service";
+import { WishlistRepository } from "./wishlist.repository";
+import { WishlistController } from "./wishlist.controller";
 
 @Module({
-  controllers: [ProductAdministrationController, ProductListingController],
+  controllers: [ProductAdministrationController, ProductListingController, CategoryController, TagController, WishlistController],
   imports: [AuthModule, ImageStorageModule],
-  providers: [ProductAdministrationRepository, ProductAdministrationService],
+  providers: [ProductAdministrationRepository, ProductAdministrationService, ClassificationRepository, ClassificationService, WishlistRepository],
   exports: [ImageStorageModule],
 })
 export class ProductCatalogModule {}

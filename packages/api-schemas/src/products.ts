@@ -4,6 +4,7 @@ import { paginationMetadataSchema } from "./common";
 
 export const productStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const systemCurrencySchema = z.literal("USD");
+export const productSlugSchema = z.string().trim().min(1).max(220);
 
 export const productImageReferenceSchema = z
   .object({
@@ -13,32 +14,49 @@ export const productImageReferenceSchema = z
   })
   .strict();
 
+export const createProductImageReferenceSchema = productImageReferenceSchema
+  .partial();
+
 const productPriceSchema = z
   .string()
   .regex(/^\d{1,10}(?:\.\d{1,2})?$/);
 
 export const createProductRequestSchema = z
   .object({
+    categoryId: z.uuid().nullable().optional(),
     description: z.string().trim().min(1).max(10_000),
-    image: productImageReferenceSchema,
+    image: createProductImageReferenceSchema.optional(),
     name: z.string().trim().min(1).max(200),
     price: productPriceSchema,
     sku: z.string().trim().min(1).max(64),
+    slug: productSlugSchema.optional(),
+    tagIds: z.array(z.uuid()).max(20).refine((ids) => new Set(ids).size === ids.length).optional(),
     status: productStatusSchema.optional(),
   })
   .strict();
 
 export const updateProductRequestSchema = createProductRequestSchema
-  .omit({ status: true })
+  .omit({ status: true, image: true })
   .partial()
+  .extend({ image: productImageReferenceSchema.optional() })
   .refine((value) => Object.keys(value).length > 0);
 
 export const updateProductStatusRequestSchema = z
   .object({ status: productStatusSchema })
   .strict();
 
+export const productClassificationSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  status: productStatusSchema,
+});
+
 export const administrativeProductSchema = z.object({
   id: z.uuid(),
+  slug: productSlugSchema.nullable(),
+  category: productClassificationSchema.nullable(),
+  tags: z.array(productClassificationSchema),
   sku: z.string().trim().min(1),
   name: z.string().trim().min(1),
   description: z.string().trim().min(1),
@@ -77,6 +95,8 @@ export const productPageSchema = paginationMetadataSchema.extend({
 export const productListQuerySchema = z
   .object({
     availability: productAvailabilitySchema.optional(),
+    categoryId: z.uuid().optional(),
+    tagIds: z.array(z.uuid()).min(1).max(20).refine((ids) => new Set(ids).size === ids.length).optional(),
     maxPrice: productPriceSchema.optional(),
     minPrice: productPriceSchema.optional(),
     page: z.coerce.number().int().min(1).default(1),

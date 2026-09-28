@@ -9,6 +9,11 @@ import {
 } from "../src/features/catalog/catalog-api";
 import { ProductDetail } from "../src/features/catalog/product-detail";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/products/10184fd0-3dcb-47cf-af70-a8be4c765421",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const cartAction = vi.hoisted(() => ({
   addProduct: vi.fn(),
 }));
@@ -32,6 +37,7 @@ vi.mock("../src/features/catalog/catalog-api", async (importOriginal) => {
 
 const availableProduct: ProductDetailModel = {
   availability: "IN_STOCK",
+  category: null,
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   description: "Teclado mecánico de perfil compacto con iluminación configurable.",
@@ -43,8 +49,10 @@ const availableProduct: ProductDetailModel = {
   name: "Teclado Relay 75",
   price: "149.90",
   sku: "RELAY-075",
+  slug: "teclado-relay-75",
   status: "ACTIVE",
   stockAvailable: 8,
+  tags: [],
   updatedAt: "2026-09-04T12:00:00.000Z",
 };
 

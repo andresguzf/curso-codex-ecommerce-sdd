@@ -24,6 +24,8 @@ export async function getPublicProducts(query: CatalogQuery): Promise<ProductPag
     params: {
       query: {
         availability: query.availability,
+        categoryId: query.categoryId,
+        tagIds: query.tagIds?.join(","),
         maxPrice: query.maxPrice,
         minPrice: query.minPrice,
         page: query.page,

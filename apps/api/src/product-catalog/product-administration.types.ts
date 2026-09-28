@@ -7,10 +7,19 @@ export type ProductImageReference = Readonly<{
   url: string;
 }>;
 
+export type ProductClassificationSummary = Readonly<{
+  id: string;
+  name: string;
+  slug: string;
+  status: "ACTIVE" | "INACTIVE";
+}>;
+
 export type AdministrativeProduct = Readonly<{
   id: string;
   sku: string;
   slug: string | null;
+  category: ProductClassificationSummary | null;
+  tags: ProductClassificationSummary[];
   name: string;
   description: string;
   price: string;
@@ -50,6 +59,8 @@ export type ProductListQuery = Readonly<{
   page: number;
   pageSize: number;
   search?: string;
+  categoryId?: string;
+  tagIds?: readonly string[];
   status?: ProductStatus;
   availability?: ProductAvailability;
   minPrice?: string;
@@ -70,6 +81,8 @@ export type ProductPage = Readonly<{
 export type CreateAdministrativeProduct = Readonly<{
   sku: string;
   slug?: string;
+  categoryId?: string | null;
+  tagIds?: readonly string[];
   name: string;
   description: string;
   price: string;
@@ -80,6 +93,8 @@ export type CreateAdministrativeProduct = Readonly<{
 export type UpdateAdministrativeProduct = Readonly<{
   sku?: string;
   slug?: string;
+  categoryId?: string | null;
+  tagIds?: readonly string[];
   name?: string;
   description?: string;
   price?: string;

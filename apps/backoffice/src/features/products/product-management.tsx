@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateProductRequest,
+  ProductImageReference,
   ProductListItem,
   UpdateProductRequest,
 } from "@technology-ecommerce/api-schemas";
@@ -69,14 +70,16 @@ export function ProductManagement() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (input: CreateProductRequest) => {
+    mutationFn: async (input: CreateProductRequest & { image: ProductImageReference }) => {
       if (form?.mode === "edit") {
         const changes: UpdateProductRequest = {
+          ...(input.categoryId !== (form.product.category?.id ?? null) ? { categoryId: input.categoryId } : {}),
           description: input.description,
           image: input.image,
           name: input.name,
           price: input.price,
           sku: input.sku,
+          ...(JSON.stringify([...(input.tagIds ?? [])].sort()) !== JSON.stringify([...(form.product.tags?.map((tag) => tag.id) ?? [])].sort()) ? { tagIds: input.tagIds ?? [] } : {}),
         };
         return updateProduct(accessToken, form.product.id, changes);
       }

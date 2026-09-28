@@ -6,7 +6,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { LogoutButton } from "../auth/logout-button";
 import { useSessionStore } from "../auth/session";
 
-type NavigationIcon = "home" | "products" | "orders" | "invoices" | "users";
+type NavigationIcon = "home" | "products" | "categories" | "tags" | "orders" | "invoices" | "users";
 type NavigationItem = Readonly<{
   href: string;
   icon: NavigationIcon;
@@ -16,6 +16,8 @@ type NavigationItem = Readonly<{
 const ADMIN_NAVIGATION: readonly NavigationItem[] = [
   { href: "/", icon: "home", label: "Inicio" },
   { href: "/products", icon: "products", label: "Productos e inventario" },
+  { href: "/categories", icon: "categories", label: "Categorías" },
+  { href: "/tags", icon: "tags", label: "Etiquetas" },
   { href: "/users", icon: "users", label: "Usuarios" },
   { href: "/orders", icon: "orders", label: "Órdenes" },
   { href: "/invoices", icon: "invoices", label: "Facturas" },
@@ -207,6 +209,12 @@ function NavigationGlyph({ icon }: Readonly<{ icon: NavigationIcon }>) {
   }
   if (icon === "products") {
     return <svg {...common}><rect height="7" rx="1.4" width="7" x="3" y="3" /><rect height="7" rx="1.4" width="7" x="14" y="3" /><rect height="7" rx="1.4" width="7" x="3" y="14" /><rect height="7" rx="1.4" width="7" x="14" y="14" /></svg>;
+  }
+  if (icon === "categories") {
+    return <svg {...common}><path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 0V5a2 2 0 0 1 2-2h5l2 2" /></svg>;
+  }
+  if (icon === "tags") {
+    return <svg {...common}><path d="M3 4h9l9 9-8 8-9-9V4Z" /><circle cx="8" cy="8" r="1.5" /></svg>;
   }
   if (icon === "users") {
     return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 5" /></svg>;

@@ -117,19 +117,19 @@
 
 - [x] 13.1 Añadir migraciones para categorías, etiquetas, relación producto-etiqueta, categoría principal y slug de producto con índices, unicidad y eliminación lógica; verificar migración desde cero y restricciones con pruebas PostgreSQL.
 - [x] 13.2 Implementar normalización y resolución determinista de slugs sin regenerarlos automáticamente al cambiar nombres; verificar caracteres especiales, colisiones, edición explícita y unicidad concurrente.
-- [ ] 13.3 Implementar CRUD REST autorizado de categorías y etiquetas con búsqueda, filtros, orden y paginación; verificar OpenAPI, validaciones, permisos `ADMIN` y conservación de referencias al desactivar o eliminar lógicamente.
-- [ ] 13.4 Extender productos y catálogo con categoría, etiquetas, slug y detalle público por slug; verificar creación, edición, filtros combinados y rechazo de clasificaciones inactivas en nuevas asignaciones.
-- [ ] 13.5 Crear pantallas administrativas paginadas para categorías y etiquetas con búsqueda superior, filtros colapsables y formularios React Hook Form más Zod; verificar CRUD, mensajes flash y confirmaciones contra el API.
-- [ ] 13.6 Integrar selectores de categoría y etiquetas en formularios de producto y filtros en el catálogo público; verificar selección accesible, persistencia en URL y vuelta a página 1 al cambiar criterios.
-- [ ] 13.7 Regenerar el cliente TypeScript y los esquemas Zod después de ampliar el contrato de catálogo; verificar compilación de API, storefront y backoffice y ausencia de diferencias de contrato sin generar.
+- [x] 13.3 Implementar CRUD REST autorizado de categorías y etiquetas con búsqueda, filtros, orden y paginación; verificar OpenAPI, validaciones, permisos `ADMIN` y conservación de referencias al desactivar o eliminar lógicamente.
+- [x] 13.4 Extender productos y catálogo con categoría, etiquetas, slug y detalle público por slug; verificar creación, edición, filtros combinados y rechazo de clasificaciones inactivas en nuevas asignaciones.
+- [x] 13.5 Crear pantallas administrativas paginadas para categorías y etiquetas con búsqueda superior, filtros colapsables y formularios React Hook Form más Zod; verificar CRUD, mensajes flash y confirmaciones contra el API.
+- [x] 13.6 Integrar selectores de categoría y etiquetas en formularios de producto y filtros en el catálogo público; verificar selección accesible, persistencia en URL y vuelta a página 1 al cambiar criterios.
+- [x] 13.7 Regenerar el cliente TypeScript y los esquemas Zod después de ampliar el contrato de catálogo; verificar compilación de API, storefront y backoffice y ausencia de diferencias de contrato sin generar.
 
 ## 14. Lista de deseos
 
-- [ ] 14.1 Añadir migraciones y repositorios para una wishlist por cliente y elementos únicos por producto; verificar unicidad, aislamiento por propietario y conservación de referencias a productos inactivos.
-- [ ] 14.2 Implementar endpoints REST para listar deseos paginados, agregar y eliminar productos con autorización de propietario; verificar duplicados, producto inexistente, cliente ajeno y metadatos de paginación.
-- [ ] 14.3 Crear controles para agregar o quitar deseos desde tarjetas y detalle de producto y una página de wishlist del cliente; verificar estados activo, agotado e inactivo, invalidación de caché y mensajes flash.
-- [ ] 14.4 Permitir agregar al carrito desde la wishlist sin eliminar automáticamente el deseo; verificar stock válido, stock insuficiente, badge del carrito y permanencia del producto guardado.
-- [ ] 14.5 Añadir pruebas end-to-end de wishlist para persistencia entre sesiones, ausencia de duplicados, aislamiento de clientes y transición válida al carrito; verificar el flujo completo con dos clientes.
+- [x] 14.1 Añadir migraciones y repositorios para una wishlist por cliente y elementos únicos por producto; verificar unicidad, aislamiento por propietario y conservación de referencias a productos inactivos.
+- [x] 14.2 Implementar endpoints REST para listar deseos paginados, agregar y eliminar productos con autorización de propietario; verificar duplicados, producto inexistente, cliente ajeno y metadatos de paginación.
+- [x] 14.3 Crear controles para agregar o quitar deseos desde tarjetas y detalle de producto y una página de wishlist del cliente; verificar estados activo, agotado e inactivo, invalidación de caché y mensajes flash.
+- [x] 14.4 Permitir agregar al carrito desde la wishlist sin eliminar automáticamente el deseo; verificar stock válido, stock insuficiente, badge del carrito y permanencia del producto guardado.
+- [x] 14.5 Añadir pruebas end-to-end de wishlist para persistencia entre sesiones, ausencia de duplicados, aislamiento de clientes y transición válida al carrito; verificar el flujo completo con dos clientes.
 
 ## 15. Perfil empresarial y snapshots
 

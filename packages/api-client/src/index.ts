@@ -1,4 +1,5 @@
 export { createApiClient, type ApiClient, type ApiClientOptions } from "./client";
+export { getActiveCategories, getActiveTags } from "./public-classifications";
 export {
   AuthApiError,
   createAuthBrowserClient,

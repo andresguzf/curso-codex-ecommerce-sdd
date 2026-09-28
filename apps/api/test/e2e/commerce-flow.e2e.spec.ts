@@ -304,6 +304,9 @@ describe("complete commerce HTTP flow", () => {
     });
     const billingSession = await login(billingEmail, billingPassword);
 
+    const categoryCreation = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(adminSession.accessToken), payload: { name: "E2E Teclados", slug: "e2e-teclados" } });
+    expect(categoryCreation.statusCode).toBe(201);
+    const categoryId = categoryCreation.json<{ id: string }>().id;
     const productCreationResponse = await server.inject({
       method: "POST",
       url: "/api/v1/products",
@@ -314,6 +317,7 @@ describe("complete commerce HTTP flow", () => {
         price: "149.99",
         sku: "E2E-MECH-001",
         status: "ACTIVE",
+        categoryId,
       },
     });
     expect(productCreationResponse.statusCode).toBe(201);

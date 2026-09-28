@@ -317,6 +317,148 @@ export interface paths {
         patch: operations["updateProductStatus"];
         trace?: never;
     };
+    "/api/v1/products/slug/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a public product detail by stable slug */
+        get: operations["getProductBySlug"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List categories */
+        get: operations["listCategories"];
+        put?: never;
+        /** Create a category */
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a category */
+        get: operations["getCategory"];
+        put?: never;
+        post?: never;
+        /** Soft-delete a category */
+        delete: operations["deleteCategory"];
+        options?: never;
+        head?: never;
+        /** Update a category or its status */
+        patch: operations["updateCategory"];
+        trace?: never;
+    };
+    "/api/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tags */
+        get: operations["listTags"];
+        put?: never;
+        /** Create a tag */
+        post: operations["createTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags/{tagId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a tag */
+        get: operations["getTag"];
+        put?: never;
+        post?: never;
+        /** Soft-delete a tag */
+        delete: operations["deleteTag"];
+        options?: never;
+        head?: never;
+        /** Update a tag or its status */
+        patch: operations["updateTag"];
+        trace?: never;
+    };
+    "/api/v1/wishlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the current customer's wishlist */
+        get: operations["listWishlist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wishlist/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save a product to the current customer's wishlist */
+        post: operations["addWishlistItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/wishlist/items/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a product from the current customer's wishlist */
+        delete: operations["removeWishlistItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/media/images/{storageKey}": {
         parameters: {
             query?: never;
@@ -868,33 +1010,57 @@ export interface components {
             totalItems: number;
             totalPages: number;
         };
-        ProductImageReferenceDto: {
-            /** @example products/example/cover.webp */
-            storageKey: string;
-            /** @example https://cdn.example.com/products/example/cover.webp */
-            url: string;
+        CreateProductImageReferenceDto: {
+            storageKey?: string;
+            url?: string;
         };
         CreateProductRequestDto: {
             /** @example NOTEBOOK-001 */
             sku: string;
             slug?: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+            tagIds?: string[];
             /** @example Notebook Pro 14 */
             name: string;
             description: string;
             /** @example 1299990.00 */
             price: string;
-            image?: components["schemas"]["ProductImageReferenceDto"];
+            image?: components["schemas"]["CreateProductImageReferenceDto"];
             /**
              * @default INACTIVE
              * @enum {string}
              */
             status: "ACTIVE" | "INACTIVE";
         };
+        ProductClassificationDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+        };
+        ProductImageReferenceDto: {
+            /** @example products/example/cover.webp */
+            storageKey: string;
+            /** @example https://cdn.example.com/products/example/cover.webp */
+            url: string;
+        };
         AdministrativeProductResponseDto: {
             /** Format: uuid */
             id: string;
             sku: string;
             slug: string | null;
+            category: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+                slug?: string;
+                /** @enum {string} */
+                status?: "ACTIVE" | "INACTIVE";
+            } | null;
+            tags: components["schemas"]["ProductClassificationDto"][];
             name: string;
             description: string;
             /** @example 1299990.00 */
@@ -917,6 +1083,9 @@ export interface components {
         UpdateProductRequestDto: {
             sku?: string;
             slug?: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+            tagIds?: string[];
             name?: string;
             description?: string;
             price?: string;
@@ -934,6 +1103,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             sku: string;
+            slug: string | null;
+            category: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+                slug?: string;
+                /** @enum {string} */
+                status?: "ACTIVE" | "INACTIVE";
+            } | null;
+            tags: components["schemas"]["ProductClassificationDto"][];
             name: string;
             description: string;
             /** @example 1299990.00 */
@@ -963,6 +1142,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             sku: string;
+            slug: string | null;
+            category: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+                slug?: string;
+                /** @enum {string} */
+                status?: "ACTIVE" | "INACTIVE";
+            } | null;
+            tags: components["schemas"]["ProductClassificationDto"][];
             name: string;
             description: string;
             /** @example 1299990.00 */
@@ -982,6 +1171,122 @@ export interface components {
             updatedAt: string;
             /** @enum {string} */
             availability: "IN_STOCK" | "OUT_OF_STOCK";
+        };
+        CategoryDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            deletedAt: string | null;
+            description: string;
+        };
+        CategoryPageDto: {
+            items: components["schemas"]["CategoryDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        CreateCategoryDto: {
+            name: string;
+            slug?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateCategoryDto: {
+            name?: string;
+            slug?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        TagDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            deletedAt: string | null;
+        };
+        TagPageDto: {
+            items: components["schemas"]["TagDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        CreateTagDto: {
+            name: string;
+            slug?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateTagDto: {
+            name?: string;
+            slug?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        WishlistImageDto: {
+            storageKey: string;
+            url: string;
+        };
+        WishlistProductDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string | null;
+            /** @example 99.00 */
+            price: string;
+            /** @enum {string} */
+            currency: "USD";
+            image: components["schemas"]["WishlistImageDto"] | null;
+            stockAvailable: number;
+            isAvailable: boolean;
+        };
+        WishlistItemDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @enum {string} */
+            productStatus: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            productDeletedAt: string | null;
+            product: components["schemas"]["WishlistProductDto"];
+        };
+        WishlistPageDto: {
+            items: components["schemas"]["WishlistItemDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
+        AddWishlistItemDto: {
+            /** Format: uuid */
+            productId: string;
+        };
+        WishlistAddResultDto: {
+            /** Format: uuid */
+            productId: string;
+            /** @description False when the product was already saved */
+            added: boolean;
         };
         CartImageDto: {
             storageKey: string;
@@ -2135,6 +2440,9 @@ export interface operations {
                 minPrice?: string;
                 availability?: "IN_STOCK" | "OUT_OF_STOCK";
                 status?: "ACTIVE" | "INACTIVE";
+                /** @description Comma-separated tag UUIDs; matches any selected tag */
+                tagIds?: string;
+                categoryId?: string;
                 search?: string;
                 pageSize?: number;
                 page?: number;
@@ -2425,6 +2733,573 @@ export interface operations {
                 content?: never;
             };
             /** @description Product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getProductBySlug: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailResponseDto"];
+                };
+            };
+            /** @description Invalid product slug */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product not found or not publicly visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listCategories: {
+        parameters: {
+            query?: {
+                view?: "public" | "administrative";
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "updatedAt" | "name" | "slug" | "status";
+                status?: "ACTIVE" | "INACTIVE";
+                search?: string;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryPageDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires ADMIN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"];
+                };
+            };
+            /** @description Invalid category data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate name or slug */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCategory: {
+        parameters: {
+            query?: {
+                view?: "public" | "administrative";
+            };
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"];
+                };
+            };
+            /** @description Invalid identifier or view */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category deleted logically */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDto"];
+                };
+            };
+            /** @description Invalid category data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate name or slug */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listTags: {
+        parameters: {
+            query?: {
+                view?: "public" | "administrative";
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "updatedAt" | "name" | "slug" | "status";
+                status?: "ACTIVE" | "INACTIVE";
+                search?: string;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagPageDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrative view requires ADMIN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"];
+                };
+            };
+            /** @description Invalid tag data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate name or slug */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTag: {
+        parameters: {
+            query?: {
+                view?: "public" | "administrative";
+            };
+            header?: never;
+            path: {
+                tagId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"];
+                };
+            };
+            /** @description Invalid identifier or view */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tagId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tag deleted logically */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tagId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"];
+                };
+            };
+            /** @description Invalid tag data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate name or slug */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listWishlist: {
+        parameters: {
+            query?: {
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WishlistPageDto"];
+                };
+            };
+            /** @description Invalid pagination */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addWishlistItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddWishlistItemDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WishlistAddResultDto"];
+                };
+            };
+            /** @description Invalid product identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Active product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeWishlistItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Wishlist item removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid product identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Wishlist item not found for this customer */
             404: {
                 headers: {
                     [name: string]: unknown;

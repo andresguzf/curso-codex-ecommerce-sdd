@@ -43,6 +43,7 @@ import {
 } from "./product-administration.types";
 
 const uuidSchema = z.string().uuid();
+const tagIdsSchema = z.array(uuidSchema).max(20).refine((ids) => new Set(ids).size === ids.length);
 const moneySchema = z
   .string()
   .trim()
@@ -69,6 +70,8 @@ const createProductSchema = z
     price: moneySchema,
     sku: z.string().trim().min(1).max(64),
     slug: z.string().trim().min(1).max(220).optional(),
+    categoryId: uuidSchema.nullable().optional(),
+    tagIds: tagIdsSchema.optional(),
     status: z.enum(PRODUCT_STATUSES).default("INACTIVE"),
   })
   .strict();
@@ -80,6 +83,8 @@ const updateProductSchema = z
     price: moneySchema.optional(),
     sku: z.string().trim().min(1).max(64).optional(),
     slug: z.string().trim().min(1).max(220).optional(),
+    categoryId: uuidSchema.nullable().optional(),
+    tagIds: tagIdsSchema.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -95,11 +100,27 @@ class ProductImageReferenceDto {
   url!: string;
 }
 
+class CreateProductImageReferenceDto {
+  @ApiPropertyOptional({ maxLength: 512 }) storageKey?: string;
+  @ApiPropertyOptional({ maxLength: 2_048 }) url?: string;
+}
+
+class ProductClassificationDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] }) status!: "ACTIVE" | "INACTIVE";
+}
+
 class CreateProductRequestDto {
   @ApiProperty({ example: "NOTEBOOK-001", maxLength: 64 })
   sku!: string;
 
   @ApiPropertyOptional({ maxLength: 220 }) slug?: string;
+
+  @ApiPropertyOptional({ format: "uuid", nullable: true, type: String }) categoryId?: string | null;
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" }) tagIds?: string[];
 
   @ApiProperty({ example: "Notebook Pro 14", maxLength: 200 })
   name!: string;
@@ -110,8 +131,8 @@ class CreateProductRequestDto {
   @ApiProperty({ example: "1299990.00", pattern: "^\\d{1,10}(?:\\.\\d{1,2})?$", type: String })
   price!: string;
 
-  @ApiPropertyOptional({ type: ProductImageReferenceDto })
-  image?: ProductImageReferenceDto;
+  @ApiPropertyOptional({ type: CreateProductImageReferenceDto })
+  image?: CreateProductImageReferenceDto;
 
   @ApiPropertyOptional({ default: "INACTIVE", enum: PRODUCT_STATUSES })
   status?: (typeof PRODUCT_STATUSES)[number];
@@ -122,6 +143,10 @@ class UpdateProductRequestDto {
   sku?: string;
 
   @ApiPropertyOptional({ maxLength: 220 }) slug?: string;
+
+  @ApiPropertyOptional({ format: "uuid", nullable: true, type: String }) categoryId?: string | null;
+
+  @ApiPropertyOptional({ type: [String], format: "uuid" }) tagIds?: string[];
 
   @ApiPropertyOptional({ maxLength: 200 })
   name?: string;
@@ -145,6 +170,8 @@ class AdministrativeProductResponseDto {
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() sku!: string;
   @ApiProperty({ nullable: true, type: String }) slug!: string | null;
+  @ApiProperty({ nullable: true, type: "object", properties: { id: { type: "string", format: "uuid" }, name: { type: "string" }, slug: { type: "string" }, status: { type: "string", enum: ["ACTIVE", "INACTIVE"] } } }) category!: ProductClassificationDto | null;
+  @ApiProperty({ type: [ProductClassificationDto] }) tags!: ProductClassificationDto[];
   @ApiProperty() name!: string;
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;

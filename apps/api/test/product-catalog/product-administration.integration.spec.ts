@@ -17,11 +17,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { configureApplication } from "../../src/application";
 import {
   auditEntries,
+  categories,
   inventoryBalances,
   inventoryMovements,
   productImages,
+  productTags,
   products,
   roleAssignments,
+  tags,
   users,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
@@ -360,6 +363,16 @@ describe("administrative product lifecycle", () => {
       price: "1399990.00",
     });
 
+    const [category] = await database.insert(categories).values({ name: "Categoría notebook", slug: "categoria-notebook" }).returning({ id: categories.id });
+    if (!category) throw new Error("Expected activation category");
+    const classified = await server.inject({
+      method: "PATCH",
+      url: `/api/v1/products/${existing.id}`,
+      headers: authorization(tokens.admin),
+      payload: { categoryId: category.id },
+    });
+    expect(classified.statusCode).toBe(200);
+
     const activated = await server.inject({
       method: "PATCH",
       url: `/api/v1/products/${existing.id}/status`,
@@ -407,6 +420,7 @@ describe("administrative product lifecycle", () => {
     expect(persistedImage?.storageKey).toBe(productPayload.image.storageKey);
     expect(actions.map(({ action }) => action)).toEqual([
       "PRODUCT_CREATED",
+      "PRODUCT_UPDATED",
       "PRODUCT_UPDATED",
       "PRODUCT_ACTIVATED",
       "PRODUCT_DELETED",
@@ -983,5 +997,146 @@ describe("administrative product lifecycle", () => {
       storageKey: "defaults/products/default-image-001/placeholder.svg",
       url: "/images/product-placeholder.svg",
     });
+  });
+
+  it("administers categories and tags with authorized paginated REST queries and soft deletion", async () => {
+    for (const path of ["categories", "tags"]) {
+      const payload = { name: path === "categories" ? "Portátiles" : "Gamer" };
+      const attempts = await Promise.all([
+        server.inject({ method: "POST", url: `/api/v1/${path}`, payload }),
+        server.inject({ method: "POST", url: `/api/v1/${path}`, headers: authorization(tokens.customer), payload }),
+        server.inject({ method: "POST", url: `/api/v1/${path}`, headers: authorization(tokens.billing), payload }),
+      ]);
+      expect(attempts.map((response) => response.statusCode)).toEqual([401, 403, 403]);
+      const invalid = await server.inject({ method: "POST", url: `/api/v1/${path}`, headers: authorization(tokens.admin), payload: { name: " " } });
+      expect(invalid.statusCode).toBe(400);
+    }
+
+    const categoryResponse = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Portátiles", description: "Equipos móviles" } });
+    const tagResponse = await server.inject({ method: "POST", url: "/api/v1/tags", headers: authorization(tokens.admin), payload: { name: "Gamer" } });
+    expect([categoryResponse.statusCode, tagResponse.statusCode]).toEqual([201, 201]);
+    const category = categoryResponse.json<{ id: string; slug: string }>();
+    const tag = tagResponse.json<{ id: string; slug: string }>();
+    expect(category.slug).toBe("portatiles");
+    expect(tag.slug).toBe("gamer");
+
+    const secondCategory = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Audio", slug: "audio" } });
+    const secondTag = await server.inject({ method: "POST", url: "/api/v1/tags", headers: authorization(tokens.admin), payload: { name: "Ofertas" } });
+    expect([secondCategory.statusCode, secondTag.statusCode]).toEqual([201, 201]);
+    const duplicate = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Otro nombre", slug: "portatiles" } });
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json()).toMatchObject({ code: "CLASSIFICATION_SLUG_ALREADY_EXISTS" });
+    const duplicateName = await server.inject({ method: "POST", url: "/api/v1/tags", headers: authorization(tokens.admin), payload: { name: "GAMER", slug: "gamer-alternativo" } });
+    expect(duplicateName.statusCode).toBe(409);
+    expect(duplicateName.json()).toMatchObject({ code: "CLASSIFICATION_NAME_ALREADY_EXISTS" });
+
+    for (const [path, search] of [["categories", "Port"], ["tags", "Gam"]] as const) {
+      const page = await server.inject({ method: "GET", url: `/api/v1/${path}?search=${search}&page=1&pageSize=1&sortBy=name&sortOrder=asc` });
+      expect(page.statusCode).toBe(200);
+      expect(page.json()).toMatchObject({ page: 1, pageSize: 1, totalItems: 1, totalPages: 1 });
+      const secondPage = await server.inject({ method: "GET", url: `/api/v1/${path}?page=2&pageSize=1&sortBy=name&sortOrder=asc` });
+      expect(secondPage.statusCode).toBe(200);
+      expect(secondPage.json()).toMatchObject({ page: 2, pageSize: 1, totalItems: path === "categories" ? 3 : 2, totalPages: path === "categories" ? 3 : 2 });
+      const denied = await server.inject({ method: "GET", url: `/api/v1/${path}?view=administrative`, headers: authorization(tokens.billing) });
+      expect(denied.statusCode).toBe(403);
+      const invalidStatus = await server.inject({ method: "GET", url: `/api/v1/${path}?status=INACTIVE` });
+      expect(invalidStatus.statusCode).toBe(400);
+    }
+
+    const renamedCategory = await server.inject({ method: "PATCH", url: `/api/v1/categories/${category.id}`, headers: authorization(tokens.admin), payload: { name: "Notebooks" } });
+    expect(renamedCategory.statusCode).toBe(200);
+    expect(renamedCategory.json()).toMatchObject({ name: "Notebooks", slug: "portatiles" });
+    const collisionResolved = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Portatiles" } });
+    expect(collisionResolved.statusCode).toBe(201);
+    expect(collisionResolved.json()).toMatchObject({ slug: "portatiles-2" });
+    const renamedTag = await server.inject({ method: "PATCH", url: `/api/v1/tags/${tag.id}`, headers: authorization(tokens.admin), payload: { name: "Juego", slug: "juego" } });
+    expect(renamedTag.statusCode).toBe(200);
+    expect(renamedTag.json()).toMatchObject({ name: "Juego", slug: "juego" });
+    const inactiveTag = await server.inject({ method: "PATCH", url: `/api/v1/tags/${tag.id}`, headers: authorization(tokens.admin), payload: { status: "INACTIVE" } });
+    expect(inactiveTag.statusCode).toBe(200);
+    expect((await server.inject({ method: "GET", url: `/api/v1/tags/${tag.id}` })).statusCode).toBe(404);
+    expect((await server.inject({ method: "GET", url: `/api/v1/tags/${tag.id}?view=administrative`, headers: authorization(tokens.admin) })).statusCode).toBe(200);
+    const filteredTags = await server.inject({ method: "GET", url: "/api/v1/tags?view=administrative&status=INACTIVE&sortBy=updatedAt&sortOrder=desc", headers: authorization(tokens.admin) });
+    expect(filteredTags.statusCode).toBe(200);
+    expect(filteredTags.json()).toMatchObject({ totalItems: 1, items: [{ id: tag.id, status: "INACTIVE" }] });
+    const publicTags = await server.inject({ method: "GET", url: "/api/v1/tags" });
+    expect(publicTags.json()).toMatchObject({ totalItems: 1, items: [{ name: "Ofertas" }] });
+    const reactivatedTag = await server.inject({ method: "PATCH", url: `/api/v1/tags/${tag.id}`, headers: authorization(tokens.admin), payload: { status: "ACTIVE" } });
+    expect(reactivatedTag.statusCode).toBe(200);
+    expect((await server.inject({ method: "GET", url: `/api/v1/tags/${tag.id}` })).statusCode).toBe(200);
+
+    const product = await database.insert(products).values({ sku: "CLASSIFICATION-REF-001", name: "Producto clasificado", description: "Referencia histórica", price: "10.00", categoryId: category.id }).returning({ id: products.id });
+    expect(product[0]).toBeDefined();
+    await database.insert(productTags).values({ productId: product[0]!.id, tagId: tag.id });
+    const deletedCategory = await server.inject({ method: "DELETE", url: `/api/v1/categories/${category.id}`, headers: authorization(tokens.admin) });
+    const deletedTag = await server.inject({ method: "DELETE", url: `/api/v1/tags/${tag.id}`, headers: authorization(tokens.admin) });
+    expect([deletedCategory.statusCode, deletedTag.statusCode]).toEqual([204, 204]);
+    const [storedProduct] = await database.select().from(products).where(eq(products.id, product[0]!.id));
+    const [storedProductTag] = await database.select().from(productTags).where(eq(productTags.productId, product[0]!.id));
+    const [storedCategory] = await database.select().from(categories).where(eq(categories.id, category.id));
+    const [storedTag] = await database.select().from(tags).where(eq(tags.id, tag.id));
+    expect(storedProduct?.categoryId).toBe(category.id);
+    expect(storedProductTag?.tagId).toBe(tag.id);
+    expect(storedCategory).toMatchObject({ status: "INACTIVE" });
+    expect(storedCategory?.deletedAt).toBeInstanceOf(Date);
+    expect(storedTag?.deletedAt).toBeInstanceOf(Date);
+    expect((await server.inject({ method: "GET", url: `/api/v1/categories/${category.id}?view=administrative`, headers: authorization(tokens.admin) })).statusCode).toBe(404);
+
+    const openapi = await server.inject({ method: "GET", url: "/api/v1/openapi.json" });
+    expect(openapi.statusCode).toBe(200);
+    expect(openapi.json()).toMatchObject({ paths: {
+      "/api/v1/categories": { get: { operationId: "listCategories" }, post: { operationId: "createCategory" } },
+      "/api/v1/tags": { get: { operationId: "listTags" }, post: { operationId: "createTag" } },
+    } });
+  });
+
+  it("classifies products, filters combinations and resolves only public slugs", async () => {
+    const [category, otherCategory] = await database.insert(categories).values([
+      { name: "Clasificación audio", slug: "clasificacion-audio" },
+      { name: "Clasificación video", slug: "clasificacion-video" },
+    ]).returning({ id: categories.id });
+    const [tag, otherTag] = await database.insert(tags).values([
+      { name: "Clasificación premium", slug: "clasificacion-premium" },
+      { name: "Clasificación portátil", slug: "clasificacion-portatil" },
+    ]).returning({ id: tags.id });
+    if (!category || !otherCategory || !tag || !otherTag) throw new Error("Classification fixtures failed");
+
+    const missingCategory = await server.inject({ method: "POST", url: "/api/v1/products", headers: authorization(tokens.admin), payload: { ...productPayload, sku: "CLASS-NO-CAT", status: "ACTIVE" } });
+    expect(missingCategory.statusCode).toBe(400);
+    expect(missingCategory.json()).toMatchObject({ code: "PRODUCT_CATEGORY_REQUIRED" });
+
+    const created = await server.inject({ method: "POST", url: "/api/v1/products", headers: authorization(tokens.admin), payload: { ...productPayload, sku: "CLASS-AUDIO-001", name: "Altavoz Clasificado", status: "ACTIVE", categoryId: category.id, tagIds: [tag.id, otherTag.id], image: { storageKey: "products/class-audio/cover.webp", url: "/images/product-placeholder.svg" } } });
+    expect(created.statusCode).toBe(201);
+    const product = created.json<ProductResponse>();
+    expect(product).toMatchObject({ slug: "altavoz-clasificado", category: { id: category.id }, tags: [{ id: tag.id }, { id: otherTag.id }] });
+    const slugDetail = await server.inject({ method: "GET", url: `/api/v1/products/slug/${product.slug}` });
+    expect(slugDetail.statusCode).toBe(200);
+    expect(slugDetail.json()).toMatchObject({ id: product.id, category: { id: category.id }, tags: [{ id: tag.id }, { id: otherTag.id }] });
+
+    const filtered = await server.inject({ method: "GET", url: `/api/v1/products?categoryId=${category.id}&tagIds=${tag.id},${otherTag.id}&search=Altavoz&minPrice=1000&maxPrice=2000` });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json()).toMatchObject({ totalItems: 1, items: [{ id: product.id }] });
+    const wrongCategory = await server.inject({ method: "GET", url: `/api/v1/products?categoryId=${otherCategory.id}&tagIds=${tag.id}` });
+    expect(wrongCategory.json()).toMatchObject({ totalItems: 0 });
+
+    const edited = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { name: "Altavoz Nuevo", tagIds: [otherTag.id] } });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json()).toMatchObject({ slug: product.slug, tags: [{ id: otherTag.id }] });
+    const [links] = await database.select().from(productTags).where(eq(productTags.productId, product.id));
+    expect(links?.tagId).toBe(otherTag.id);
+
+    await database.update(tags).set({ status: "INACTIVE" }).where(eq(tags.id, tag.id));
+    const invalidTag = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { tagIds: [tag.id] } });
+    expect(invalidTag.statusCode).toBe(400);
+    expect(invalidTag.json()).toMatchObject({ code: "PRODUCT_CLASSIFICATION_UNAVAILABLE" });
+    await database.update(categories).set({ status: "INACTIVE" }).where(eq(categories.id, otherCategory.id));
+    const invalidCategory = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { categoryId: otherCategory.id } });
+    expect(invalidCategory.statusCode).toBe(400);
+    expect(invalidCategory.json()).toMatchObject({ code: "PRODUCT_CLASSIFICATION_UNAVAILABLE" });
+    const current = await server.inject({ method: "GET", url: `/api/v1/products/slug/${product.slug}` });
+    expect(current.statusCode).toBe(200);
+    expect(current.json()).toMatchObject({ tags: [{ id: otherTag.id }] });
+    await database.update(products).set({ status: "INACTIVE" }).where(eq(products.id, product.id));
+    expect((await server.inject({ method: "GET", url: `/api/v1/products/slug/${product.slug}` })).statusCode).toBe(404);
   });
 });

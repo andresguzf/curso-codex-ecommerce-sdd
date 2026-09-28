@@ -49,6 +49,8 @@ describe("BackofficeShell", () => {
     const sidebar = screen.getByRole("navigation", { name: "Navegación administrativa" });
 
     expect(within(sidebar).getByRole("link", { name: "Productos e inventario" })).toHaveAttribute("href", "/products");
+    expect(within(sidebar).getByRole("link", { name: "Categorías" })).toHaveAttribute("href", "/categories");
+    expect(within(sidebar).getByRole("link", { name: "Etiquetas" })).toHaveAttribute("href", "/tags");
     expect(within(sidebar).getByRole("link", { name: "Usuarios" })).toHaveAttribute("href", "/users");
     expect(within(sidebar).getByRole("link", { name: "Órdenes" })).toHaveAttribute("href", "/orders");
     expect(within(sidebar).getByRole("link", { name: "Facturas" })).toHaveAttribute("href", "/invoices");
@@ -63,6 +65,8 @@ describe("BackofficeShell", () => {
     expect(within(sidebar).getByRole("link", { name: "Órdenes" })).toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Facturas" })).toBeInTheDocument();
     expect(within(sidebar).queryByRole("link", { name: "Productos e inventario" })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole("link", { name: "Categorías" })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole("link", { name: "Etiquetas" })).not.toBeInTheDocument();
     expect(within(sidebar).queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("complementary")).getByText("Facturación")).toBeInTheDocument();
   });

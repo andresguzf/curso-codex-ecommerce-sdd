@@ -8,6 +8,7 @@ import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
 import { ProductImage } from "./product-image";
+import { WishlistButton } from "../wishlist/wishlist-button";
 
 export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
   const { addProduct, isAdding } = useAddToCart();
@@ -103,6 +104,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
                   ? "Agregando al carrito…"
                   : "Agregar al carrito"}
             </button>
+            <div className="mt-3"><WishlistButton productId={product.id} productName={product.name} variant="label" /></div>
             <p className="mb-0 mt-4 text-center text-xs leading-5 text-slate-500">
               La disponibilidad se volverá a validar al agregar y al finalizar la compra.
             </p>

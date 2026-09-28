@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { ProductAdministrationRepository } from "./product-administration.repository";
+import { ProductAdministrationRepository, ProductCategoryRequiredError, ProductClassificationUnavailableError } from "./product-administration.repository";
 import { normalizeSlug } from "./slug";
 import type {
   AdministrativeProduct,
@@ -63,6 +63,12 @@ export class ProductAdministrationService {
     return product;
   }
 
+  async getPublicDetailBySlug(slug: string): Promise<ProductDetail> {
+    const product = await this.repository.findPublicDetailBySlug(slug);
+    if (!product) throw this.notFound();
+    return product;
+  }
+
   async get(productId: string): Promise<AdministrativeProduct> {
     const product = await this.repository.findById(productId);
     if (!product) throw this.notFound();
@@ -103,13 +109,13 @@ export class ProductAdministrationService {
     status: ProductStatus,
     actorUserId: string,
   ): Promise<AdministrativeProduct> {
-    const product = await this.repository.updateStatus(
-      productId,
-      status,
-      actorUserId,
-    );
-    if (!product) throw this.notFound();
-    return product;
+    try {
+      const product = await this.repository.updateStatus(productId, status, actorUserId);
+      if (!product) throw this.notFound();
+      return product;
+    } catch (error) {
+      this.rethrowPersistenceError(error);
+    }
   }
 
   async delete(productId: string, actorUserId: string): Promise<void> {
@@ -123,6 +129,8 @@ export class ProductAdministrationService {
     return {
       ...input,
       ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
+      ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
+      ...(input.tagIds === undefined ? {} : { tagIds: input.tagIds }),
       description: input.description.trim(),
       image: {
         storageKey: input.image.storageKey.trim(),
@@ -152,10 +160,18 @@ export class ProductAdministrationService {
         ? {}
         : { sku: input.sku.trim().toUpperCase() }),
       ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
+      ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
+      ...(input.tagIds === undefined ? {} : { tagIds: input.tagIds }),
     };
   }
 
   private rethrowPersistenceError(error: unknown): never {
+    if (error instanceof ProductCategoryRequiredError) {
+      throw new BadRequestException({ code: "PRODUCT_CATEGORY_REQUIRED", message: "An active product requires a category" });
+    }
+    if (error instanceof ProductClassificationUnavailableError) {
+      throw new BadRequestException({ code: "PRODUCT_CLASSIFICATION_UNAVAILABLE", message: "The selected category or tag is not active" });
+    }
     const constraint = this.findPostgresConstraint(error);
     if (constraint === "products_sku_unique") {
       throw new ConflictException({

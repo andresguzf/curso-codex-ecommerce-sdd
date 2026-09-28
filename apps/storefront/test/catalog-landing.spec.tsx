@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
 import type { ActiveCart, ProductListItem, ProductPage } from "@technology-ecommerce/api-schemas";
 import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -26,6 +27,12 @@ vi.mock("../src/features/catalog/catalog-api", () => ({
   getPublicProducts: vi.fn(),
 }));
 
+vi.mock("@technology-ecommerce/api-client", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@technology-ecommerce/api-client")>(),
+  getActiveCategories: vi.fn(),
+  getActiveTags: vi.fn(),
+}));
+
 vi.mock("../src/features/cart/cart-api", async (importOriginal) => {
   const original = await importOriginal<
     typeof import("../src/features/cart/cart-api")
@@ -39,6 +46,7 @@ vi.mock("../src/features/cart/cart-api", async (importOriginal) => {
 });
 
 const productBase = {
+  category: null,
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   description: "Producto tecnológico preparado para trabajo exigente.",
@@ -47,13 +55,15 @@ const productBase = {
     url: "https://picsum.photos/id/60/1200/900.webp",
   },
   price: "499.90",
+  slug: "producto-ejemplo",
+  tags: [],
   updatedAt: "2026-09-04T12:00:00.000Z",
 } as const;
 
 function product(
   input: Pick<ProductListItem, "id" | "name" | "sku" | "status" | "stockAvailable">,
 ): ProductListItem {
-  return { ...productBase, ...input };
+  return { ...productBase, ...input, tags: [] };
 }
 
 function page(items: readonly ProductListItem[]): ProductPage {
@@ -121,6 +131,8 @@ describe("storefront catalog landing", () => {
     vi.mocked(addCartItem).mockReset();
     vi.mocked(getCart).mockReset();
     vi.mocked(getPublicProducts).mockReset();
+    vi.mocked(getActiveCategories).mockResolvedValue([]);
+    vi.mocked(getActiveTags).mockResolvedValue([]);
     vi.mocked(getCart).mockResolvedValue({
       createdAt: "2026-09-08T12:00:00.000Z",
       currency: null,
@@ -372,6 +384,7 @@ describe("storefront catalog landing", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Ordenar por" }), {
       target: { value: "price:desc" },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aplicar" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
 
     expect(navigation.push).toHaveBeenCalledTimes(1);
@@ -387,6 +400,29 @@ describe("storefront catalog landing", () => {
       sortOrder: "desc",
     });
     expect(options).toEqual({ scroll: false });
+  });
+
+  it("restores category and tags accessibly and resets pagination when selection changes", async () => {
+    const categoryId = "8f732799-c098-45c1-961e-332c6becd13a";
+    const tagId = "62ac275e-bbf6-43ab-8885-e5588bd24c87";
+    navigation.searchParams = new URLSearchParams(`page=4&categoryId=${categoryId}&tagIds=${tagId}`);
+    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
+    vi.mocked(getActiveCategories).mockResolvedValue([{ id: categoryId, name: "Teclados", slug: "teclados", status: "ACTIVE", description: "", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
+    vi.mocked(getActiveTags).mockResolvedValue([{ id: tagId, name: "RGB", slug: "rgb", status: "ACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
+
+    renderCatalog();
+    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ categoryId, tagIds: [tagId], page: 4 })));
+    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Categoría" })).toHaveValue(categoryId));
+    expect(screen.getByRole("checkbox", { name: "RGB" })).toBeChecked();
+    fireEvent.change(screen.getByRole("combobox", { name: "Categoría" }), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    const [href] = navigation.push.mock.calls[0] as [string];
+    const nextUrl = new URL(href, "http://localhost:3000");
+    expect(nextUrl.searchParams.get("page")).toBe("1");
+    expect(nextUrl.searchParams.has("categoryId")).toBe(false);
+    expect(nextUrl.searchParams.get("tagIds")).toBe(tagId);
   });
 
   it("requests the criteria restored by browser history navigation", async () => {

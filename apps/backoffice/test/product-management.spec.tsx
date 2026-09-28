@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
 import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +25,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/products",
   useRouter: () => navigation,
   useSearchParams: () => navigation.searchParams,
+}));
+vi.mock("@technology-ecommerce/api-client", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@technology-ecommerce/api-client")>(),
+  getActiveCategories: vi.fn(),
+  getActiveTags: vi.fn(),
 }));
 vi.mock("../src/features/products/product-api", async (importOriginal) => ({
   ...await importOriginal<typeof import("../src/features/products/product-api")>(),
@@ -61,6 +67,8 @@ function renderManagement() {
 describe("product administration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getActiveCategories).mockResolvedValue([]);
+    vi.mocked(getActiveTags).mockResolvedValue([]);
     useFlashStore.getState().dismissFlash();
     api.listAdministrativeProducts.mockResolvedValue({
       items: [activeProduct, inactiveProduct],
@@ -96,6 +104,7 @@ describe("product administration", () => {
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Monitor Ultra 27" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Monitor para productividad" } });
     fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "299.90" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
 
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ sku: "MON-ULTRA-27", status: "INACTIVE" })));
@@ -113,11 +122,31 @@ describe("product administration", () => {
     const activeRow = screen.getByText("Teclado Nova 75").closest("tr");
     fireEvent.click(within(activeRow!).getByRole("button", { name: "Editar" }));
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Nova 75 Pro" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.objectContaining({ name: "Teclado Nova 75 Pro" })));
     expect(await screen.findByText("Producto actualizado correctamente.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["backoffice", "products"] });
+  });
+
+  it("sends selected category and tags when creating a product", async () => {
+    const categoryId = "8f732799-c098-45c1-961e-332c6becd13a";
+    const tagId = "62ac275e-bbf6-43ab-8885-e5588bd24c87";
+    vi.mocked(getActiveCategories).mockResolvedValue([{ id: categoryId, name: "Teclados", slug: "teclados", status: "ACTIVE", description: "", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
+    vi.mocked(getActiveTags).mockResolvedValue([{ id: tagId, name: "RGB", slug: "rgb", status: "ACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
+    renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo producto" }));
+    await waitFor(() => expect(screen.getByRole("option", { name: "Teclados" })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "KEY-RGB" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado RGB" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado mecánico" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.90" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Categoría principal" }), { target: { value: categoryId } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "RGB" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ categoryId, tagIds: [tagId] })));
   });
 
   it("activates, confirms deactivation and soft-deletes while invalidating cache", async () => {
@@ -159,6 +188,7 @@ describe("product administration", () => {
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Producto repetido" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Descripción de prueba" } });
     fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "299.90" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
 
     expect(await screen.findByText("Ya existe un producto con ese SKU o referencia de imagen.")).toBeInTheDocument();
@@ -172,6 +202,7 @@ describe("product administration", () => {
     const activeRow = (await screen.findByText("Teclado Nova 75")).closest("tr");
     fireEvent.click(within(activeRow!).getByRole("button", { name: "Editar" }));
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Nova 75 Pro" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     expect(await screen.findByText("No pudimos guardar el producto. Inténtalo nuevamente.")).toBeInTheDocument();
