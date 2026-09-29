@@ -195,6 +195,6 @@ export class CustomerOrdersController {
       cancelledAt: detail.cancelledAt?.toISOString() ?? null,
       items: detail.items.map((item) => ({ ...item, currency: item.currency as "USD" })),
     };
-    return new StreamableFile(this.documents.renderOrder(snapshot), { type: "application/pdf", disposition: `attachment; filename="order-${orderId}.pdf"` });
+    return new StreamableFile(await this.documents.renderOrder(snapshot), { type: "application/pdf", disposition: `attachment; filename="order-${orderId}.pdf"` });
   }
 }

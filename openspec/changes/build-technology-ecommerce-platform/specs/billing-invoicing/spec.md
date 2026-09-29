@@ -59,7 +59,7 @@ El sistema SHALL permitir que `ADMIN` y `BILLING` listen, busquen, filtren y con
 - **THEN** el sistema devuelve las facturas autorizadas que coinciden con el filtro y sus datos de paginación
 
 ### Requirement: Perfil de la empresa emisora
-El sistema SHALL mantener un único perfil vigente de la tienda con al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo, SHALL permitir que solo `ADMIN` lo modifique y SHALL permitir que `ADMIN` y `BILLING` lo consulten para facturación.
+El sistema SHALL mantener un único perfil vigente de la tienda con al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo administrado, SHALL permitir que solo `ADMIN` lo modifique y SHALL permitir que `ADMIN` y `BILLING` lo consulten para facturación.
 
 #### Scenario: Administrador actualiza la empresa
 - **WHEN** un administrador guarda datos empresariales válidos
@@ -69,8 +69,19 @@ El sistema SHALL mantener un único perfil vigente de la tienda con al menos nom
 - **WHEN** un usuario `BILLING` intenta editar el perfil de la tienda
 - **THEN** el sistema deniega la modificación sin impedir su consulta autorizada
 
+### Requirement: Logo empresarial administrado e inmutable
+El sistema SHALL permitir exclusivamente a `ADMIN` cargar un logo PNG, JPEG o WebP con límites de tamaño y validación de firma, SHALL guardar cada versión bajo una clave nueva que no se sobrescriba y SHALL asociar al perfil únicamente una referencia emitida por el API. La referencia SHALL incluir MIME y huella SHA-256 verificable. El sistema MUST conservar los assets referenciados por órdenes o facturas históricas y MUST NOT confiar en URLs o claves arbitrarias proporcionadas en `PATCH /store-profile`.
+
+#### Scenario: Administrador sustituye el logo
+- **WHEN** `ADMIN` carga una imagen válida y selecciona la referencia recibida en el formulario empresarial
+- **THEN** el perfil usa la versión nueva y las órdenes y facturas anteriores continúan referenciando la versión previa sin sobrescribirla ni eliminarla
+
+#### Scenario: Archivo inválido o rol no autorizado
+- **WHEN** se carga un archivo sobredimensionado, con MIME distinto de su firma, o un usuario `BILLING` intenta cargar un logo
+- **THEN** el API rechaza la operación sin modificar el perfil ni crear una referencia utilizable
+
 ### Requirement: Snapshot empresarial de la factura
-El sistema SHALL copiar en cada factura los datos vigentes del perfil de la empresa al crearla o emitirla y MUST mantener ese snapshot independiente de cambios posteriores del perfil.
+El sistema SHALL copiar en cada factura los datos vigentes del perfil de la empresa al crearla o emitirla, incluida la clave y huella del logo administrado cuando exista, y MUST mantener ese snapshot independiente de cambios posteriores del perfil.
 
 #### Scenario: Factura después de cambiar la empresa
 - **WHEN** se modifica el perfil de la tienda después de crear o emitir una factura

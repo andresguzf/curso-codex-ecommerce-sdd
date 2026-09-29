@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -9,10 +11,11 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { configureApplication } from "../../src/application";
-import { auditEntries, roleAssignments, storeProfiles, users } from "../../src/database/schema";
+import { auditEntries, roleAssignments, storeLogoAssets, storeProfiles, users } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
 
@@ -24,6 +27,7 @@ const originalEnvironment = {
   allowedOrigins: process.env.CORS_ALLOWED_ORIGINS,
   cookieSecure: process.env.AUTH_COOKIE_SECURE,
   databaseUrl: process.env.DATABASE_URL,
+  imageRoot: process.env.IMAGE_STORAGE_LOCAL_ROOT,
   nodeEnvironment: process.env.NODE_ENV,
 };
 const testDatabaseName = `ecommerce_store_profile_e2e_${randomUUID().replaceAll("-", "")}`;
@@ -42,7 +46,9 @@ let app: NestFastifyApplication;
 let server: FastifyInstance;
 let database: NodePgDatabase<typeof schema>;
 let isolatedDatabaseCreated = false;
+let imageRoot: string | undefined;
 let adminId: string;
+let customerId: string;
 const tokens: Record<"ADMIN" | "BILLING" | "CUSTOMER", string> = { ADMIN: "", BILLING: "", CUSTOMER: "" };
 
 const completeProfile = {
@@ -51,7 +57,6 @@ const completeProfile = {
   taxIdentifier: "76.123.456-7",
   address: { line1: "Av. Principal 123", city: "Santiago", countryCode: "CL" },
   contact: { email: "ventas@example.com", phone: "+56 2 1234 5678" },
-  logo: { storageKey: "logos/tienda.svg", url: "https://example.com/logos/tienda.svg" },
 };
 
 function authorization(role: "ADMIN" | "BILLING" | "CUSTOMER"): { authorization: string } {
@@ -64,6 +69,7 @@ function restoreEnvironment(): void {
     AUTH_COOKIE_SECURE: originalEnvironment.cookieSecure,
     CORS_ALLOWED_ORIGINS: originalEnvironment.allowedOrigins,
     DATABASE_URL: originalEnvironment.databaseUrl,
+    IMAGE_STORAGE_LOCAL_ROOT: originalEnvironment.imageRoot,
     NODE_ENV: originalEnvironment.nodeEnvironment,
   })) {
     if (value === undefined) delete process.env[key];
@@ -82,6 +88,8 @@ describe("store profile REST permissions and audit", () => {
     process.env.AUTH_ACCESS_TOKEN_SECRET = "store-profile-end-to-end-secret-at-least-32-characters";
     process.env.AUTH_COOKIE_SECURE = "false";
     process.env.CORS_ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3002";
+    imageRoot = await mkdtemp(resolve(tmpdir(), "ecommerce-store-logo-test-"));
+    process.env.IMAGE_STORAGE_LOCAL_ROOT = imageRoot;
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
       import("../../src/app.module"),
@@ -106,6 +114,7 @@ describe("store profile REST permissions and audit", () => {
       }).returning({ id: users.id });
       if (!user) throw new Error(`${role} fixture was not created`);
       if (role === "ADMIN") adminId = user.id;
+      if (role === "CUSTOMER") customerId = user.id;
       await database.insert(roleAssignments).values({ userId: user.id, role });
       const login = await server.inject({ method: "POST", url: "/api/v1/auth/login", payload: { email, password } });
       expect(login.statusCode).toBe(200);
@@ -115,7 +124,6 @@ describe("store profile REST permissions and audit", () => {
 
   afterAll(async () => {
     await app?.close();
-    restoreEnvironment();
     if (maintenancePool && isolatedDatabaseCreated) {
       await maintenancePool.query(
         "select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()",
@@ -124,6 +132,8 @@ describe("store profile REST permissions and audit", () => {
       await maintenancePool.query(`drop database ${quotedDatabaseName}`);
     }
     await maintenancePool?.end();
+    if (imageRoot) await rm(imageRoot, { recursive: true, force: true });
+    restoreEnvironment();
   }, 30_000);
 
   it("permits Admin and Billing reads, only Admin writes, and audits accepted changes", async () => {
@@ -160,7 +170,7 @@ describe("store profile REST permissions and audit", () => {
       taxIdentifier: completeProfile.taxIdentifier,
       address: { line1: completeProfile.address.line1, city: "Valparaíso", countryCode: "CL" },
       contact: { email: completeProfile.contact.email, phone: null },
-      logo: completeProfile.logo,
+      logo: null,
     });
     expect(await database.select().from(storeProfiles)).toHaveLength(1);
     const audit = await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"));
@@ -185,7 +195,39 @@ describe("store profile REST permissions and audit", () => {
     expect(await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"))).toEqual(beforeAudit);
   });
 
+  it("uploads immutable logo versions only for Admin and rejects invented references", async () => {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=", "base64");
+    const upload = (role: "ADMIN" | "BILLING" | "CUSTOMER", payload: Buffer, mime = "image/png") => server.inject({
+      method: "POST", url: "/api/v1/store-profile/logo",
+      headers: { ...authorization(role), "content-type": mime }, payload,
+    });
+    expect((await upload("BILLING", png)).statusCode).toBe(403);
+    expect((await upload("CUSTOMER", png)).statusCode).toBe(403);
+    expect((await upload("ADMIN", png, "image/jpeg")).statusCode).toBe(400);
+    expect((await upload("ADMIN", Buffer.concat([png, Buffer.alloc(5 * 1024 * 1024)]))).statusCode).toBe(413);
+    expect(await database.select().from(storeLogoAssets)).toHaveLength(0);
+    for (const logo of [{ storageKey: "invented.png" }, { storageKey: "invented.png", url: "https://evil.example/logo.png" }]) {
+      expect((await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { logo } })).statusCode).toBe(400);
+    }
+    const first = await upload("ADMIN", png);
+    const second = await upload("ADMIN", png);
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(201);
+    const firstLogo = first.json<{ storageKey: string; url: string; mimeType: string; size: number; sha256: string }>();
+    const secondLogo = second.json<typeof firstLogo>();
+    expect(firstLogo.storageKey).not.toBe(secondLogo.storageKey);
+    expect(firstLogo).toMatchObject({ mimeType: "image/png", size: png.length });
+    expect(firstLogo.sha256).toMatch(/^[0-9a-f]{64}$/);
+    for (const logo of [firstLogo, secondLogo]) {
+      const selected = await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { logo: { storageKey: logo.storageKey } } });
+      expect(selected.statusCode).toBe(200);
+      expect(selected.json()).toMatchObject({ logo: { storageKey: logo.storageKey, sha256: logo.sha256, url: logo.url } });
+    }
+    expect(await database.select().from(storeLogoAssets)).toHaveLength(2);
+  });
+
   it("serializes simultaneous partial updates so neither field is lost", async () => {
+    const auditBefore = await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"));
     const [tradeNameUpdate, postalCodeUpdate] = await Promise.all([
       server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { tradeName: "Tienda Tecnología Plus" } }),
       server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { address: { postalCode: "8320000" } } }),
@@ -194,6 +236,87 @@ describe("store profile REST permissions and audit", () => {
     expect(postalCodeUpdate.statusCode).toBe(200);
     const profile = await server.inject({ method: "GET", url: "/api/v1/store-profile", headers: authorization("BILLING") });
     expect(profile.json()).toMatchObject({ tradeName: "Tienda Tecnología Plus", address: { postalCode: "8320000" } });
-    expect(await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"))).toHaveLength(4);
+    expect(await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"))).toHaveLength(auditBefore.length + 2);
   });
+
+  it("keeps invoice snapshots and PDFs unchanged after Admin replaces the profile and logo", async () => {
+    const logoBefore = await sharp({ create: { width: 90, height: 45, channels: 3, background: "#164a83" } }).png().toBuffer();
+    const logoAfter = await sharp({ create: { width: 90, height: 45, channels: 3, background: "#ca6d24" } }).png().toBuffer();
+    const upload = (role: "ADMIN" | "BILLING", data: Buffer) => server.inject({
+      method: "POST", url: "/api/v1/store-profile/logo",
+      headers: { ...authorization(role), "content-type": "image/png" }, payload: data,
+    });
+    const firstUpload = await upload("ADMIN", logoBefore);
+    expect(firstUpload.statusCode).toBe(201);
+    const firstLogo = firstUpload.json<{ storageKey: string; url: string; sha256: string }>();
+    const firstLogoReference = { storageKey: firstLogo.storageKey, url: firstLogo.url, sha256: firstLogo.sha256 };
+    const oldProfile = await server.inject({
+      method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"),
+      payload: {
+        tradeName: "Nexo Original", legalName: "Nexo Original SpA", taxIdentifier: "TAX-OLD",
+        address: { line1: "Calle Antigua 1", city: "Santiago", countryCode: "CL" },
+        contact: { email: "old@example.com" }, logo: { storageKey: firstLogo.storageKey },
+      },
+    });
+    expect(oldProfile.statusCode).toBe(200);
+    expect(oldProfile.json()).toMatchObject({ logo: firstLogoReference, legalName: "Nexo Original SpA" });
+    expect((await server.inject({ method: "GET", url: "/api/v1/store-profile", headers: authorization("BILLING") })).json())
+      .toMatchObject({ logo: firstLogoReference, legalName: "Nexo Original SpA" });
+    expect((await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("BILLING"), payload: { legalName: "Unauthorized" } })).statusCode).toBe(403);
+    expect((await upload("BILLING", logoAfter)).statusCode).toBe(403);
+
+    const createInvoice = (role: "ADMIN" | "BILLING") => server.inject({
+      method: "POST", url: "/api/v1/invoices", headers: authorization(role),
+      payload: {
+        customerId, shippingTotal: "0.00",
+        lines: [{ productId: null, sku: "SERVICE", name: "Technical service", description: "Historical service", quantity: 1, unitPrice: "25.00", taxRate: "0.0000" }],
+      },
+    });
+    const created = await createInvoice("BILLING");
+    expect(created.statusCode).toBe(201);
+    const firstInvoice = created.json<{ id: string; issuerSnapshot: Record<string, unknown> }>();
+    expect(firstInvoice.issuerSnapshot).toMatchObject({ legalName: "Nexo Original SpA", address: { line1: "Calle Antigua 1" }, logo: firstLogoReference });
+    const pdfUrl = `/api/v1/invoices/${firstInvoice.id}/pdf`;
+    const firstPdf = await server.inject({ method: "GET", url: pdfUrl, headers: authorization("CUSTOMER") });
+    expect(firstPdf.statusCode).toBe(200);
+    expect(firstPdf.headers["content-type"]).toContain("application/pdf");
+    expect(firstPdf.rawPayload.toString("latin1")).toContain("/Subtype /Image");
+    expect(firstPdf.rawPayload.toString("latin1")).toContain("Nexo Original SpA");
+
+    const secondUpload = await upload("ADMIN", logoAfter);
+    expect(secondUpload.statusCode).toBe(201);
+    const secondLogo = secondUpload.json<typeof firstLogo>();
+    const secondLogoReference = { storageKey: secondLogo.storageKey, url: secondLogo.url, sha256: secondLogo.sha256 };
+    expect(secondLogo.storageKey).not.toBe(firstLogo.storageKey);
+    const updated = await server.inject({
+      method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"),
+      payload: {
+        tradeName: "Nexo Nuevo", legalName: "Nexo Nuevo SpA", taxIdentifier: "TAX-NEW",
+        address: { line1: "Calle Nueva 2" }, logo: { storageKey: secondLogo.storageKey },
+      },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toMatchObject({ legalName: "Nexo Nuevo SpA", logo: secondLogoReference });
+    expect((await server.inject({ method: "GET", url: "/api/v1/store-profile", headers: authorization("BILLING") })).json())
+      .toMatchObject({ legalName: "Nexo Nuevo SpA", logo: secondLogoReference });
+
+    const historical = await server.inject({ method: "GET", url: `/api/v1/invoices/${firstInvoice.id}`, headers: authorization("BILLING") });
+    expect(historical.statusCode).toBe(200);
+    expect(historical.json<{ issuerSnapshot: unknown }>().issuerSnapshot).toEqual(firstInvoice.issuerSnapshot);
+    const regenerated = await server.inject({ method: "GET", url: pdfUrl, headers: authorization("ADMIN") });
+    expect(regenerated.statusCode).toBe(200);
+    expect(regenerated.rawPayload.equals(firstPdf.rawPayload)).toBe(true);
+    expect(regenerated.rawPayload.toString("latin1")).not.toContain("Nexo Nuevo SpA");
+    expect(await database.select().from(storeLogoAssets).where(eq(storeLogoAssets.storageKey, firstLogo.storageKey))).toHaveLength(1);
+
+    const next = await createInvoice("ADMIN");
+    expect(next.statusCode).toBe(201);
+    const nextInvoice = next.json<{ id: string; issuerSnapshot: Record<string, unknown> }>();
+    expect(nextInvoice.issuerSnapshot).toMatchObject({ legalName: "Nexo Nuevo SpA", address: { line1: "Calle Nueva 2" }, logo: secondLogoReference });
+    const nextPdf = await server.inject({ method: "GET", url: `/api/v1/invoices/${nextInvoice.id}/pdf`, headers: authorization("BILLING") });
+    expect(nextPdf.statusCode).toBe(200);
+    expect(nextPdf.rawPayload.toString("latin1")).toContain("Nexo Nuevo SpA");
+    expect(nextPdf.rawPayload.toString("latin1")).toContain("/Subtype /Image");
+    expect(nextPdf.rawPayload.equals(firstPdf.rawPayload)).toBe(false);
+  }, 30_000);
 });

@@ -17,7 +17,7 @@ export type IssuerSnapshot = Readonly<{
     countryCode: string;
   }>;
   contact: Readonly<{ email: string | null; phone: string | null }>;
-  logo: Readonly<{ storageKey: string; url: string }> | null;
+  logo: Readonly<{ storageKey: string; url: string; sha256: string }> | null;
 }>;
 
 export function issuerSnapshotFromProfile(profile: StoreProfile): IssuerSnapshot {
@@ -34,8 +34,8 @@ export function issuerSnapshotFromProfile(profile: StoreProfile): IssuerSnapshot
       countryCode: profile.addressCountryCode,
     },
     contact: { email: profile.contactEmail, phone: profile.contactPhone },
-    logo: profile.logoStorageKey && profile.logoUrl
-      ? { storageKey: profile.logoStorageKey, url: profile.logoUrl }
+    logo: profile.logoStorageKey && profile.logoUrl && profile.logoSha256
+      ? { storageKey: profile.logoStorageKey, url: profile.logoUrl, sha256: profile.logoSha256 }
       : null,
   };
 }

@@ -25,11 +25,25 @@ function address(snapshot: Readonly<Record<string, unknown>>): string {
     .join(", ") || "No registrada";
 }
 
+function issuerHeader(snapshot: unknown): string[] {
+  if (!snapshot || typeof snapshot !== "object") return [];
+  const issuer = snapshot as Readonly<Record<string, unknown>>;
+  const nestedAddress = issuer.address && typeof issuer.address === "object"
+    ? issuer.address as Readonly<Record<string, unknown>> : issuer;
+  return [
+    `Nombre comercial: ${snapshotText(issuer, "tradeName", "commercialName", "legalName")}`,
+    `Razon social: ${snapshotText(issuer, "legalName", "businessName")}`,
+    `Identificador fiscal: ${snapshotText(issuer, "taxIdentifier", "taxId")}`,
+    `Direccion del emisor: ${address(nestedAddress)}`,
+  ];
+}
+
 export function orderDocumentTemplate(order: OrderSnapshot): PdfDocument {
   const customer = order.customerSnapshot;
   const payment = order.paymentSnapshot;
   return {
     title: `ORDEN DE COMPRA ${order.number}`,
+    issuerLines: issuerHeader(order.issuerSnapshot),
     lines: [
       `Estado: ${order.status}`,
       `Fecha: ${date(order.createdAt)}`,
@@ -54,15 +68,12 @@ export function invoiceDocumentTemplate(invoice: InvoiceSnapshot): PdfDocument {
   const draftLabel = invoice.status === "DRAFT" ? "BORRADOR · sin numero definitivo" : `Numero: ${invoice.number ?? "No registrado"}`;
   return {
     title: `FACTURA ${invoice.number ?? "BORRADOR"}`,
+    issuerLines: issuerHeader(issuer),
     lines: [
       draftLabel,
       `Estado: ${invoice.status}`,
       `Origen: ${invoice.origin === "ORDER" ? "Orden de compra" : "Manual"}`,
       `Fecha: ${date(invoice.createdAt)}`,
-      `Emisor: ${snapshotText(issuer, "tradeName", "commercialName", "legalName", "name")}`,
-      `Razon social: ${snapshotText(issuer, "legalName", "businessName")}`,
-      `Identificador fiscal: ${snapshotText(issuer, "taxId", "taxIdentifier")}`,
-      `Direccion del emisor: ${address(issuer)}`,
       `Cliente: ${snapshotText(customer, "displayName")}`,
       `Email: ${snapshotText(customer, "email")}`,
       "LINEAS",

@@ -19,7 +19,7 @@ describe("store profile domain validation", () => {
       ...validProfile,
       tradeName: "  Tecnología Central  ",
       contact: { email: "ventas@example.com", phone: "+56 2 1234 5678" },
-      logo: { storageKey: "logos/store.svg", url: "https://example.com/store.svg" },
+      logo: { storageKey: "managed-logo.png" },
     })).toMatchObject({ tradeName: "Tecnología Central", address: { city: "Santiago" } });
   });
 
@@ -31,7 +31,7 @@ describe("store profile domain validation", () => {
     { ...validProfile, address: { ...validProfile.address, city: "" } },
     { ...validProfile, address: { ...validProfile.address, countryCode: "Chile" } },
     { ...validProfile, contact: { email: "not-an-email" } },
-    { ...validProfile, logo: { storageKey: "logos/store.svg", url: "not-a-url" } },
+    { ...validProfile, logo: { storageKey: "managed-logo.png", url: "https://untrusted.example/logo.png" } },
   ])("rejects missing or invalid business identity data: %#", (input) => {
     expect(() => validateStoreProfile(input)).toThrow();
   });

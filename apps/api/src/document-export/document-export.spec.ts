@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+
+import sharp from "sharp";
+import { describe, expect, it, vi } from "vitest";
 
 import { DocumentExportService } from "./document-export.service";
 import { SimplePdfAdapter } from "./simple-pdf.adapter";
 import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate";
 import type { OrderSnapshot } from "../order-management/order.aggregate";
+import type { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
+import { ImageStorageNotFoundError } from "../product-catalog/image-storage/image-storage.port";
 
 const order: OrderSnapshot = {
   id: "16f7d829-e4c8-4a78-a883-4e21b2d8a957",
@@ -28,10 +33,11 @@ const invoice: InvoiceSnapshot = {
 };
 
 describe("document export", () => {
-  const service = new DocumentExportService(new SimplePdfAdapter());
+  const read = vi.fn();
+  const service = new DocumentExportService(new SimplePdfAdapter(), { read } as unknown as ImageStorageService);
 
-  it("renders a valid order PDF from its historical snapshot", () => {
-    const pdf = service.renderOrder(order);
+  it("renders a valid order PDF from its historical snapshot", async () => {
+    const pdf = await service.renderOrder(order);
     const source = pdf.toString("latin1");
     expect(pdf.subarray(0, 8).toString("latin1")).toBe("%PDF-1.4");
     expect(source).toContain("ORDEN DE COMPRA ORD-HISTORIC-PDF");
@@ -40,8 +46,8 @@ describe("document export", () => {
     expect(source).toContain("%%EOF");
   });
 
-  it("marks draft invoices and excludes unknown snapshot fields", () => {
-    const pdf = service.renderInvoice(invoice);
+  it("marks draft invoices and excludes unknown snapshot fields", async () => {
+    const pdf = await service.renderInvoice(invoice);
     const source = pdf.toString("latin1");
     expect(source).toContain("FACTURA BORRADOR");
     expect(source).toContain("BORRADOR ");
@@ -50,25 +56,25 @@ describe("document export", () => {
     expect(source).not.toContain("DO-NOT-PRINT");
   });
 
-  it("does not depend on live catalog or customer objects", () => {
+  it("does not depend on live catalog or customer objects", async () => {
     const historic = { ...order, customerSnapshot: { ...order.customerSnapshot, displayName: "Nombre congelado" }, items: [{ ...order.items[0], name: "Producto congelado" }] };
-    const source = service.renderOrder(historic).toString("latin1");
+    const source = (await service.renderOrder(historic)).toString("latin1");
     expect(source).toContain("Nombre congelado");
     expect(source).toContain("Producto congelado");
     expect(source).not.toContain("Cliente historico");
     expect(source).not.toContain("Teclado historico");
   });
 
-  it("regenerates the same draft invoice after related master data changes", () => {
-    const orderBefore = service.renderOrder(order);
-    const before = service.renderInvoice(invoice);
+  it("regenerates the same draft invoice after related master data changes", async () => {
+    const orderBefore = await service.renderOrder(order);
+    const before = await service.renderInvoice(invoice);
     const changedMasterData = {
       customerName: "Cliente actualizado",
       productName: "Servicio actualizado",
       productPrice: "999.00",
     };
-    const orderAfter = service.renderOrder(order);
-    const after = service.renderInvoice(invoice);
+    const orderAfter = await service.renderOrder(order);
+    const after = await service.renderInvoice(invoice);
     const orderSource = orderAfter.toString("latin1");
     const source = after.toString("latin1");
 
@@ -85,5 +91,65 @@ describe("document export", () => {
     expect(source).not.toContain(changedMasterData.customerName);
     expect(source).not.toContain(changedMasterData.productName);
     expect(source).not.toContain(changedMasterData.productPrice);
+  });
+
+  it.each(["png", "jpeg", "webp"] as const)("embeds a verified historical %s logo in both document types", async (format) => {
+    const data = await sharp({ create: { width: 120, height: 60, channels: 3, background: "#164a83" } })[format]().toBuffer();
+    const sha256 = createHash("sha256").update(data).digest("hex");
+    const logo = { storageKey: `historic-logo.${format}`, url: "https://ignored.example/new-logo", sha256 };
+    const issuer = {
+      tradeName: "Marca Histórica", legalName: "Empresa Histórica SpA", taxIdentifier: "RUT-HIST",
+      address: { line1: "Calle Antigua 22", line2: null, city: "Santiago", region: null, postalCode: null, countryCode: "CL" },
+      contact: { email: null, phone: null }, logo,
+    };
+    read.mockResolvedValue({ storageKey: logo.storageKey, url: "https://ignored.example/asset", mimeType: `image/${format}`, size: data.length, data });
+    const orderPdf = await service.renderOrder({ ...order, issuerSnapshot: issuer });
+    const invoicePdf = await service.renderInvoice({ ...invoice, issuerSnapshot: issuer });
+    for (const pdf of [orderPdf, invoicePdf]) {
+      const source = pdf.toString("latin1");
+      expect(source).toContain("/Subtype /Image");
+      expect(source).toContain("/Logo Do");
+      expect(source).toContain("Marca Historica");
+      expect(source).toContain("Empresa Historica SpA");
+      expect(source).toContain("RUT-HIST");
+      expect(source).toContain("Calle Antigua 22");
+      expect(source).not.toContain("https://ignored.example");
+    }
+    expect(read).toHaveBeenCalledWith(logo.storageKey);
+    read.mockReset();
+  });
+
+  it("omits logos from legacy snapshots and rejects missing or tampered managed assets", async () => {
+    const legacy = { ...invoice, issuerSnapshot: { ...invoice.issuerSnapshot, logo: { storageKey: "old.svg", url: "https://old.example/logo.svg" } } };
+    expect((await service.renderInvoice(legacy)).toString("latin1")).not.toContain("/Subtype /Image");
+    const managed = { ...invoice, issuerSnapshot: { ...invoice.issuerSnapshot, logo: { storageKey: "lost.png", sha256: "a".repeat(64) } } };
+    read.mockRejectedValueOnce(new ImageStorageNotFoundError("lost.png"));
+    await expect(service.renderInvoice(managed)).rejects.toMatchObject({ response: { code: "DOCUMENT_LOGO_MISSING" } });
+    read.mockResolvedValueOnce({ data: Buffer.from("different"), mimeType: "image/png" });
+    await expect(service.renderInvoice(managed)).rejects.toMatchObject({ response: { code: "DOCUMENT_LOGO_TAMPERED" } });
+    const unreadable = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("broken")]);
+    read.mockResolvedValueOnce({ data: unreadable, mimeType: "image/png" });
+    await expect(service.renderInvoice({ ...managed, issuerSnapshot: { ...managed.issuerSnapshot, logo: {
+      storageKey: "broken.png", sha256: createHash("sha256").update(unreadable).digest("hex"),
+    } } })).rejects.toMatchObject({ response: { code: "DOCUMENT_LOGO_UNREADABLE" } });
+    read.mockReset();
+  });
+
+  it("regenerates identical bytes after the current profile and logo change", async () => {
+    const data = await sharp({ create: { width: 64, height: 32, channels: 3, background: "#164a83" } }).png().toBuffer();
+    const historical = { ...order, issuerSnapshot: {
+      tradeName: "Tienda Original", legalName: "Razón Original SpA", taxIdentifier: "TAX-OLD",
+      address: { line1: "Calle Original 1", line2: null, city: "Santiago", region: null, postalCode: null, countryCode: "CL" },
+      contact: { email: null, phone: null },
+      logo: { storageKey: "original.png", url: "https://unused.example/original.png", sha256: createHash("sha256").update(data).digest("hex") },
+    } };
+    read.mockResolvedValue({ data, mimeType: "image/png" });
+    const first = await service.renderOrder(historical);
+    const currentProfile = { tradeName: "Tienda Nueva", logo: "new.png" };
+    const second = await service.renderOrder(historical);
+    expect(second.equals(first)).toBe(true);
+    expect(second.toString("latin1")).not.toContain(currentProfile.tradeName);
+    expect(read).toHaveBeenCalledWith("original.png");
+    read.mockReset();
   });
 });

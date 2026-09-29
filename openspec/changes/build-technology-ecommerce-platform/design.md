@@ -167,6 +167,10 @@ La cancelación requiere `ADMIN` o `BILLING`, motivo y una orden `PROCESSING` o 
 
 El backend generará PDFs de órdenes y facturas desde sus snapshots y comprobará propiedad o rol antes de entregar el archivo. Los borradores se marcarán visiblemente y las facturas emitidas recibirán un número único dentro de una transacción.
 
+El logo empresarial se cargará por un endpoint REST exclusivo de `ADMIN`, con límite de tamaño, comprobación de firma de archivo y formatos raster admitidos PNG, JPEG y WebP. Un adaptador de almacenamiento conservará cada carga bajo una clave nueva e inmutable y registrará su MIME, tamaño y huella SHA-256; no se aceptarán URLs arbitrarias ni claves inventadas en el perfil. El back office seleccionará la referencia devuelta por la carga, y el API derivará la URL pública sin confiar en una URL enviada por el navegador. Reemplazar o quitar el logo vigente no borrará un asset usado por una orden o factura histórica.
+
+Los nuevos `issuerSnapshot` de órdenes y facturas conservarán clave y huella de la versión elegida. La factura derivada copiará ambos datos de la orden. Al generar un PDF, `document-export` leerá únicamente el snapshot y el asset inmutable por su clave, verificará la huella y entregará los bytes al adaptador PDF para incrustar visualmente la imagen, sin consultar el perfil actual ni solicitar la URL remota. Un logo ausente se omite sin invalidar el documento; un asset declarado pero perdido o alterado produce un error explícito y nunca se sustituye silenciosamente por el logo vigente. Los documentos anteriores a esta capacidad, que carecen de snapshot o asset administrado, se conservan como legados sin inventar una identidad visual retroactiva.
+
 La primera versión generará el documento bajo demanda mediante un adaptador de renderizado. Si el costo o volumen lo exige, el mismo adaptador permitirá persistir archivos en almacenamiento de objetos y generarlos mediante un worker sin cambiar el contrato REST.
 
 ### 11. Auditoría, observabilidad y pruebas
@@ -228,9 +232,9 @@ Alternativa considerada: guardar categorías y etiquetas como texto o arrays den
 
 ### 15. Perfil único de tienda y snapshots empresariales
 
-Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada, datos de contacto opcionales y referencia al logo. Solo `ADMIN` podrá modificarlo; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados.
+Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada, datos de contacto opcionales y referencia a un logo administrado e inmutable. Solo `ADMIN` podrá modificarlo o cargar un logo; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados.
 
-Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento. De este modo, editar la empresa no reescribe órdenes, facturas ni PDFs históricos.
+Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente, incluida la clave y huella del logo administrado cuando exista. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento y la versión inmutable del asset referenciado. De este modo, editar la empresa no reescribe órdenes, facturas ni PDFs históricos.
 
 Alternativa considerada: consultar siempre el perfil vigente al renderizar. Se descarta porque produciría documentos históricos distintos después de una modificación empresarial.
 
@@ -271,6 +275,7 @@ DELETE /wishlist/items/:productId
 
 GET    /store-profile
 PATCH  /store-profile
+POST   /store-profile/logo
 ```
 
 Los endpoints existentes `GET /products` y `GET /users` admitirán consultas limitadas para autocomplete mediante `search`, `page`, `pageSize` y filtros autorizados; no se crearán endpoints que devuelvan catálogos o clientes completos. `GET /products` añadirá filtros por categoría, etiquetas, disponibilidad y rango de precio, y el detalle público podrá resolverse por slug sin eliminar el acceso administrativo por identificador. Todas las rutas conservarán validación Zod en la frontera frontend, validación autoritativa en NestJS, autorización, errores uniformes y cliente generado.

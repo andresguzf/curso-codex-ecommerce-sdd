@@ -16,7 +16,7 @@ export const storeProfileSchema = z.object({
     countryCode: z.string().regex(/^[A-Z]{2}$/),
   }),
   contact: z.object({ email: z.email().nullable(), phone: nullableText(40) }),
-  logo: z.object({ storageKey: z.string().min(1).max(512), url: z.url().max(2048).refine((url) => /^https?:\/\//.test(url)) }).nullable(),
+  logo: z.object({ storageKey: z.string().min(1).max(512), url: z.url().max(2048).refine((url) => /^https?:\/\//.test(url)), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
 });
@@ -35,14 +35,19 @@ export const storeProfileFormSchema = z.object({
   phone: z.string().trim().max(40),
   logoMode: z.enum(["none", "reference"]),
   logoStorageKey: z.string().trim().max(512),
-  logoUrl: z.string().trim().max(2048),
 }).superRefine((value, context) => {
   if (value.logoMode !== "reference") return;
-  if (!value.logoStorageKey) context.addIssue({ code: "custom", path: ["logoStorageKey"], message: "Ingresa la clave del logo alojado." });
-  if (!/^https?:\/\//.test(value.logoUrl) || !z.url().safeParse(value.logoUrl).success) {
-    context.addIssue({ code: "custom", path: ["logoUrl"], message: "Ingresa una URL HTTP o HTTPS válida." });
-  }
+  if (!value.logoStorageKey) context.addIssue({ code: "custom", path: ["logoStorageKey"], message: "Carga un logo antes de seleccionarlo." });
+});
+
+export const uploadedStoreLogoSchema = z.object({
+  storageKey: z.string().min(1).max(512),
+  url: z.url().max(2048),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+  size: z.number().int().positive(),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
 export type StoreProfile = z.infer<typeof storeProfileSchema>;
 export type StoreProfileFormValues = z.infer<typeof storeProfileFormSchema>;
+export type UploadedStoreLogo = z.infer<typeof uploadedStoreLogoSchema>;

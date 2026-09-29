@@ -41,8 +41,16 @@ El sistema MUST producir documentos con los datos históricos guardados, aun cua
 - **THEN** el contenido comercial del documento coincide con el snapshot de la orden o factura original
 
 ### Requirement: Identidad empresarial en documentos
-Los PDF de órdenes y facturas SHALL incluir el nombre comercial, razón social, identificador fiscal, dirección y logo disponibles en el snapshot empresarial del documento correspondiente.
+Los PDF de órdenes y facturas SHALL incluir el nombre comercial, razón social, identificador fiscal y dirección del snapshot empresarial del documento correspondiente y SHALL incrustar visualmente la versión inmutable del logo cuando el snapshot la referencie. El generador MUST verificar la huella del asset y MUST NOT consultar el perfil vigente, descargar una URL remota ni sustituir un logo histórico por uno nuevo.
 
 #### Scenario: Documento histórico tras actualizar la empresa
 - **WHEN** un usuario autorizado regenera el PDF de una orden o factura creada antes de actualizar el perfil de la tienda
 - **THEN** el PDF conserva la identidad empresarial histórica del snapshot y no mezcla datos del perfil vigente
+
+#### Scenario: Logo histórico sustituido en el perfil
+- **WHEN** un administrador reemplaza el logo vigente y se regenera un PDF cuyo snapshot contiene la referencia anterior
+- **THEN** el PDF vuelve a incrustar visualmente los bytes verificados de la versión anterior
+
+#### Scenario: Logo ausente o asset alterado
+- **WHEN** el snapshot no contiene logo, o contiene uno cuyo asset falta o no coincide con su huella
+- **THEN** el documento sin logo se genera normalmente, mientras que el asset faltante o alterado produce un error explícito sin recurrir al logo vigente

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  integer,
   pgTable,
   smallint,
   timestamp,
@@ -24,6 +25,7 @@ export const storeProfiles = pgTable(
     contactPhone: varchar("contact_phone", { length: 40 }),
     logoStorageKey: varchar("logo_storage_key", { length: 512 }),
     logoUrl: varchar("logo_url", { length: 2048 }),
+    logoSha256: varchar("logo_sha256", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -40,9 +42,22 @@ export const storeProfiles = pgTable(
     check("store_profiles_address_postal_code_not_blank", sql`${table.addressPostalCode} is null or btrim(${table.addressPostalCode}) <> ''`),
     check("store_profiles_contact_email_not_blank", sql`${table.contactEmail} is null or btrim(${table.contactEmail}) <> ''`),
     check("store_profiles_contact_phone_not_blank", sql`${table.contactPhone} is null or btrim(${table.contactPhone}) <> ''`),
-    check("store_profiles_logo_reference_complete", sql`(${table.logoStorageKey} is null and ${table.logoUrl} is null) or (${table.logoStorageKey} is not null and btrim(${table.logoStorageKey}) <> '' and ${table.logoUrl} is not null and btrim(${table.logoUrl}) <> '')`),
+    check("store_profiles_logo_reference_complete", sql`(${table.logoStorageKey} is null and ${table.logoUrl} is null and ${table.logoSha256} is null) or (${table.logoStorageKey} is not null and ${table.logoUrl} is not null and ${table.logoSha256} ~ '^[0-9a-f]{64}$')`),
   ],
 );
 
 export type StoreProfile = typeof storeProfiles.$inferSelect;
 export type NewStoreProfile = typeof storeProfiles.$inferInsert;
+
+export const storeLogoAssets = pgTable("store_logo_assets", {
+  storageKey: varchar("storage_key", { length: 512 }).primaryKey(),
+  url: varchar("url", { length: 2048 }).notNull(),
+  mimeType: varchar("mime_type", { length: 32 }).notNull(),
+  size: integer("size").notNull(),
+  sha256: varchar("sha256", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("store_logo_assets_mime", sql`${table.mimeType} in ('image/png','image/jpeg','image/webp')`),
+  check("store_logo_assets_size", sql`${table.size} > 0`),
+  check("store_logo_assets_sha256", sql`${table.sha256} ~ '^[0-9a-f]{64}$'`),
+]);

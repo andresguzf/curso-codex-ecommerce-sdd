@@ -16,7 +16,6 @@ const contactSchema = z.object({
 }).strict();
 const logoSchema = z.object({
   storageKey: requiredText(512),
-  url: z.url().max(2048),
 }).strict();
 
 export const storeProfileInputSchema = z.object({

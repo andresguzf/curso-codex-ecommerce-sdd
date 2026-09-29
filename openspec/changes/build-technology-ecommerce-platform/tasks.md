@@ -139,8 +139,9 @@
 - [x] 15.2 Implementar `GET /api/v1/store-profile` y `PATCH /api/v1/store-profile` con modificación exclusiva de `ADMIN`, lectura autorizada para `ADMIN` y `BILLING` y auditoría; verificar la matriz de permisos y OpenAPI.
 - [x] 15.3 Crear el formulario de empresa en backoffice con React Hook Form, Zod y carga o selección de logo; verificar valores iniciales, errores accesibles, guardado, mensaje flash y permisos por rol.
 - [x] 15.4 Incorporar el snapshot empresarial al confirmar órdenes y a facturas manuales o derivadas de órdenes; verificar que editar el perfil no altera documentos existentes y que una factura desde orden reutiliza el emisor histórico.
-- [ ] 15.5 Actualizar las plantillas PDF para usar únicamente el snapshot empresarial de cada orden o factura; verificar nombre comercial, razón social, identificador fiscal, dirección y logo antes y después de modificar el perfil vigente.
-- [ ] 15.6 Añadir pruebas de integración y end-to-end del perfil empresarial, autorización y persistencia histórica; verificar edición por Admin, lectura por Billing, rechazo de modificación por Billing y regeneración estable de PDF.
+- [x] 15.5 Implementar carga REST de logo empresarial exclusiva de `ADMIN`, almacenamiento de versiones raster inmutables con MIME, tamaño y huella SHA-256, selección desde el formulario y referencia administrada en perfil y nuevos snapshots; verificar tipo, tamaño, permisos, rechazo de URL/clave inventadas, conservación de versiones previas y cliente OpenAPI/Zod.
+- [x] 15.6 Actualizar el adaptador y las plantillas PDF para incrustar visualmente el logo desde el asset histórico verificado y mostrar nombre comercial, razón social, identificador fiscal y dirección exclusivamente desde el snapshot; verificar PDF con y sin logo, asset perdido o alterado, y regeneración tras modificar el perfil.
+- [x] 15.7 Añadir pruebas de integración y end-to-end del perfil empresarial, autorización y persistencia histórica; verificar edición por Admin, lectura por Billing, rechazo de modificación por Billing, sustitución de logo y regeneración estable de PDF.
 
 ## 16. Listas, sidebars y paginación uniforme
 

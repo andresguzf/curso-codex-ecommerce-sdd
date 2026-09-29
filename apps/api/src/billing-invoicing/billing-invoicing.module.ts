@@ -10,10 +10,12 @@ import { ManualInvoiceController } from "./manual-invoice.controller";
 import { ManualInvoiceService } from "./manual-invoice.service";
 import { StoreProfileController } from "./store-profile.controller";
 import { StoreProfileService } from "./store-profile.service";
+import { StoreLogoService } from "./store-logo.service";
 import { DocumentExportModule } from "../document-export/document-export.module";
+import { ImageStorageModule } from "../product-catalog/image-storage/image-storage.module";
 
 @Module({
-  imports: [AuthModule, DocumentExportModule],
+  imports: [AuthModule, DocumentExportModule, ImageStorageModule],
   controllers: [InvoiceFromOrderController, InvoiceController, ManualInvoiceController, StoreProfileController],
   providers: [
     InvoiceFromOrderService,
@@ -21,6 +23,7 @@ import { DocumentExportModule } from "../document-export/document-export.module"
     InvoiceQueryService,
     ManualInvoiceService,
     StoreProfileService,
+    StoreLogoService,
   ],
   exports: [
     InvoiceFromOrderService,

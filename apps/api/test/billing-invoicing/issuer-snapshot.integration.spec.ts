@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -6,18 +6,22 @@ import { eq } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { InvoiceFromOrderService } from "../../src/billing-invoicing/invoice-from-order.service";
 import { ManualInvoiceService } from "../../src/billing-invoicing/manual-invoice.service";
 import { StoreProfileService } from "../../src/billing-invoicing/store-profile.service";
 import { currentIssuerSnapshot } from "../../src/billing-invoicing/issuer-snapshot";
+import { DocumentExportService } from "../../src/document-export/document-export.service";
+import { SimplePdfAdapter } from "../../src/document-export/simple-pdf.adapter";
 import type { DatabaseService } from "../../src/database/database.service";
-import { invoices, orders, payments, products, roleAssignments, users } from "../../src/database/schema";
+import { invoices, orders, payments, products, roleAssignments, storeLogoAssets, users } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import type { AuthenticatedUser } from "../../src/identity-access/auth.types";
 import { CustomerOrdersService } from "../../src/order-management/customer-orders.service";
 import { OrderService } from "../../src/order-management/order.service";
+import type { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for issuer snapshot integration tests");
@@ -83,11 +87,17 @@ describe("historical issuer snapshots", () => {
     await expect(database.transaction((transaction) => currentIssuerSnapshot(transaction)))
       .rejects.toMatchObject({ response: { code: "STORE_PROFILE_NOT_CONFIGURED" } });
 
+    const logoData = await sharp({ create: { width: 40, height: 20, channels: 3, background: "#164a83" } }).png().toBuffer();
+    const logoSha = createHash("sha256").update(logoData).digest("hex");
+    await database.insert(storeLogoAssets).values({ storageKey: "managed-logo.png", url: "http://localhost:3001/api/v1/media/images/managed-logo.png", mimeType: "image/png", size: logoData.length, sha256: logoSha });
+    const documents = new DocumentExportService(new SimplePdfAdapter(), {
+      read: async () => ({ data: logoData, mimeType: "image/png" }),
+    } as unknown as ImageStorageService);
     await profile.update(admin, {
       tradeName: "Nexo Original", legalName: "Nexo Original SpA", taxIdentifier: "TAX-OLD",
       address: { line1: "Calle Antigua 1", city: "Santiago", countryCode: "CL" },
       contact: { email: "old@example.com" },
-      logo: { storageKey: "logos/old.svg", url: "https://example.com/old.svg" },
+      logo: { storageKey: "managed-logo.png" },
     });
     const confirmed = await database.transaction(async (transaction) => {
       const issuerSnapshot = await currentIssuerSnapshot(transaction);
@@ -108,6 +118,8 @@ describe("historical issuer snapshots", () => {
       return order.snapshot;
     });
     expect(confirmed.issuerSnapshot?.legalName).toBe("Nexo Original SpA");
+    expect(confirmed.issuerSnapshot?.logo).toMatchObject({ storageKey: "managed-logo.png", sha256: logoSha });
+    const orderPdfBefore = await documents.renderOrder(confirmed);
 
     await profile.update(admin, {
       tradeName: "Nexo Nueva", legalName: "Nexo Nueva SpA", taxIdentifier: "TAX-NEW",
@@ -115,8 +127,11 @@ describe("historical issuer snapshots", () => {
     });
     const persistedOrder = await orderQuery.detail(customer, confirmed.id);
     expect(persistedOrder.issuerSnapshot).toEqual(confirmed.issuerSnapshot);
+    expect((await documents.renderOrder(confirmed)).equals(orderPdfBefore)).toBe(true);
+    expect(orderPdfBefore.toString("latin1")).toContain("/Subtype /Image");
     const issued = await fromOrder.convert(admin, confirmed.id);
     expect(issued.issuerSnapshot).toEqual(confirmed.issuerSnapshot);
+    expect((await documents.renderInvoice(issued)).toString("latin1")).toContain("/Subtype /Image");
     const [storedOrder, storedInvoice] = await Promise.all([
       database.select({ issuerSnapshot: orders.issuerSnapshot }).from(orders).where(eq(orders.id, confirmed.id)),
       database.select({ issuerSnapshot: invoices.issuerSnapshot }).from(invoices).where(eq(invoices.id, issued.id)),

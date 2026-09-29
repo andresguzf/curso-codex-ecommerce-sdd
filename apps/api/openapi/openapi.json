@@ -922,6 +922,74 @@
         ]
       }
     },
+    "/api/v1/store-profile/logo": {
+      "post": {
+        "operationId": "uploadStoreLogo",
+        "parameters": [
+          {
+            "name": "content-type",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadedStoreLogoDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid image type, signature or size"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role is not permitted"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Upload an immutable store logo version",
+        "tags": [
+          "store-profile"
+        ]
+      }
+    },
     "/api/v1/store-profile": {
       "get": {
         "operationId": "getStoreProfile",
@@ -999,6 +1067,53 @@
         "summary": "Create or partially update the store issuer profile",
         "tags": [
           "store-profile"
+        ]
+      }
+    },
+    "/api/v1/media/images/{storageKey}": {
+      "get": {
+        "operationId": "readCatalogImage",
+        "parameters": [
+          {
+            "name": "storageKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored image bytes",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found"
+          }
+        },
+        "summary": "Read an image from the configured catalog storage",
+        "tags": [
+          "catalog-media"
         ]
       }
     },
@@ -2286,53 +2401,6 @@
         "summary": "Remove a product from the current customer's wishlist",
         "tags": [
           "wishlist"
-        ]
-      }
-    },
-    "/api/v1/media/images/{storageKey}": {
-      "get": {
-        "operationId": "readCatalogImage",
-        "parameters": [
-          {
-            "name": "storageKey",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stored image bytes",
-            "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/webp": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Image not found"
-          }
-        },
-        "summary": "Read an image from the configured catalog storage",
-        "tags": [
-          "catalog-media"
         ]
       }
     },
@@ -3939,6 +4007,43 @@
           "lines"
         ]
       },
+      "UploadedStoreLogoDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "mimeType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp"
+            ]
+          },
+          "size": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "storageKey",
+          "url",
+          "sha256",
+          "mimeType",
+          "size"
+        ]
+      },
       "StoreAddressDto": {
         "type": "object",
         "properties": {
@@ -4009,11 +4114,16 @@
             "type": "string",
             "format": "uri",
             "maxLength": 2048
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
           }
         },
         "required": [
           "storageKey",
-          "url"
+          "url",
+          "sha256"
         ]
       },
       "StoreProfileDto": {
@@ -4120,6 +4230,18 @@
           }
         }
       },
+      "StoreLogoReferenceDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "storageKey"
+        ]
+      },
       "PatchStoreProfileDto": {
         "type": "object",
         "properties": {
@@ -4146,7 +4268,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/StoreLogoDto"
+                "$ref": "#/components/schemas/StoreLogoReferenceDto"
               }
             ]
           }

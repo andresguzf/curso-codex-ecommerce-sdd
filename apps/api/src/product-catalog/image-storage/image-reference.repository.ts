@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 
 import { DatabaseService } from "../../database/database.service";
-import { productImages } from "../../database/schema";
+import { productImages, storeLogoAssets } from "../../database/schema";
 
 export abstract class ImageReferenceLookup {
   abstract isReferenced(storageKey: string): Promise<boolean>;
@@ -23,6 +23,9 @@ export class ImageReferenceRepository extends ImageReferenceLookup {
       .where(eq(productImages.storageKey, storageKey))
       .limit(1);
 
-    return references.length > 0;
+    if (references.length > 0) return true;
+    const logos = await this.database.client.select({ key: storeLogoAssets.storageKey })
+      .from(storeLogoAssets).where(eq(storeLogoAssets.storageKey, storageKey)).limit(1);
+    return logos.length > 0;
   }
 }

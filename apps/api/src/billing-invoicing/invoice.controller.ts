@@ -177,7 +177,7 @@ export class InvoiceController {
   async downloadPdf(@CurrentUser() actor: AuthenticatedUser, @Param("invoiceId") invoiceId: string): Promise<StreamableFile> {
     if (!z.uuid().safeParse(invoiceId).success) throw new BadRequestException({ code: "REQUEST_VALIDATION_FAILED", message: "Invalid invoice identifier" });
     const snapshot = await this.queries.detail(actor, invoiceId);
-    return new StreamableFile(this.documents.renderInvoice(snapshot), { type: "application/pdf", disposition: `attachment; filename="invoice-${invoiceId}.pdf"` });
+    return new StreamableFile(await this.documents.renderInvoice(snapshot), { type: "application/pdf", disposition: `attachment; filename="invoice-${invoiceId}.pdf"` });
   }
 
   @Patch(":invoiceId/status")

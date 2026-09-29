@@ -8,7 +8,7 @@ import { useSessionStore } from "../src/features/auth/session";
 import { StoreProfileManagement } from "../src/features/store-profile/store-profile-management";
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
-const api = vi.hoisted(() => ({ getStoreProfile: vi.fn(), saveStoreProfile: vi.fn() }));
+const api = vi.hoisted(() => ({ getStoreProfile: vi.fn(), saveStoreProfile: vi.fn(), uploadStoreLogo: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("../src/features/store-profile/store-profile-api", async (importOriginal) => ({
   ...await importOriginal<typeof import("../src/features/store-profile/store-profile-api")>(),
@@ -22,7 +22,7 @@ const profile: StoreProfile = {
   taxIdentifier: "76.123.456-7",
   address: { line1: "Av. Principal 123", line2: null, city: "Santiago", region: "RM", postalCode: "8320000", countryCode: "CL" },
   contact: { email: "empresa@example.com", phone: "+56 2 1234 5678" },
-  logo: { storageKey: "logos/nexo.svg", url: "https://example.com/nexo.svg" },
+  logo: { storageKey: "managed/nexo.png", url: "https://example.com/nexo.png", sha256: "a".repeat(64) },
   createdAt: "2026-09-01T12:00:00.000Z",
   updatedAt: "2026-09-20T12:00:00.000Z",
 };
@@ -51,18 +51,18 @@ describe("perfil empresarial en backoffice", () => {
     setSession("ADMIN");
     api.getStoreProfile.mockResolvedValue(profile);
     api.saveStoreProfile.mockResolvedValue({ ...profile, updatedAt: "2026-09-21T12:00:00.000Z" });
+    api.uploadStoreLogo.mockResolvedValue({ storageKey: "managed/new.png", url: "https://example.com/new.png", sha256: "b".repeat(64), mimeType: "image/png", size: 42 });
   });
 
-  it("precarga los campos, permite elegir logo alojado y guarda con flash", async () => {
+  it("precarga el logo administrado y guarda con flash", async () => {
     renderPage();
     expect(await screen.findByDisplayValue("Nexo Tecnología SpA")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("logos/nexo.svg")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("https://example.com/nexo.svg")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver logo seleccionado" })).toHaveAttribute("href", "https://example.com/nexo.png");
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre comercial" }), { target: { value: "Nexo Plus" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar perfil empresarial" }));
     await waitFor(() => expect(api.saveStoreProfile).toHaveBeenCalledWith("ADMIN-token", expect.objectContaining({
       tradeName: "Nexo Plus",
-      logo: { storageKey: "logos/nexo.svg", url: "https://example.com/nexo.svg" },
+      logo: { storageKey: "managed/nexo.png" },
     })));
     expect(await screen.findByText("Perfil empresarial guardado.")).toBeInTheDocument();
   });
@@ -74,11 +74,20 @@ describe("perfil empresarial en backoffice", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar perfil empresarial" }));
     expect(await screen.findByText("Ingresa la razón social.")).toHaveAttribute("role", "alert");
     expect(api.saveStoreProfile).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("radio", { name: "Usar logo alojado" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "URL del logo" }), { target: { value: "not-a-url" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Usar logo cargado" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar perfil empresarial" }));
-    expect(await screen.findByText("Ingresa una URL HTTP o HTTPS válida.")).toHaveAttribute("role", "alert");
+    expect(await screen.findByText("Carga un logo antes de seleccionarlo.")).toHaveAttribute("role", "alert");
     expect(api.saveStoreProfile).not.toHaveBeenCalled();
+  });
+
+  it("carga un archivo y selecciona solo la clave emitida por el API", async () => {
+    renderPage();
+    await screen.findByDisplayValue("Nexo Tecnología SpA");
+    fireEvent.change(screen.getByLabelText("Seleccionar logo"), { target: { files: [new File(["image"], "new.png", { type: "image/png" })] } });
+    await waitFor(() => expect(api.uploadStoreLogo).toHaveBeenCalledWith("ADMIN-token", expect.any(File)));
+    expect(await screen.findByRole("link", { name: "Ver logo seleccionado" })).toHaveAttribute("href", "https://example.com/new.png");
+    fireEvent.click(screen.getByRole("button", { name: "Guardar perfil empresarial" }));
+    await waitFor(() => expect(api.saveStoreProfile).toHaveBeenCalledWith("ADMIN-token", expect.objectContaining({ logo: { storageKey: "managed/new.png" } })));
   });
 
   it("permite lectura a BILLING sin controles de edición", async () => {

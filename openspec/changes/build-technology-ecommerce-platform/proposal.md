@@ -24,7 +24,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Incorporar una lista de deseos persistente para cada cliente, con acciones para agregar o retirar productos y mover productos disponibles al carrito.
 - Ampliar el catálogo con slugs únicos, categorías administrables y etiquetas asociables a productos.
 - Permitir en el formulario administrativo de productos seleccionar etiquetas existentes o crear y asignar etiquetas nuevas por nombre, como chips o mediante entrada separada por comas, sin salir del formulario; ofrecer un slug de producto opcional y editable. Las categorías se crean exclusivamente en su administración y se seleccionan desde un desplegable de categorías existentes.
-- Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal, dirección física y logo, administrable desde el back office y preservado como snapshot en órdenes y facturas.
+- Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal, dirección física y logo administrado como archivo inmutable, configurable desde el back office y preservado como referencia verificable en los snapshots de órdenes y facturas; los PDF incrustarán visualmente la versión histórica del logo cuando exista.
 - Incorporar autocompletado remoto y paginado de clientes y productos al crear facturas manuales.
 - Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
 - Incorporar un dashboard inicial del back office con indicadores y accesos operativos adaptados a los permisos de `ADMIN` y `BILLING`.
@@ -59,7 +59,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `order-management`: búsqueda y paginación administrativa, gestión de estados por `ADMIN` y `BILLING` y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
 - `billing-invoicing`: perfil de empresa, autocompletado remoto y experiencia administrativa paginada.
-- `document-export`: datos de empresa preservados en PDFs históricos.
+- `document-export`: datos de empresa y logo visual preservados en PDFs históricos sin consultar el perfil vigente ni descargar imágenes remotas al regenerar.
 
 ### Modified Capabilities
 
@@ -73,6 +73,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Nuevas dependencias de frontend para React/Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y TanStack Query; y dependencias de backend para REST, persistencia, autenticación, OpenAPI y generación PDF.
 - Nuevas suites de pruebas unitarias, integración, contrato y flujos end-to-end para seguridad, catálogo, checkout, concurrencia de inventario y facturación.
 - Nuevas entidades y contratos REST para categorías, etiquetas, lista de deseos y perfil de empresa, además de búsquedas remotas para autocompletado.
+- Un endpoint administrativo de carga de logo y almacenamiento de versiones inmutables con huella verificable; el perfil referenciará solo assets gestionados por el API y las versiones usadas en documentos históricos no se eliminarán.
 - Ampliación de las mutaciones REST de productos para resolver o crear etiquetas por nombre junto con sus asociaciones en una sola operación, sin creación de categorías en línea.
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.

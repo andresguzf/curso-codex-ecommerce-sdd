@@ -229,6 +229,23 @@ export interface paths {
         patch: operations["changeInvoiceStatus"];
         trace?: never;
     };
+    "/api/v1/store-profile/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload an immutable store logo version */
+        post: operations["uploadStoreLogo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/store-profile": {
         parameters: {
             query?: never;
@@ -245,6 +262,23 @@ export interface paths {
         head?: never;
         /** Create or partially update the store issuer profile */
         patch: operations["updateStoreProfile"];
+        trace?: never;
+    };
+    "/api/v1/media/images/{storageKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an image from the configured catalog storage */
+        get: operations["readCatalogImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/inventory/{productId}/adjustments": {
@@ -472,23 +506,6 @@ export interface paths {
         post?: never;
         /** Remove a product from the current customer's wishlist */
         delete: operations["removeWishlistItem"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/media/images/{storageKey}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read an image from the configured catalog storage */
-        get: operations["readCatalogImage"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -965,6 +982,15 @@ export interface components {
             shippingTotal: string;
             lines: components["schemas"]["ManualInvoiceLineRequestDto"][];
         };
+        UploadedStoreLogoDto: {
+            storageKey: string;
+            /** Format: uri */
+            url: string;
+            sha256: string;
+            /** @enum {string} */
+            mimeType: "image/png" | "image/jpeg" | "image/webp";
+            size: number;
+        };
         StoreAddressDto: {
             line1: string;
             line2: string | null;
@@ -982,6 +1008,7 @@ export interface components {
             storageKey: string;
             /** Format: uri */
             url: string;
+            sha256: string;
         };
         StoreProfileDto: {
             /** @enum {number} */
@@ -1010,13 +1037,16 @@ export interface components {
             email?: string | null;
             phone?: string | null;
         };
+        StoreLogoReferenceDto: {
+            storageKey: string;
+        };
         PatchStoreProfileDto: {
             tradeName?: string;
             legalName?: string;
             taxIdentifier?: string;
             address?: components["schemas"]["PatchStoreAddressDto"];
             contact?: components["schemas"]["PatchStoreContactDto"];
-            logo?: components["schemas"]["StoreLogoDto"] | null;
+            logo?: components["schemas"]["StoreLogoReferenceDto"] | null;
         };
         InventoryAdjustmentRequestDto: {
             /**
@@ -2397,6 +2427,54 @@ export interface operations {
             };
         };
     };
+    uploadStoreLogo: {
+        parameters: {
+            query?: never;
+            header: {
+                "content-type": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/png": string;
+                "image/jpeg": string;
+                "image/webp": string;
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadedStoreLogoDto"];
+                };
+            };
+            /** @description Invalid image type, signature or size */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not permitted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getStoreProfile: {
         parameters: {
             query?: never;
@@ -2474,6 +2552,37 @@ export interface operations {
             };
             /** @description Role is not permitted */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readCatalogImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storageKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stored image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Image not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3462,37 +3571,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Wishlist item not found for this customer */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    readCatalogImage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                storageKey: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Stored image bytes */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "image/jpeg": string;
-                    "image/png": string;
-                    "image/webp": string;
-                };
-            };
-            /** @description Image not found */
             404: {
                 headers: {
                     [name: string]: unknown;
