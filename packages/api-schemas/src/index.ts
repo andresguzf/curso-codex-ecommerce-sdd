@@ -63,6 +63,7 @@ export {
   type ShippingMethod,
 } from "./checkout";
 export { healthResponseSchema, type HealthResponse } from "./health";
+export { storeProfileSchema, storeProfileFormSchema, type StoreProfile, type StoreProfileFormValues } from "./store-profile";
 export {
   categoryFormSchema,
   categoryPageSchema,

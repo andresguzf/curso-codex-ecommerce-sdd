@@ -96,6 +96,38 @@ describe("storefront product detail", () => {
     expect(getPublicProduct).toHaveBeenCalledWith(availableProduct.id);
   });
 
+  it("shows the product category and every active tag with catalog filter links", async () => {
+    vi.mocked(getPublicProduct).mockResolvedValue({
+      ...availableProduct,
+      category: { id: "553c237f-d1a5-4e98-b7c5-e67415724cf2", name: "Periféricos", slug: "perifericos", status: "ACTIVE" },
+      tags: [
+        { id: "16875593-f79f-45fd-b642-fc4e13154519", name: "Gaming", slug: "gaming", status: "ACTIVE" },
+        { id: "4052c829-2ac3-42ab-b9dc-cf322dd85c2b", name: "RGB", slug: "rgb", status: "ACTIVE" },
+      ],
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole("link", { name: "Periféricos" })).toHaveAttribute("href", "/?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2#catalog");
+    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta Gaming" })).toHaveAttribute("href", "/?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519#catalog");
+    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta RGB" })).toBeInTheDocument();
+  });
+
+  it("explains absent classifications without linking inactive ones", async () => {
+    vi.mocked(getPublicProduct).mockResolvedValue({
+      ...availableProduct,
+      category: { id: "553c237f-d1a5-4e98-b7c5-e67415724cf2", name: "Archivada", slug: "archivada", status: "INACTIVE" },
+      tags: [{ id: "16875593-f79f-45fd-b642-fc4e13154519", name: "Antigua", slug: "antigua", status: "INACTIVE" }],
+    });
+
+    renderDetail();
+
+    expect(await screen.findByText("Sin categoría asignada")).toBeInTheDocument();
+    expect(screen.getByText("Sin etiquetas asignadas")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Archivada" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ver productos con la etiqueta Antigua" })).not.toBeInTheDocument();
+  });
+
   it("connects the detail purchase action to the cart mutation", async () => {
     vi.mocked(getPublicProduct).mockResolvedValue(availableProduct);
 

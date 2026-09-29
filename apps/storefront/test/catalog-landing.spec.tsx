@@ -185,6 +185,25 @@ describe("storefront catalog landing", () => {
     });
   });
 
+  it("shows category and tag links on a classified product card", async () => {
+    vi.mocked(getPublicProducts).mockResolvedValue(page([{
+      ...product({
+        id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
+        name: "Monitor Studio 27",
+        sku: "MONITOR-027",
+        status: "ACTIVE",
+        stockAvailable: 5,
+      }),
+      category: { id: "553c237f-d1a5-4e98-b7c5-e67415724cf2", name: "Monitores", slug: "monitores", status: "ACTIVE" },
+      tags: [{ id: "16875593-f79f-45fd-b642-fc4e13154519", name: "4K", slug: "4k", status: "ACTIVE" }],
+    }]));
+
+    renderCatalog();
+
+    expect(await screen.findByRole("link", { name: "Ver productos de la categoría Monitores" })).toHaveAttribute("href", "/?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2#catalog");
+    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta 4K" })).toHaveAttribute("href", "/?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519#catalog");
+  });
+
   it("disables the purchase action for an exhausted product", async () => {
     vi.mocked(getPublicProducts).mockResolvedValue(page([
       product({

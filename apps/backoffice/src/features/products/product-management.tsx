@@ -72,6 +72,7 @@ export function ProductManagement() {
   const saveMutation = useMutation({
     mutationFn: async (input: CreateProductRequest & { image: ProductImageReference }) => {
       if (form?.mode === "edit") {
+        const tagsChanged = JSON.stringify([...(input.tagIds ?? [])].sort()) !== JSON.stringify([...(form.product.tags?.map((tag) => tag.id) ?? [])].sort());
         const changes: UpdateProductRequest = {
           ...(input.categoryId !== (form.product.category?.id ?? null) ? { categoryId: input.categoryId } : {}),
           description: input.description,
@@ -79,7 +80,8 @@ export function ProductManagement() {
           name: input.name,
           price: input.price,
           sku: input.sku,
-          ...(JSON.stringify([...(input.tagIds ?? [])].sort()) !== JSON.stringify([...(form.product.tags?.map((tag) => tag.id) ?? [])].sort()) ? { tagIds: input.tagIds ?? [] } : {}),
+          ...(input.slug && input.slug !== form.product.slug ? { slug: input.slug } : {}),
+          ...(tagsChanged || input.tagNames?.length ? { tagIds: input.tagIds ?? [], tagNames: input.tagNames ?? [] } : {}),
         };
         return updateProduct(accessToken, form.product.id, changes);
       }
@@ -91,6 +93,7 @@ export function ProductManagement() {
       setForm(undefined);
       showFlash("success", `Producto ${action} correctamente.`);
       void queryClient.invalidateQueries({ queryKey: productQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ["classifications", "active-tags"] });
     },
   });
 

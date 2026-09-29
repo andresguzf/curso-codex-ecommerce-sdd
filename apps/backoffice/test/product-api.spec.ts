@@ -39,6 +39,8 @@ describe("product administration API client", () => {
       name: product.name,
       price: product.price,
       sku: product.sku,
+      slug: "teclado-nova-custom",
+      tagNames: ["Mecánico"],
       status: product.status,
     };
 
@@ -52,9 +54,17 @@ describe("product administration API client", () => {
     expect(requests.map((request) => request.method)).toEqual(["GET", "POST", "PATCH", "PATCH", "DELETE"]);
     expect(requests[0].url).toContain("/api/v1/products?page=1&pageSize=10&sortBy=createdAt&sortOrder=desc&view=administrative");
     expect(requests[1].url.endsWith("/api/v1/products")).toBe(true);
+    expect(await requests[1].clone().json()).toMatchObject({ slug: "teclado-nova-custom", tagNames: ["Mecánico"] });
     expect(requests[2].url.endsWith(`/api/v1/products/${product.id}`)).toBe(true);
     expect(requests[3].url.endsWith(`/api/v1/products/${product.id}/status`)).toBe(true);
     expect(requests[4].url.endsWith(`/api/v1/products/${product.id}`)).toBe(true);
     for (const request of requests) expect(request.headers.get("Authorization")).toBe("Bearer admin-token");
+  });
+
+  it("shows a safe, actionable message for an unavailable inline tag", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ code: "PRODUCT_TAG_INACTIVE", message: "Internal detail" }, { status: 400 })));
+    const api = await import("../src/features/products/product-api");
+    await expect(api.createProduct("admin-token", { description: product.description, image: product.image, name: product.name, price: product.price, sku: "TAG-INACTIVE", tagNames: ["Inactive"] }))
+      .rejects.toThrow("Una etiqueta escrita ya no está activa.");
   });
 });

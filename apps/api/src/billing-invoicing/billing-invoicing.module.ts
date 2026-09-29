@@ -8,22 +8,26 @@ import { InvoiceLifecycleService } from "./invoice-lifecycle.service";
 import { InvoiceQueryService } from "./invoice-query.service";
 import { ManualInvoiceController } from "./manual-invoice.controller";
 import { ManualInvoiceService } from "./manual-invoice.service";
+import { StoreProfileController } from "./store-profile.controller";
+import { StoreProfileService } from "./store-profile.service";
 import { DocumentExportModule } from "../document-export/document-export.module";
 
 @Module({
   imports: [AuthModule, DocumentExportModule],
-  controllers: [InvoiceFromOrderController, InvoiceController, ManualInvoiceController],
+  controllers: [InvoiceFromOrderController, InvoiceController, ManualInvoiceController, StoreProfileController],
   providers: [
     InvoiceFromOrderService,
     InvoiceLifecycleService,
     InvoiceQueryService,
     ManualInvoiceService,
+    StoreProfileService,
   ],
   exports: [
     InvoiceFromOrderService,
     InvoiceLifecycleService,
     InvoiceQueryService,
     ManualInvoiceService,
+    StoreProfileService,
   ],
 })
 export class BillingInvoicingModule {}

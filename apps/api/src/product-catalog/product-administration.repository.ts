@@ -81,6 +81,9 @@ type ProductSelectionRow = Readonly<{
 
 export class ProductCategoryRequiredError extends Error {}
 export class ProductClassificationUnavailableError extends Error {}
+export class ProductTagLimitExceededError extends Error {}
+export class ProductTagNameInvalidError extends Error {}
+export class ProductTagInactiveError extends Error {}
 
 type Classifications = Readonly<{
   category: ProductClassificationSummary | null;
@@ -248,7 +251,8 @@ export class ProductAdministrationRepository {
     actorUserId: string,
   ): Promise<AdministrativeProduct> {
     return this.database.client.transaction(async (transaction) => {
-      await this.validateAssignments(transaction, input.categoryId ?? null, input.tagIds ?? [], input.status === "ACTIVE");
+      const tagIds = await this.resolveTagIds(transaction, input.tagIds ?? [], input.tagNames ?? [], actorUserId);
+      await this.validateAssignments(transaction, input.categoryId ?? null, tagIds, input.status === "ACTIVE");
       const [product] = await transaction
         .insert(products)
         .values({
@@ -270,7 +274,7 @@ export class ProductAdministrationRepository {
         storageKey: input.image.storageKey,
         url: input.image.url,
       });
-      if (input.tagIds?.length) await transaction.insert(productTags).values(input.tagIds.map((tagId, sortOrder) => ({ productId: product.id, tagId, sortOrder })));
+      if (tagIds.length) await transaction.insert(productTags).values(tagIds.map((tagId, sortOrder) => ({ productId: product.id, tagId, sortOrder })));
 
       const classifications = await this.loadClassifications([product.id], transaction);
 
@@ -311,8 +315,12 @@ export class ProductAdministrationRepository {
       if (!currentRow) return undefined;
       const before = await this.loadClassifications([productId], transaction);
       const current = this.toProduct(currentRow, before.get(productId));
-      if (input.categoryId !== undefined || input.tagIds !== undefined) {
-        await this.validateAssignments(transaction, input.categoryId === undefined ? null : input.categoryId, input.tagIds ?? [], currentRow.status === "ACTIVE" && input.categoryId !== undefined);
+      const replacingTags = input.tagIds !== undefined || input.tagNames !== undefined;
+      const tagIds = replacingTags
+        ? await this.resolveTagIds(transaction, input.tagIds ?? [], input.tagNames ?? [], actorUserId)
+        : [];
+      if (input.categoryId !== undefined || replacingTags) {
+        await this.validateAssignments(transaction, input.categoryId === undefined ? null : input.categoryId, tagIds, currentRow.status === "ACTIVE" && input.categoryId !== undefined);
       }
       const now = new Date();
       const [updated] = await transaction
@@ -351,9 +359,9 @@ export class ProductAdministrationRepository {
         image = updatedImage;
       }
 
-      if (input.tagIds !== undefined) {
+      if (replacingTags) {
         await transaction.delete(productTags).where(eq(productTags.productId, productId));
-        if (input.tagIds.length) await transaction.insert(productTags).values(input.tagIds.map((tagId, sortOrder) => ({ productId, tagId, sortOrder })));
+        if (tagIds.length) await transaction.insert(productTags).values(tagIds.map((tagId, sortOrder) => ({ productId, tagId, sortOrder })));
       }
       const classifications = await this.loadClassifications([productId], transaction);
 
@@ -467,6 +475,68 @@ export class ProductAdministrationRepository {
       );
       return true;
     });
+  }
+
+  private async resolveTagIds(
+    transaction: DatabaseTransaction,
+    selectedIds: readonly string[],
+    names: readonly string[],
+    actorUserId: string,
+  ): Promise<string[]> {
+    const resolved = new Set(selectedIds);
+    const seenNames = new Set<string>();
+
+    for (const rawName of names) {
+      const name = rawName.trim();
+      const nameKey = name.toUpperCase();
+      if (seenNames.has(nameKey)) continue;
+      seenNames.add(nameKey);
+
+      let baseSlug: string;
+      try {
+        baseSlug = normalizeSlug(name, 140);
+      } catch {
+        throw new ProductTagNameInvalidError();
+      }
+
+      const findByName = async () => {
+        const [record] = await transaction.select({ id: tags.id, status: tags.status, deletedAt: tags.deletedAt })
+          .from(tags)
+          .where(sql`upper(${tags.name}) = upper(${name})`)
+          .limit(1);
+        return record;
+      };
+      let record = await findByName();
+      if (!record) {
+        for (let attempt = 1; attempt <= 1000; attempt += 1) {
+          const slug = slugCandidate(baseSlug, attempt, 140);
+          const [created] = await transaction.insert(tags).values({ name, slug, status: "ACTIVE" })
+            .onConflictDoNothing()
+            .returning({ id: tags.id });
+          if (created) {
+            await transaction.insert(auditEntries).values(createAuditEntry({
+              action: "TAG_CREATED",
+              actorUserId,
+              changes: { after: { id: created.id, name, slug, status: "ACTIVE" } },
+              entityId: created.id,
+              entityType: "TAG",
+            }));
+            resolved.add(created.id);
+            break;
+          }
+          record = await findByName();
+          if (record) break;
+          if (attempt === 1000) throw new ProductTagNameInvalidError();
+        }
+      }
+      if (record) {
+        if (record.status !== "ACTIVE" || record.deletedAt) throw new ProductTagInactiveError();
+        resolved.add(record.id);
+      }
+    }
+
+    if (resolved.size > 20) throw new ProductTagLimitExceededError();
+    return [...resolved];
   }
 
   private async validateAssignments(

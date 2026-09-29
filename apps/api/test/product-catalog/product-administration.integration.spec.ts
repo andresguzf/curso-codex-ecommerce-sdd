@@ -1015,6 +1015,10 @@ describe("administrative product lifecycle", () => {
     const categoryResponse = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Portátiles", description: "Equipos móviles" } });
     const tagResponse = await server.inject({ method: "POST", url: "/api/v1/tags", headers: authorization(tokens.admin), payload: { name: "Gamer" } });
     expect([categoryResponse.statusCode, tagResponse.statusCode]).toEqual([201, 201]);
+    const isoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+    for (const response of [categoryResponse, tagResponse]) {
+      expect(response.json()).toMatchObject({ createdAt: expect.stringMatching(isoDate), updatedAt: expect.stringMatching(isoDate), deletedAt: null });
+    }
     const category = categoryResponse.json<{ id: string; slug: string }>();
     const tag = tagResponse.json<{ id: string; slug: string }>();
     expect(category.slug).toBe("portatiles");
@@ -1034,6 +1038,9 @@ describe("administrative product lifecycle", () => {
       const page = await server.inject({ method: "GET", url: `/api/v1/${path}?search=${search}&page=1&pageSize=1&sortBy=name&sortOrder=asc` });
       expect(page.statusCode).toBe(200);
       expect(page.json()).toMatchObject({ page: 1, pageSize: 1, totalItems: 1, totalPages: 1 });
+      expect(page.json<{ items: { createdAt: string; updatedAt: string }[] }>().items[0]).toMatchObject({
+        createdAt: expect.stringMatching(isoDate), updatedAt: expect.stringMatching(isoDate),
+      });
       const secondPage = await server.inject({ method: "GET", url: `/api/v1/${path}?page=2&pageSize=1&sortBy=name&sortOrder=asc` });
       expect(secondPage.statusCode).toBe(200);
       expect(secondPage.json()).toMatchObject({ page: 2, pageSize: 1, totalItems: path === "categories" ? 3 : 2, totalPages: path === "categories" ? 3 : 2 });
@@ -1045,7 +1052,7 @@ describe("administrative product lifecycle", () => {
 
     const renamedCategory = await server.inject({ method: "PATCH", url: `/api/v1/categories/${category.id}`, headers: authorization(tokens.admin), payload: { name: "Notebooks" } });
     expect(renamedCategory.statusCode).toBe(200);
-    expect(renamedCategory.json()).toMatchObject({ name: "Notebooks", slug: "portatiles" });
+    expect(renamedCategory.json()).toMatchObject({ name: "Notebooks", slug: "portatiles", updatedAt: expect.stringMatching(isoDate) });
     const collisionResolved = await server.inject({ method: "POST", url: "/api/v1/categories", headers: authorization(tokens.admin), payload: { name: "Portatiles" } });
     expect(collisionResolved.statusCode).toBe(201);
     expect(collisionResolved.json()).toMatchObject({ slug: "portatiles-2" });
@@ -1138,5 +1145,55 @@ describe("administrative product lifecycle", () => {
     expect(current.json()).toMatchObject({ tags: [{ id: otherTag.id }] });
     await database.update(products).set({ status: "INACTIVE" }).where(eq(products.id, product.id));
     expect((await server.inject({ method: "GET", url: `/api/v1/products/slug/${product.slug}` })).statusCode).toBe(404);
+  });
+
+  it("creates or reuses inline tags with product changes in one transaction", async () => {
+    const [existing] = await database.insert(tags).values({ name: "Inline RGB", slug: "inline-rgb" }).returning({ id: tags.id });
+    if (!existing) throw new Error("Tag fixture failed");
+    const created = await server.inject({
+      method: "POST", url: "/api/v1/products", headers: authorization(tokens.admin),
+      payload: { ...productPayload, sku: "INLINE-TAGS-001", image: { storageKey: "products/inline-tags-001/cover.webp", url: "/images/product-placeholder.svg" }, tagIds: [existing.id], tagNames: ["  inline rgb  ", "Óptico", "óptico"] },
+    });
+    expect(created.statusCode).toBe(201);
+    const product = created.json<ProductResponse & { tags: { id: string; name: string; slug: string }[] }>();
+    expect(product.tags).toHaveLength(2);
+    expect(product.tags.map((tag) => tag.id)).toContain(existing.id);
+    expect(product.tags.map((tag) => tag.slug)).toContain("optico");
+    expect(await database.select({ id: tags.id }).from(tags).where(eq(tags.slug, "optico"))).toHaveLength(1);
+
+    const updated = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { slug: "inline-producto-renovado", tagIds: [existing.id], tagNames: ["ÓPTICO", "Nuevo inline"] } });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json<{ slug: string; tags: unknown[] }>()).toMatchObject({ slug: "inline-producto-renovado" });
+    expect(updated.json<{ tags: unknown[] }>().tags).toHaveLength(3);
+    expect(await database.select({ id: productTags.tagId }).from(productTags).where(eq(productTags.productId, product.id))).toHaveLength(3);
+
+    const unchanged = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { name: "Producto renombrado" } });
+    expect(unchanged.statusCode).toBe(200);
+    expect(unchanged.json<{ tags: unknown[] }>().tags).toHaveLength(3);
+
+    const rollback = await server.inject({ method: "POST", url: "/api/v1/products", headers: authorization(tokens.admin), payload: { ...productPayload, sku: "INLINE-TAGS-001", image: { storageKey: "products/inline-rollback/cover.webp", url: "/images/product-placeholder.svg" }, tagNames: ["Etiqueta reversible"] } });
+    expect(rollback.statusCode).toBe(409);
+    expect(await database.select({ id: tags.id }).from(tags).where(eq(tags.name, "Etiqueta reversible"))).toHaveLength(0);
+
+    const [inactive] = await database.insert(tags).values({ name: "Inline inactiva", slug: "inline-inactiva", status: "INACTIVE" }).returning({ id: tags.id });
+    if (!inactive) throw new Error("Inactive tag fixture failed");
+    const rejected = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { tagNames: ["INLINE INACTIVA"] } });
+    expect(rejected.statusCode).toBe(400);
+    expect(rejected.json()).toMatchObject({ code: "PRODUCT_TAG_INACTIVE", details: [{ field: "tagNames" }] });
+    const limited = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { tagIds: [existing.id], tagNames: Array.from({ length: 20 }, (_, index) => `Etiqueta límite ${index}`) } });
+    expect(limited.statusCode).toBe(400);
+    expect(limited.json()).toMatchObject({ code: "PRODUCT_TAG_LIMIT_EXCEEDED" });
+    expect(await database.select({ id: tags.id }).from(tags).where(eq(tags.name, "Etiqueta límite 0"))).toHaveLength(0);
+  });
+
+  it("reuses a single tag when product creations race", async () => {
+    const responses = await Promise.all([1, 2].map((number) => server.inject({
+      method: "POST", url: "/api/v1/products", headers: authorization(tokens.admin),
+      payload: { ...productPayload, sku: `INLINE-RACE-${number}`, image: { storageKey: `products/inline-race-${number}/cover.webp`, url: "/images/product-placeholder.svg" }, tagNames: ["Concurrente inline"] },
+    })));
+    expect(responses.map((response) => response.statusCode)).toEqual([201, 201]);
+    const [first, second] = responses.map((response) => response.json<{ tags: { id: string }[] }>());
+    expect(first?.tags[0]?.id).toBe(second?.tags[0]?.id);
+    expect(await database.select({ id: tags.id }).from(tags).where(eq(tags.name, "Concurrente inline"))).toHaveLength(1);
   });
 });

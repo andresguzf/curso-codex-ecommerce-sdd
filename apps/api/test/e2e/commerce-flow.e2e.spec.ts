@@ -17,6 +17,7 @@ import { configureApplication } from "../../src/application";
 import {
   roleAssignments,
   users,
+  storeProfiles,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
@@ -234,6 +235,10 @@ describe("complete commerce HTTP flow", () => {
       migrationsFolder: resolve("src/database/migrations"),
       migrationsSchema: "drizzle",
       migrationsTable: "__drizzle_migrations",
+    });
+    await database.insert(storeProfiles).values({
+      tradeName: "E2E Technology Store", legalName: "E2E Technology Store SpA", taxIdentifier: "E2E-TAX-1",
+      addressLine1: "Test Street 1", addressCity: "Santiago", addressCountryCode: "CL",
     });
 
     const passwordHash = await hashPassword(adminPassword);

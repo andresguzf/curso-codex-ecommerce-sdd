@@ -2,6 +2,7 @@ import type { ProductListItem } from "@technology-ecommerce/api-schemas";
 import Link from "next/link";
 
 import { formatProductPrice } from "./catalog-format";
+import { ProductClassifications } from "./product-classifications";
 import { ProductImage } from "./product-image";
 import { WishlistButton } from "../wishlist/wishlist-button";
 
@@ -34,6 +35,7 @@ export function ProductCard({
         <div className="absolute right-4 top-4"><WishlistButton productId={product.id} productName={product.name} /></div>
       </div>
       <div className="flex flex-1 flex-col p-5">
+        <ProductClassifications category={product.category} compact tags={product.tags} />
         <div className="flex items-start justify-between gap-4">
           <h2 className="m-0 text-xl font-black leading-tight tracking-tight text-slate-950">
             <Link className="rounded-sm hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" href={`/products/${product.id}`}>

@@ -15,6 +15,11 @@ function fixture() {
   return {
     customerId: "customer-1",
     customerSnapshot: { id: "customer-1", displayName: "Original customer", email: "customer@example.com" },
+    issuerSnapshot: {
+      tradeName: "Original Store", legalName: "Original Store SpA", taxIdentifier: "TAX-1",
+      address: { line1: "Issuer Street", line2: null, city: "Santiago", region: null, postalCode: null, countryCode: "CL" },
+      contact: { email: null, phone: null }, logo: null,
+    },
     shippingAddressSnapshot: { line1: "Original address", nested: { city: "Santiago" } },
     shippingMethodSnapshot: { method: "STANDARD", cost: "5.00" },
     paymentSnapshot: { status: "APPROVED", method: "SIMULATED_CARD_APPROVED" },
@@ -45,6 +50,7 @@ describe("OrderAggregate", () => {
     const aggregate = OrderAggregate.create(input, now);
     const original = aggregate.snapshot;
     input.customerSnapshot.displayName = "Changed customer";
+    input.issuerSnapshot.address.line1 = "Changed issuer";
     input.items[0]!.name = "Changed product";
     input.shippingAddressSnapshot.nested.city = "Changed city";
     input.paymentSnapshot.status = "REJECTED";
@@ -55,6 +61,7 @@ describe("OrderAggregate", () => {
     const restored = OrderAggregate.restore(original);
     (original.customerSnapshot as { displayName: string }).displayName = "Changed persisted input";
     expect(restored.snapshot.customerSnapshot.displayName).toBe("Original customer");
+    expect(restored.snapshot.issuerSnapshot?.address.line1).toBe("Issuer Street");
   });
 
   const allowed = new Set(["PROCESSING:INVOICED", "PROCESSING:CANCELLED", "INVOICED:COMPLETED", "INVOICED:CANCELLED"]);
@@ -90,6 +97,7 @@ describe("OrderAggregate", () => {
     const input = fixture();
     const invalid: OrderCommercialSnapshot[] = [
       { ...input, paymentSnapshot: { status: "REJECTED" } },
+      { ...input, issuerSnapshot: null as unknown as OrderCommercialSnapshot["issuerSnapshot"] },
       { ...input, customerId: "other-customer" },
       { ...input, items: [] },
       { ...input, items: [...input.items, ...input.items] },

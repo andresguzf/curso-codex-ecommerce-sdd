@@ -54,6 +54,7 @@ describe("BackofficeShell", () => {
     expect(within(sidebar).getByRole("link", { name: "Usuarios" })).toHaveAttribute("href", "/users");
     expect(within(sidebar).getByRole("link", { name: "Órdenes" })).toHaveAttribute("href", "/orders");
     expect(within(sidebar).getByRole("link", { name: "Facturas" })).toHaveAttribute("href", "/invoices");
+    expect(within(sidebar).getByRole("link", { name: "Empresa" })).toHaveAttribute("href", "/store-profile");
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
     expect(screen.getByText("Usuario de prueba")).toBeInTheDocument();
   });
@@ -64,6 +65,7 @@ describe("BackofficeShell", () => {
 
     expect(within(sidebar).getByRole("link", { name: "Órdenes" })).toBeInTheDocument();
     expect(within(sidebar).getByRole("link", { name: "Facturas" })).toBeInTheDocument();
+    expect(within(sidebar).getByRole("link", { name: "Empresa" })).toBeInTheDocument();
     expect(within(sidebar).queryByRole("link", { name: "Productos e inventario" })).not.toBeInTheDocument();
     expect(within(sidebar).queryByRole("link", { name: "Categorías" })).not.toBeInTheDocument();
     expect(within(sidebar).queryByRole("link", { name: "Etiquetas" })).not.toBeInTheDocument();

@@ -143,10 +143,81 @@ describe("product administration", () => {
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado mecánico" } });
     fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.90" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Categoría principal" }), { target: { value: categoryId } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "RGB" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ RGB" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ categoryId, tagIds: [tagId] })));
+  });
+
+  it("creates removable tag chips and sends an optional product slug", async () => {
+    renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo producto" }));
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "KEY-CHIPS" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Chips" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado compacto" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.90" } });
+    fireEvent.change(screen.getByLabelText("Slug del producto"), { target: { value: "teclado-chips" } });
+    const tagInput = screen.getByLabelText("Agregar etiquetas por nombre");
+    fireEvent.change(tagInput, { target: { value: "RGB, mecánico," } });
+    expect(screen.getByRole("button", { name: "Quitar etiqueta RGB" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitar etiqueta mecánico" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Quitar etiqueta RGB" }));
+    fireEvent.change(tagInput, { target: { value: "inalámbrico" } });
+    fireEvent.keyDown(tagInput, { key: "Enter" });
+    expect(screen.queryByRole("button", { name: "Quitar etiqueta RGB" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitar etiqueta inalámbrico" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ slug: "teclado-chips", tagNames: ["mecánico", "inalámbrico"] })));
+    expect(screen.queryByRole("button", { name: "Crear categoría" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the current slug on edits unless explicitly changed", async () => {
+    api.listAdministrativeProducts.mockResolvedValue({ items: [{ ...activeProduct, slug: "teclado-nova-75", category: null, tags: [] }], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+    renderManagement();
+    const row = (await screen.findByText("Teclado Nova 75")).closest("tr");
+    fireEvent.click(within(row!).getByRole("button", { name: "Editar" }));
+    expect(screen.getByLabelText("Slug del producto")).toHaveValue("teclado-nova-75");
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Nova Pro" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.not.objectContaining({ slug: expect.anything() })));
+  });
+
+  it("sends an explicit slug change and inline tags when editing", async () => {
+    api.listAdministrativeProducts.mockResolvedValue({ items: [{ ...activeProduct, slug: "teclado-nova-75", category: null, tags: [] }], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+    renderManagement();
+    const row = (await screen.findByText("Teclado Nova 75")).closest("tr");
+    fireEvent.click(within(row!).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Slug del producto"), { target: { value: "teclado-nova-pro" } });
+    fireEvent.change(screen.getByLabelText("Agregar etiquetas por nombre"), { target: { value: "Óptico" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.objectContaining({ slug: "teclado-nova-pro", tagIds: [], tagNames: ["Óptico"] })));
+  });
+
+  it("submits an unconfirmed tag name and validates the combined tag limit", async () => {
+    renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo producto" }));
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "KEY-DRAFT" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Draft" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado compacto" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.90" } });
+    const tagInput = screen.getByLabelText("Agregar etiquetas por nombre");
+    fireEvent.change(tagInput, { target: { value: "sin confirmar" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith("admin-token", expect.objectContaining({ tagNames: ["sin confirmar"] })));
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Nuevo producto" }));
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "KEY-LIMIT" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado Limit" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado compacto" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.90" } });
+    fireEvent.change(screen.getByLabelText("Agregar etiquetas por nombre"), { target: { value: Array.from({ length: 21 }, (_, index) => `Etiqueta ${index}`).join(",") } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Selecciona como máximo 20 etiquetas distintas.");
+    expect(api.createProduct).toHaveBeenCalledTimes(1);
   });
 
   it("activates, confirms deactivation and soft-deletes while invalidating cache", async () => {

@@ -31,6 +31,7 @@ export const createProductRequestSchema = z
     sku: z.string().trim().min(1).max(64),
     slug: productSlugSchema.optional(),
     tagIds: z.array(z.uuid()).max(20).refine((ids) => new Set(ids).size === ids.length).optional(),
+    tagNames: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
     status: productStatusSchema.optional(),
   })
   .strict();

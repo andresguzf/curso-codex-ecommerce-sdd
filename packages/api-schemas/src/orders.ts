@@ -18,6 +18,7 @@ export const customerOrderPageSchema = z.object({
 });
 export const customerOrderDetailSchema = customerOrderSummarySchema.extend({
   customerSnapshot: z.record(z.string(), z.unknown()),
+  issuerSnapshot: z.record(z.string(), z.unknown()).nullable().optional(),
   shippingAddressSnapshot: z.record(z.string(), z.unknown()),
   shippingMethodSnapshot: z.record(z.string(), z.unknown()),
   paymentSnapshot: z.record(z.string(), z.unknown()),

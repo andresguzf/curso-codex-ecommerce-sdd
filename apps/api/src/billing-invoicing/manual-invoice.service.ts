@@ -20,6 +20,7 @@ import {
 } from "../database/schema";
 import type { AuthenticatedUser } from "../identity-access/auth.types";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import { currentIssuerSnapshot } from "./issuer-snapshot";
 import {
   InvoiceAggregate,
   type InvoiceLineSnapshot,
@@ -186,6 +187,7 @@ export class ManualInvoiceService {
         };
       });
       const shippingCents = cents(request.shippingTotal);
+      const issuerSnapshot = await currentIssuerSnapshot(transaction);
       const now = new Date();
       let snapshot: InvoiceSnapshot;
       try {
@@ -200,8 +202,7 @@ export class ManualInvoiceService {
             shippingTotal: money(shippingCents),
             taxTotal: money(taxTotalCents),
             total: money(subtotalCents + shippingCents + taxTotalCents),
-            // StoreProfile and the real issuer snapshot are introduced by 15.1-15.4.
-            issuerSnapshot: {},
+            issuerSnapshot,
             customerSnapshot: {
               id: customer.id,
               displayName: customer.displayName,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
@@ -8,15 +9,19 @@ import {
   type CreateProductRequest,
   type ProductImageReference,
   type ProductListItem,
+  type Tag,
 } from "@technology-ecommerce/api-schemas";
 import { IconButton, TextField } from "@technology-ecommerce/ui";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+
+import { ProductTagEditor } from "./product-tag-editor";
 
 const DEFAULT_PRODUCT_IMAGE_URL = "/images/product-placeholder.svg";
 
 const productFormSchema = createProductRequestSchema.extend({
   categoryId: z.union([z.uuid(), z.literal("")]).optional(),
+  slug: z.string().trim().max(220).optional(),
   image: z
     .object({
       storageKey: z.string().trim().max(512).optional(),
@@ -26,6 +31,28 @@ const productFormSchema = createProductRequestSchema.extend({
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
+
+function mergeTags(
+  selectedIds: readonly string[],
+  selectedNames: readonly string[],
+  draft: string,
+  knownTags: readonly Pick<Tag, "id" | "name" | "status">[],
+): { tagIds: string[]; tagNames: string[]; error?: string } {
+  const ids = new Set(selectedIds);
+  const names = new Map(selectedNames.map((name) => [name.trim().toUpperCase(), name.trim()]));
+  for (const rawName of draft.split(",")) {
+    const name = rawName.trim();
+    if (!name) continue;
+    if (name.length > 120) return { tagIds: [...ids], tagNames: [...names.values()], error: "Cada etiqueta debe tener como máximo 120 caracteres." };
+    const key = name.toUpperCase();
+    const existing = knownTags.find((tag) => tag.name.toUpperCase() === key);
+    if (existing?.status === "INACTIVE") return { tagIds: [...ids], tagNames: [...names.values()], error: `La etiqueta «${existing.name}» está inactiva.` };
+    if (existing) ids.add(existing.id);
+    else names.set(key, name);
+  }
+  if (ids.size + names.size > 20) return { tagIds: [...ids], tagNames: [...names.values()], error: "Selecciona como máximo 20 etiquetas distintas." };
+  return { tagIds: [...ids], tagNames: [...names.values()] };
+}
 
 function defaultImageStorageKey(sku: string): string {
   const segment = sku
@@ -58,9 +85,10 @@ export function ProductForm({
   onSubmit: (input: CreateProductRequest & { image: ProductImageReference }) => void;
   product?: ProductListItem;
 }>) {
+  const [tagDraft, setTagDraft] = useState("");
   const categoriesQuery = useQuery({ queryKey: ["classifications", "active-categories"], queryFn: ({ signal }) => getActiveCategories(signal) });
   const tagsQuery = useQuery({ queryKey: ["classifications", "active-tags"], queryFn: ({ signal }) => getActiveTags(signal) });
-  const { formState, handleSubmit, register } = useForm<ProductFormValues>({
+  const { clearErrors, control, formState, getValues, handleSubmit, register, setError, setValue } = useForm<ProductFormValues>({
     defaultValues: product
       ? {
           description: product.description,
@@ -69,8 +97,10 @@ export function ProductForm({
           name: product.name,
           price: product.price,
           sku: product.sku,
+          slug: product.slug ?? "",
           status: product.status,
           tagIds: product.tags?.map((tag) => tag.id) ?? [],
+          tagNames: [],
         }
       : {
           description: "",
@@ -79,26 +109,60 @@ export function ProductForm({
           name: "",
           price: "",
           sku: "",
+          slug: "",
           status: "INACTIVE",
           tagIds: [],
+          tagNames: [],
         },
     resolver: zodResolver(productFormSchema),
   });
 
   const inputClass =
     "min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 shadow-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-200 aria-invalid:border-red-700";
+  const selectedTagIds = useWatch({ control, name: "tagIds" }) ?? [];
+  const newTagNames = useWatch({ control, name: "tagNames" }) ?? [];
+  const knownTags = [...(tagsQuery.data ?? []), ...(product?.tags ?? [])];
+
+  function updateTags(draft: string): { tagIds: string[]; tagNames: string[] } | undefined {
+    const merged = mergeTags(getValues("tagIds") ?? [], getValues("tagNames") ?? [], draft, knownTags);
+    if (merged.error) {
+      setError("tagNames", { message: merged.error });
+      return undefined;
+    }
+    setValue("tagIds", merged.tagIds, { shouldValidate: true });
+    setValue("tagNames", merged.tagNames, { shouldValidate: true });
+    clearErrors("tagNames");
+    return merged;
+  }
+
+  function commitTags(value: string) {
+    if (!updateTags(value)) return false;
+    setTagDraft("");
+    return true;
+  }
 
   return (
     <form
       className="grid gap-5"
       noValidate
-      onSubmit={handleSubmit((input) =>
-        onSubmit({
+      onSubmit={handleSubmit((input) => {
+        const merged = mergeTags(input.tagIds ?? [], input.tagNames ?? [], tagDraft, knownTags);
+        if (merged.error) { setError("tagNames", { message: merged.error }); return; }
+        const payload = createProductRequestSchema.safeParse({
           ...input,
           categoryId: input.categoryId || null,
           image: normalizeImage(input.image, input.sku),
-        }),
-      )}
+          slug: input.slug?.trim() || undefined,
+          tagIds: merged.tagIds,
+          tagNames: merged.tagNames,
+        });
+        if (!payload.success) {
+          setError("tagNames", { message: "Revisa las etiquetas seleccionadas." });
+          return;
+        }
+        setTagDraft("");
+        onSubmit({ ...payload.data, image: normalizeImage(input.image, input.sku) });
+      })}
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <TextField
@@ -117,31 +181,45 @@ export function ProductForm({
         />
       </div>
 
+      <TextField
+        autoComplete="off"
+        error={formState.errors.slug?.message}
+        hint={product ? "Opcional. Déjalo igual para conservar el enlace actual." : "Opcional. Si lo dejas vacío, se genera a partir del nombre."}
+        id="product-slug"
+        label="Slug del producto"
+        placeholder="teclado-mecanico-rgb"
+        {...register("slug")}
+      />
+
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="grid content-start gap-2">
           <label className="text-sm font-semibold text-slate-800" htmlFor="product-category">Categoría principal</label>
           {categoriesQuery.data ? <select className={inputClass} id="product-category" {...register("categoryId")}>
             <option value="">Sin categoría</option>
-            {product?.category?.status === "INACTIVE" ? <option value={product.category.id}>{product.category.name} (inactiva)</option> : null}
+            {product?.category?.status === "INACTIVE" ? <option disabled value={product.category.id}>{product.category.name} (inactiva)</option> : null}
             {categoriesQuery.data?.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select> : null}
           {categoriesQuery.isPending ? <p className="m-0 text-xs text-slate-600">Cargando categorías…</p> : null}
           {categoriesQuery.isError ? <p className="m-0 text-xs text-red-700" role="alert">No se pudieron cargar las categorías.</p> : null}
           {formState.errors.categoryId ? <p className="m-0 text-xs text-red-700" role="alert">{formState.errors.categoryId.message}</p> : null}
         </div>
-        <fieldset className="grid content-start gap-2 rounded-lg border border-slate-300 p-3">
-          <legend className="px-1 text-sm font-semibold text-slate-800">Etiquetas</legend>
-          {tagsQuery.isPending ? <p className="m-0 text-xs text-slate-600">Cargando etiquetas…</p> : null}
-          {tagsQuery.isError ? <p className="m-0 text-xs text-red-700" role="alert">No se pudieron cargar las etiquetas.</p> : null}
-          {[...(tagsQuery.data ?? []), ...(product?.tags?.filter((tag) => tag.status === "INACTIVE") ?? [])].map((tag) => (
-            <label className="flex min-h-9 items-center gap-2 text-sm text-slate-800" key={tag.id}>
-              <input className="size-4 accent-blue-700" type="checkbox" value={tag.id} {...register("tagIds")} />
-              {tag.name}{tag.status === "INACTIVE" ? " (inactiva)" : ""}
-            </label>
-          ))}
-          {tagsQuery.data?.length === 0 ? <p className="m-0 text-xs text-slate-600">No hay etiquetas activas.</p> : null}
-          {formState.errors.tagIds ? <p className="m-0 text-xs text-red-700" role="alert">Selecciona como máximo 20 etiquetas distintas.</p> : null}
-        </fieldset>
+        <div className="grid content-start gap-2">
+          <ProductTagEditor
+            availableTags={tagsQuery.data ?? []}
+            currentTags={product?.tags ?? []}
+            draft={tagDraft}
+            error={formState.errors.tagNames?.message ?? formState.errors.tagIds?.message}
+            newNames={newTagNames}
+            onCommit={commitTags}
+            onDraftChange={setTagDraft}
+            onRemoveId={(id) => setValue("tagIds", selectedTagIds.filter((selected) => selected !== id), { shouldValidate: true })}
+            onRemoveName={(name) => setValue("tagNames", newTagNames.filter((selected) => selected.toUpperCase() !== name.toUpperCase()), { shouldValidate: true })}
+            onSelectId={(id) => updateTags(knownTags.find((tag) => tag.id === id)?.name ?? "")}
+            selectedIds={selectedTagIds}
+          />
+          {tagsQuery.isPending ? <p className="m-0 text-xs text-slate-600">Cargando etiquetas existentes…</p> : null}
+          {tagsQuery.isError ? <p className="m-0 text-xs text-red-700" role="alert">No se pudieron cargar las etiquetas existentes. Puedes escribir nuevas etiquetas por nombre.</p> : null}
+        </div>
       </div>
 
       <div className="grid gap-2">
@@ -201,7 +279,7 @@ export function ProductForm({
 
       <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-5">
         <IconButton className="border-slate-300 text-slate-800 hover:bg-slate-100 focus-visible:ring-blue-700" disabled={isPending} icon="x" label="Cancelar" onClick={onCancel} />
-        <IconButton className="border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={isPending || !categoriesQuery.data || !tagsQuery.data} icon="check" label={isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"} type="submit" />
+        <IconButton className="border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={isPending || !categoriesQuery.data} icon="check" label={isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"} type="submit" />
       </div>
     </form>
   );

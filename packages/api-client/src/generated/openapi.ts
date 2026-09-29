@@ -229,6 +229,24 @@ export interface paths {
         patch: operations["changeInvoiceStatus"];
         trace?: never;
     };
+    "/api/v1/store-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the current store issuer profile */
+        get: operations["getStoreProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Create or partially update the store issuer profile */
+        patch: operations["updateStoreProfile"];
+        trace?: never;
+    };
     "/api/v1/inventory/{productId}/adjustments": {
         parameters: {
             query?: never;
@@ -947,6 +965,59 @@ export interface components {
             shippingTotal: string;
             lines: components["schemas"]["ManualInvoiceLineRequestDto"][];
         };
+        StoreAddressDto: {
+            line1: string;
+            line2: string | null;
+            city: string;
+            region: string | null;
+            postalCode: string | null;
+            countryCode: string;
+        };
+        StoreContactDto: {
+            /** Format: email */
+            email: string | null;
+            phone: string | null;
+        };
+        StoreLogoDto: {
+            storageKey: string;
+            /** Format: uri */
+            url: string;
+        };
+        StoreProfileDto: {
+            /** @enum {number} */
+            id: 1;
+            tradeName: string;
+            legalName: string;
+            taxIdentifier: string;
+            address: components["schemas"]["StoreAddressDto"];
+            contact: components["schemas"]["StoreContactDto"];
+            logo: components["schemas"]["StoreLogoDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PatchStoreAddressDto: {
+            line1?: string;
+            line2?: string | null;
+            city?: string;
+            region?: string | null;
+            postalCode?: string | null;
+            countryCode?: string;
+        };
+        PatchStoreContactDto: {
+            /** Format: email */
+            email?: string | null;
+            phone?: string | null;
+        };
+        PatchStoreProfileDto: {
+            tradeName?: string;
+            legalName?: string;
+            taxIdentifier?: string;
+            address?: components["schemas"]["PatchStoreAddressDto"];
+            contact?: components["schemas"]["PatchStoreContactDto"];
+            logo?: components["schemas"]["StoreLogoDto"] | null;
+        };
         InventoryAdjustmentRequestDto: {
             /**
              * @description Signed quantity to add to or remove from available inventory
@@ -1021,6 +1092,8 @@ export interface components {
             /** Format: uuid */
             categoryId?: string | null;
             tagIds?: string[];
+            /** @description Tag names to reuse or create atomically with the product */
+            tagNames?: string[];
             /** @example Notebook Pro 14 */
             name: string;
             description: string;
@@ -1086,6 +1159,8 @@ export interface components {
             /** Format: uuid */
             categoryId?: string | null;
             tagIds?: string[];
+            /** @description Tag names to reuse or create atomically with the product */
+            tagNames?: string[];
             name?: string;
             description?: string;
             price?: string;
@@ -1528,6 +1603,9 @@ export interface components {
             customerSnapshot: {
                 [key: string]: unknown;
             };
+            issuerSnapshot: {
+                [key: string]: unknown;
+            } | null;
             shippingAddressSnapshot: {
                 [key: string]: unknown;
             };
@@ -2312,6 +2390,90 @@ export interface operations {
             };
             /** @description Invalid invoice state transition */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getStoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreProfileDto"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not permitted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Store profile has not yet been configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateStoreProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchStoreProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreProfileDto"];
+                };
+            };
+            /** @description Invalid profile or missing required fields on first save */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role is not permitted */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

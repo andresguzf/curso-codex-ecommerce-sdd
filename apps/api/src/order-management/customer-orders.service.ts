@@ -39,6 +39,7 @@ export class CustomerOrdersService {
       const [order] = await transaction.select({
         ...summaryColumns,
         customerSnapshot: orders.customerSnapshot,
+        issuerSnapshot: orders.issuerSnapshot,
         shippingAddressSnapshot: orders.shippingAddressSnapshot,
         shippingMethodSnapshot: orders.shippingMethodSnapshot,
         paymentSnapshot: orders.paymentSnapshot,

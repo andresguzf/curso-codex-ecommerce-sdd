@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { ProductAdministrationRepository, ProductCategoryRequiredError, ProductClassificationUnavailableError } from "./product-administration.repository";
+import { ProductAdministrationRepository, ProductCategoryRequiredError, ProductClassificationUnavailableError, ProductTagInactiveError, ProductTagLimitExceededError, ProductTagNameInvalidError } from "./product-administration.repository";
 import { normalizeSlug } from "./slug";
 import type {
   AdministrativeProduct,
@@ -131,6 +131,7 @@ export class ProductAdministrationService {
       ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
       ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
       ...(input.tagIds === undefined ? {} : { tagIds: input.tagIds }),
+      ...(input.tagNames === undefined ? {} : { tagNames: input.tagNames.map((name) => name.trim()) }),
       description: input.description.trim(),
       image: {
         storageKey: input.image.storageKey.trim(),
@@ -162,6 +163,7 @@ export class ProductAdministrationService {
       ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug) }),
       ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
       ...(input.tagIds === undefined ? {} : { tagIds: input.tagIds }),
+      ...(input.tagNames === undefined ? {} : { tagNames: input.tagNames.map((name) => name.trim()) }),
     };
   }
 
@@ -171,6 +173,15 @@ export class ProductAdministrationService {
     }
     if (error instanceof ProductClassificationUnavailableError) {
       throw new BadRequestException({ code: "PRODUCT_CLASSIFICATION_UNAVAILABLE", message: "The selected category or tag is not active" });
+    }
+    if (error instanceof ProductTagLimitExceededError) {
+      throw new BadRequestException({ code: "PRODUCT_TAG_LIMIT_EXCEEDED", message: "A product can have at most 20 distinct tags", details: [{ field: "tagNames", message: "Select at most 20 distinct tags" }] });
+    }
+    if (error instanceof ProductTagInactiveError) {
+      throw new BadRequestException({ code: "PRODUCT_TAG_INACTIVE", message: "The tag is no longer available", details: [{ field: "tagNames", message: "Choose an active tag" }] });
+    }
+    if (error instanceof ProductTagNameInvalidError) {
+      throw new BadRequestException({ code: "PRODUCT_TAG_NAME_INVALID", message: "A tag name must contain letters or numbers", details: [{ field: "tagNames", message: "Enter a valid tag name" }] });
     }
     const constraint = this.findPostgresConstraint(error);
     if (constraint === "products_sku_unique") {

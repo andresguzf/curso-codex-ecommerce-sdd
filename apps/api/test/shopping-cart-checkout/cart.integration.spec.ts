@@ -39,6 +39,7 @@ import {
   productImages,
   products,
   roleAssignments,
+  storeProfiles,
   users,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
@@ -257,6 +258,10 @@ describe("persistent public cart", () => {
       migrationsFolder: resolve("src/database/migrations"),
       migrationsSchema: "drizzle",
       migrationsTable: "__drizzle_migrations",
+    });
+    await database.insert(storeProfiles).values({
+      tradeName: "Cart Test Store", legalName: "Cart Test Store SpA", taxIdentifier: "CART-TAX-1",
+      addressLine1: "Test Street 1", addressCity: "Santiago", addressCountryCode: "CL",
     });
 
     const passwordHash = await hashPassword(password);

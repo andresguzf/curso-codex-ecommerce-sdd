@@ -63,6 +63,7 @@ class CustomerOrderLineDto {
 
 class CustomerOrderDetailDto extends CustomerOrderSummaryDto {
   @ApiProperty({ type: Object, additionalProperties: true }) customerSnapshot!: Record<string, unknown>;
+  @ApiProperty({ type: Object, additionalProperties: true, nullable: true }) issuerSnapshot!: Record<string, unknown> | null;
   @ApiProperty({ type: Object, additionalProperties: true }) shippingAddressSnapshot!: Record<string, unknown>;
   @ApiProperty({ type: Object, additionalProperties: true }) shippingMethodSnapshot!: Record<string, unknown>;
   @ApiProperty({ type: Object, additionalProperties: true }) paymentSnapshot!: Record<string, unknown>;
@@ -184,6 +185,7 @@ export class CustomerOrdersController {
       ...detail,
       customerId: customerSnapshot.id,
       customerSnapshot,
+      issuerSnapshot: detail.issuerSnapshot as OrderSnapshot["issuerSnapshot"],
       currency: detail.currency as "USD",
       shippingAddressSnapshot: detail.shippingAddressSnapshot as OrderSnapshot["shippingAddressSnapshot"],
       shippingMethodSnapshot: detail.shippingMethodSnapshot as OrderSnapshot["shippingMethodSnapshot"],

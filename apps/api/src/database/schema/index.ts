@@ -4,4 +4,5 @@ export * from "./catalog";
 export * from "./commerce";
 export * from "./identity";
 export * from "./inventory";
+export * from "./store-profile";
 export * from "./wishlist";

@@ -14,7 +14,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { configureApplication } from "../../src/application";
-import { roleAssignments, sessions, users } from "../../src/database/schema";
+import { roleAssignments, sessions, storeProfiles, users } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { AuthTokenService } from "../../src/identity-access/auth-token.service";
 
@@ -249,6 +249,10 @@ describe("authorization boundaries over HTTP", () => {
       migrationsFolder: resolve("src/database/migrations"),
       migrationsSchema: "drizzle",
       migrationsTable: "__drizzle_migrations",
+    });
+    await database.insert(storeProfiles).values({
+      tradeName: "Authorization Store", legalName: "Authorization Store SpA", taxIdentifier: "AUTH-TAX-1",
+      addressLine1: "Test Street 1", addressCity: "Santiago", addressCountryCode: "CL",
     });
 
     adminSession = await createAuthenticatedActor(

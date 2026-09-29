@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import type { IssuerSnapshot } from "../billing-invoicing/issuer-snapshot";
 
 export const ORDER_STATUSES = ["PROCESSING", "INVOICED", "COMPLETED", "CANCELLED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -19,6 +20,7 @@ export type OrderLineSnapshot = Readonly<{
 
 export type OrderCommercialSnapshot = Readonly<{
   customerId: string;
+  issuerSnapshot: IssuerSnapshot;
   customerSnapshot: Readonly<{ id: string; displayName: string; email: string }>;
   shippingAddressSnapshot: SnapshotObject;
   shippingMethodSnapshot: SnapshotObject;
@@ -31,7 +33,8 @@ export type OrderCommercialSnapshot = Readonly<{
   items: readonly OrderLineSnapshot[];
 }>;
 
-export type OrderSnapshot = OrderCommercialSnapshot & Readonly<{
+export type OrderSnapshot = Omit<OrderCommercialSnapshot, "issuerSnapshot"> & Readonly<{
+  issuerSnapshot: IssuerSnapshot | null;
   id: string;
   number: string;
   status: OrderStatus;
@@ -68,6 +71,11 @@ export function assertOrderTransition(from: OrderStatus, to: OrderStatus): void 
 }
 
 function validate(snapshot: OrderSnapshot): void {
+  if (snapshot.issuerSnapshot && (!snapshot.issuerSnapshot.tradeName.trim() || !snapshot.issuerSnapshot.legalName.trim()
+    || !snapshot.issuerSnapshot.taxIdentifier.trim() || !snapshot.issuerSnapshot.address.line1.trim()
+    || !snapshot.issuerSnapshot.address.city.trim())) {
+    throw new TypeError("Order issuer snapshot is required");
+  }
   if (!snapshot.id.trim() || !snapshot.number.trim() || snapshot.number.length > 64) {
     throw new TypeError("Order identity and number are required");
   }
@@ -119,6 +127,9 @@ export class OrderAggregate {
   static create(input: OrderCommercialSnapshot, now = new Date()): OrderAggregate {
     if (input.paymentSnapshot.status !== "APPROVED") {
       throw new TypeError("A confirmed order requires an approved checkout payment");
+    }
+    if (!input.issuerSnapshot) {
+      throw new TypeError("A confirmed order requires a store issuer snapshot");
     }
     const id = randomUUID();
     return new OrderAggregate({

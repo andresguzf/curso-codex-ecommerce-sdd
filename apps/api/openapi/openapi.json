@@ -922,6 +922,86 @@
         ]
       }
     },
+    "/api/v1/store-profile": {
+      "get": {
+        "operationId": "getStoreProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role is not permitted"
+          },
+          "404": {
+            "description": "Store profile has not yet been configured"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the current store issuer profile",
+        "tags": [
+          "store-profile"
+        ]
+      },
+      "patch": {
+        "operationId": "updateStoreProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchStoreProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid profile or missing required fields on first save"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role is not permitted"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create or partially update the store issuer profile",
+        "tags": [
+          "store-profile"
+        ]
+      }
+    },
     "/api/v1/inventory/{productId}/adjustments": {
       "post": {
         "operationId": "adjustProductInventory",
@@ -3859,6 +3939,219 @@
           "lines"
         ]
       },
+      "StoreAddressDto": {
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": "string",
+            "maxLength": 250
+          },
+          "line2": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 250
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 120
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          },
+          "countryCode": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        },
+        "required": [
+          "line1",
+          "line2",
+          "city",
+          "region",
+          "postalCode",
+          "countryCode"
+        ]
+      },
+      "StoreContactDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "email",
+          "phone"
+        ]
+      },
+      "StoreLogoDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "storageKey",
+          "url"
+        ]
+      },
+      "StoreProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "tradeName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "legalName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "taxIdentifier": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "address": {
+            "$ref": "#/components/schemas/StoreAddressDto"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/StoreContactDto"
+          },
+          "logo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StoreLogoDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tradeName",
+          "legalName",
+          "taxIdentifier",
+          "address",
+          "contact",
+          "logo",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PatchStoreAddressDto": {
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": "string",
+            "maxLength": 250
+          },
+          "line2": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 250
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 120
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          },
+          "countryCode": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        }
+      },
+      "PatchStoreContactDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 40
+          }
+        }
+      },
+      "PatchStoreProfileDto": {
+        "type": "object",
+        "properties": {
+          "tradeName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "legalName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "taxIdentifier": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "address": {
+            "$ref": "#/components/schemas/PatchStoreAddressDto"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/PatchStoreContactDto"
+          },
+          "logo": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StoreLogoDto"
+              }
+            ]
+          }
+        }
+      },
       "InventoryAdjustmentRequestDto": {
         "type": "object",
         "properties": {
@@ -4116,6 +4409,14 @@
               "format": "uuid"
             }
           },
+          "tagNames": {
+            "description": "Tag names to reuse or create atomically with the product",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
           "name": {
             "type": "string",
             "example": "Notebook Pro 14",
@@ -4317,6 +4618,14 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          "tagNames": {
+            "description": "Tag names to reuse or create atomically with the product",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 120
             }
           },
           "name": {
@@ -5833,6 +6142,11 @@
             "type": "object",
             "additionalProperties": true
           },
+          "issuerSnapshot": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
           "shippingAddressSnapshot": {
             "type": "object",
             "additionalProperties": true
@@ -5865,6 +6179,7 @@
           "updatedAt",
           "cancelledAt",
           "customerSnapshot",
+          "issuerSnapshot",
           "shippingAddressSnapshot",
           "shippingMethodSnapshot",
           "paymentSnapshot",

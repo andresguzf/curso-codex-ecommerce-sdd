@@ -83,6 +83,7 @@ export type CreateAdministrativeProduct = Readonly<{
   slug?: string;
   categoryId?: string | null;
   tagIds?: readonly string[];
+  tagNames?: readonly string[];
   name: string;
   description: string;
   price: string;
@@ -95,6 +96,7 @@ export type UpdateAdministrativeProduct = Readonly<{
   slug?: string;
   categoryId?: string | null;
   tagIds?: readonly string[];
+  tagNames?: readonly string[];
   name?: string;
   description?: string;
   price?: string;

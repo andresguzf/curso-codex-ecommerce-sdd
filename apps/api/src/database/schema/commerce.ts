@@ -129,6 +129,7 @@ export const orders = pgTable(
       .default("0.00"),
     total: numeric("total", { precision: 14, scale: 2 }).notNull(),
     customerSnapshot: jsonb("customer_snapshot").$type<JsonObject>().notNull(),
+    issuerSnapshot: jsonb("issuer_snapshot").$type<JsonObject>(),
     shippingAddressSnapshot: jsonb("shipping_address_snapshot")
       .$type<JsonObject>()
       .notNull(),
@@ -164,6 +165,10 @@ export const orders = pgTable(
     check(
       "orders_customer_snapshot_is_object",
       sql`jsonb_typeof(${table.customerSnapshot}) = 'object'`,
+    ),
+    check(
+      "orders_issuer_snapshot_is_object",
+      sql`${table.issuerSnapshot} is null or jsonb_typeof(${table.issuerSnapshot}) = 'object'`,
     ),
     check(
       "orders_shipping_address_snapshot_is_object",

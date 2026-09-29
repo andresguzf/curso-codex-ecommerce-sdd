@@ -44,6 +44,7 @@ import {
 
 const uuidSchema = z.string().uuid();
 const tagIdsSchema = z.array(uuidSchema).max(20).refine((ids) => new Set(ids).size === ids.length);
+const tagNamesSchema = z.array(z.string().trim().min(1).max(120)).max(20);
 const moneySchema = z
   .string()
   .trim()
@@ -72,6 +73,7 @@ const createProductSchema = z
     slug: z.string().trim().min(1).max(220).optional(),
     categoryId: uuidSchema.nullable().optional(),
     tagIds: tagIdsSchema.optional(),
+    tagNames: tagNamesSchema.optional(),
     status: z.enum(PRODUCT_STATUSES).default("INACTIVE"),
   })
   .strict();
@@ -85,6 +87,7 @@ const updateProductSchema = z
     slug: z.string().trim().min(1).max(220).optional(),
     categoryId: uuidSchema.nullable().optional(),
     tagIds: tagIdsSchema.optional(),
+    tagNames: tagNamesSchema.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -122,6 +125,8 @@ class CreateProductRequestDto {
 
   @ApiPropertyOptional({ type: [String], format: "uuid" }) tagIds?: string[];
 
+  @ApiPropertyOptional({ type: [String], maxLength: 120, description: "Tag names to reuse or create atomically with the product" }) tagNames?: string[];
+
   @ApiProperty({ example: "Notebook Pro 14", maxLength: 200 })
   name!: string;
 
@@ -147,6 +152,8 @@ class UpdateProductRequestDto {
   @ApiPropertyOptional({ format: "uuid", nullable: true, type: String }) categoryId?: string | null;
 
   @ApiPropertyOptional({ type: [String], format: "uuid" }) tagIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], maxLength: 120, description: "Tag names to reuse or create atomically with the product" }) tagNames?: string[];
 
   @ApiPropertyOptional({ maxLength: 200 })
   name?: string;

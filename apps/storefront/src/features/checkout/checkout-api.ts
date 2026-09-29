@@ -14,6 +14,7 @@ const messages: Record<string, string> = {
   CHECKOUT_INSUFFICIENT_STOCK: "El stock cambió. Revisa las cantidades en tu carrito antes de volver a comprar.",
   CHECKOUT_PRODUCT_UNAVAILABLE: "Un producto ya no está disponible. Revisa tu carrito.",
   CHECKOUT_CART_EMPTY: "Tu carrito está vacío. Agrega productos para continuar.",
+  STORE_PROFILE_NOT_CONFIGURED: "La tienda aún no está configurada para emitir órdenes. Inténtalo más tarde.",
   CHECKOUT_IN_PROGRESS: "La compra sigue en proceso. Reintenta para recuperar su resultado.",
   IDEMPOTENCY_KEY_REUSED: "Este intento corresponde a otra compra. Revisa tu carrito.",
   REQUEST_VALIDATION_FAILED: "Revisa los datos de dirección, envío y pago.",

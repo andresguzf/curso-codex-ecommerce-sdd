@@ -6,7 +6,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { LogoutButton } from "../auth/logout-button";
 import { useSessionStore } from "../auth/session";
 
-type NavigationIcon = "home" | "products" | "categories" | "tags" | "orders" | "invoices" | "users";
+type NavigationIcon = "home" | "products" | "categories" | "tags" | "orders" | "invoices" | "users" | "company";
 type NavigationItem = Readonly<{
   href: string;
   icon: NavigationIcon;
@@ -21,12 +21,14 @@ const ADMIN_NAVIGATION: readonly NavigationItem[] = [
   { href: "/users", icon: "users", label: "Usuarios" },
   { href: "/orders", icon: "orders", label: "Órdenes" },
   { href: "/invoices", icon: "invoices", label: "Facturas" },
+  { href: "/store-profile", icon: "company", label: "Empresa" },
 ];
 
 const BILLING_NAVIGATION: readonly NavigationItem[] = [
   { href: "/", icon: "home", label: "Inicio" },
   { href: "/orders", icon: "orders", label: "Órdenes" },
   { href: "/invoices", icon: "invoices", label: "Facturas" },
+  { href: "/store-profile", icon: "company", label: "Empresa" },
 ];
 
 export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>) {
@@ -218,6 +220,9 @@ function NavigationGlyph({ icon }: Readonly<{ icon: NavigationIcon }>) {
   }
   if (icon === "users") {
     return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 5" /></svg>;
+  }
+  if (icon === "company") {
+    return <svg {...common}><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M8 10h1M15 10h1" /></svg>;
   }
   if (icon === "orders") {
     return <svg {...common}><path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M15 3v5h5M9 12h6M9 16h6" /></svg>;

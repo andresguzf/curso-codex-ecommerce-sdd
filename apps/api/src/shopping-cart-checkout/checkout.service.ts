@@ -21,6 +21,7 @@ import {
 } from "../inventory-control/inventory-stock.repository";
 import { InventoryStockService } from "../inventory-control/inventory-stock.service";
 import { OrderService } from "../order-management/order.service";
+import { currentIssuerSnapshot } from "../billing-invoicing/issuer-snapshot";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
 import { addMoneyAmounts, calculateCartTotals } from "./cart-totals";
 import type {
@@ -217,6 +218,7 @@ export class CheckoutService {
       }
 
       const currency = SYSTEM_CURRENCY;
+      const issuerSnapshot = await currentIssuerSnapshot(transaction);
 
       const cartTotals = calculateCartTotals(lines);
       const shipping = await this.shipping.quote({
@@ -267,6 +269,7 @@ export class CheckoutService {
       const aggregate = await this.orderService.createInTransaction(transaction, {
           currency,
           customerId: customer.id,
+          issuerSnapshot,
           customerSnapshot: {
             displayName: customer.displayName,
             email: customer.email,

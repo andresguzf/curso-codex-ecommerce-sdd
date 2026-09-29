@@ -14,6 +14,20 @@ import type {
 } from "./classification.types";
 
 type CountRow = { totalItems: number };
+type RawClassificationRecord = Omit<ClassificationRecord, "createdAt" | "updatedAt" | "deletedAt"> & {
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  deletedAt: string | Date | null;
+};
+
+function normalizeRecord(row: RawClassificationRecord): ClassificationRecord {
+  return {
+    ...row,
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+    deletedAt: row.deletedAt === null ? null : new Date(row.deletedAt),
+  };
+}
 
 @Injectable()
 export class ClassificationRepository {
@@ -43,29 +57,29 @@ export class ClassificationRepository {
     const [{ totalItems = 0 } = {}] = (await this.database.client.execute<CountRow>(
       sql`select count(*)::int as "totalItems" from ${table} where ${where}`,
     )).rows;
-    const items = (await this.database.client.execute<ClassificationRecord>(
+    const items = (await this.database.client.execute<RawClassificationRecord>(
       sql`select id, name, slug, ${kind === "category" ? sql`${categories.description}` : sql`null::text`} as description,
         status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"
         from ${table} where ${where} order by ${orderColumn} ${direction}, ${table.id} asc
         limit ${query.pageSize} offset ${(query.page - 1) * query.pageSize}`,
-    )).rows;
+    )).rows.map(normalizeRecord);
     return { items, page: query.page, pageSize: query.pageSize, totalItems, totalPages: Math.ceil(totalItems / query.pageSize) };
   }
 
   async find(kind: ClassificationKind, id: string, includeInactive: boolean): Promise<ClassificationRecord | undefined> {
     const table = this.table(kind);
-    const rows = (await this.database.client.execute<ClassificationRecord>(
+    const rows = (await this.database.client.execute<RawClassificationRecord>(
       sql`select id, name, slug, ${kind === "category" ? sql`${categories.description}` : sql`null::text`} as description,
         status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"
         from ${table} where ${table.id} = ${id} and ${table.deletedAt} is null
         ${includeInactive ? sql`` : sql`and ${table.status} = 'ACTIVE'`} limit 1`,
     )).rows;
-    return rows[0];
+    return rows[0] ? normalizeRecord(rows[0]) : undefined;
   }
 
   async create(kind: ClassificationKind, input: ClassificationInput & { slug: string }, actorUserId: string): Promise<ClassificationRecord> {
     return this.database.client.transaction(async (transaction) => {
-      const rows = (await transaction.execute<ClassificationRecord>(
+      const rows = (await transaction.execute<RawClassificationRecord>(
         kind === "category"
           ? sql`insert into ${categories} (name, slug, description, status)
               values (${input.name}, ${input.slug}, ${input.description ?? ""}, ${input.status ?? "ACTIVE"})
@@ -74,8 +88,9 @@ export class ClassificationRepository {
               values (${input.name}, ${input.slug}, ${input.status ?? "ACTIVE"})
               returning id, name, slug, null::text as description, status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"`,
       )).rows;
-      const created = rows[0];
-      if (!created) throw new Error("PostgreSQL did not return the created classification");
+      const rawCreated = rows[0];
+      if (!rawCreated) throw new Error("PostgreSQL did not return the created classification");
+      const created = normalizeRecord(rawCreated);
       await transaction.insert(auditEntries).values(createAuditEntry({
         action: `${kind.toUpperCase()}_CREATED`, actorUserId, entityId: created.id,
         entityType: kind.toUpperCase(), changes: { after: created },
@@ -87,14 +102,15 @@ export class ClassificationRepository {
   async update(kind: ClassificationKind, id: string, input: ClassificationPatch, actorUserId: string): Promise<ClassificationRecord | undefined> {
     const table = this.table(kind);
     return this.database.client.transaction(async (transaction) => {
-      const previous = (await transaction.execute<ClassificationRecord>(
+      const rawPrevious = (await transaction.execute<RawClassificationRecord>(
         sql`select id, name, slug, ${kind === "category" ? sql`${categories.description}` : sql`null::text`} as description,
           status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"
           from ${table} where ${table.id} = ${id} and ${table.deletedAt} is null for update`,
       )).rows[0];
-      if (!previous) return undefined;
+      if (!rawPrevious) return undefined;
+      const previous = normalizeRecord(rawPrevious);
       const nextStatus = input.status ?? previous.status;
-      const updated = (await transaction.execute<ClassificationRecord>(
+      const rawUpdated = (await transaction.execute<RawClassificationRecord>(
         kind === "category"
           ? sql`update ${categories} set name = ${input.name ?? previous.name}, slug = ${input.slug ?? previous.slug},
               description = ${input.description ?? previous.description ?? ""}, status = ${nextStatus}, updated_at = now()
@@ -103,7 +119,8 @@ export class ClassificationRepository {
               status = ${nextStatus}, updated_at = now() where id = ${id}
               returning id, name, slug, null::text as description, status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"`,
       )).rows[0];
-      if (!updated) throw new Error("PostgreSQL did not return the updated classification");
+      if (!rawUpdated) throw new Error("PostgreSQL did not return the updated classification");
+      const updated = normalizeRecord(rawUpdated);
       await transaction.insert(auditEntries).values(createAuditEntry({
         action: `${kind.toUpperCase()}_UPDATED`, actorUserId, entityId: id,
         entityType: kind.toUpperCase(), changes: { before: previous, after: updated },
@@ -115,12 +132,13 @@ export class ClassificationRepository {
   async softDelete(kind: ClassificationKind, id: string, actorUserId: string): Promise<boolean> {
     const table = this.table(kind);
     return this.database.client.transaction(async (transaction) => {
-      const previous = (await transaction.execute<ClassificationRecord>(
+      const rawPrevious = (await transaction.execute<RawClassificationRecord>(
         sql`select id, name, slug, ${kind === "category" ? sql`${categories.description}` : sql`null::text`} as description,
           status, created_at as "createdAt", updated_at as "updatedAt", deleted_at as "deletedAt"
           from ${table} where ${table.id} = ${id} and ${table.deletedAt} is null for update`,
       )).rows[0];
-      if (!previous) return false;
+      if (!rawPrevious) return false;
+      const previous = normalizeRecord(rawPrevious);
       await transaction.execute(sql`update ${table} set status = 'INACTIVE', deleted_at = now(), updated_at = now() where ${table.id} = ${id}`);
       await transaction.insert(auditEntries).values(createAuditEntry({
         action: `${kind.toUpperCase()}_DELETED`, actorUserId, entityId: id,

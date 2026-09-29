@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
+import { ProductClassifications } from "./product-classifications";
 import { ProductImage } from "./product-image";
 import { WishlistButton } from "../wishlist/wishlist-button";
 
@@ -81,6 +82,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
               {product.name}
             </h1>
             <p className="mb-0 mt-6 text-base leading-8 text-slate-600">{product.description}</p>
+            <ProductClassifications category={product.category} tags={product.tags} />
 
             <div className="mt-9 border-y border-slate-200 py-7">
               <p className="m-0 text-4xl font-black tracking-tight text-slate-950">

@@ -122,6 +122,8 @@
 - [x] 13.5 Crear pantallas administrativas paginadas para categorías y etiquetas con búsqueda superior, filtros colapsables y formularios React Hook Form más Zod; verificar CRUD, mensajes flash y confirmaciones contra el API.
 - [x] 13.6 Integrar selectores de categoría y etiquetas en formularios de producto y filtros en el catálogo público; verificar selección accesible, persistencia en URL y vuelta a página 1 al cambiar criterios.
 - [x] 13.7 Regenerar el cliente TypeScript y los esquemas Zod después de ampliar el contrato de catálogo; verificar compilación de API, storefront y backoffice y ausencia de diferencias de contrato sin generar.
+- [x] 13.8 Ampliar `POST /products` y `PATCH /products/:productId` para aceptar `tagNames` junto a `tagIds`, resolver o crear etiquetas activas y guardar sus asociaciones atómicamente con el producto; actualizar OpenAPI, cliente y esquemas Zod y verificar permisos, validaciones, deduplicación, límite combinado, concurrencia y rollback con pruebas de integración.
+- [x] 13.9 Mejorar el formulario administrativo de productos con slug opcional editable, categoría activa mediante desplegable sin creación en línea y editor accesible de etiquetas existentes o nuevas como chips con entrada por coma o Enter; verificar creación, edición, eliminación de chips, mensajes de error, persistencia y ausencia de etiquetas huérfanas mediante pruebas de componentes y end-to-end.
 
 ## 14. Lista de deseos
 
@@ -133,10 +135,10 @@
 
 ## 15. Perfil empresarial y snapshots
 
-- [ ] 15.1 Añadir la migración del perfil único de tienda con nombre comercial, razón social, identificador fiscal, dirección, contacto y referencia de logo; verificar unicidad del registro y validaciones obligatorias en PostgreSQL y dominio.
-- [ ] 15.2 Implementar `GET /api/v1/store-profile` y `PATCH /api/v1/store-profile` con modificación exclusiva de `ADMIN`, lectura autorizada para `ADMIN` y `BILLING` y auditoría; verificar la matriz de permisos y OpenAPI.
-- [ ] 15.3 Crear el formulario de empresa en backoffice con React Hook Form, Zod y carga o selección de logo; verificar valores iniciales, errores accesibles, guardado, mensaje flash y permisos por rol.
-- [ ] 15.4 Incorporar el snapshot empresarial al confirmar órdenes y a facturas manuales o derivadas de órdenes; verificar que editar el perfil no altera documentos existentes y que una factura desde orden reutiliza el emisor histórico.
+- [x] 15.1 Añadir la migración del perfil único de tienda con nombre comercial, razón social, identificador fiscal, dirección, contacto y referencia de logo; verificar unicidad del registro y validaciones obligatorias en PostgreSQL y dominio.
+- [x] 15.2 Implementar `GET /api/v1/store-profile` y `PATCH /api/v1/store-profile` con modificación exclusiva de `ADMIN`, lectura autorizada para `ADMIN` y `BILLING` y auditoría; verificar la matriz de permisos y OpenAPI.
+- [x] 15.3 Crear el formulario de empresa en backoffice con React Hook Form, Zod y carga o selección de logo; verificar valores iniciales, errores accesibles, guardado, mensaje flash y permisos por rol.
+- [x] 15.4 Incorporar el snapshot empresarial al confirmar órdenes y a facturas manuales o derivadas de órdenes; verificar que editar el perfil no altera documentos existentes y que una factura desde orden reutiliza el emisor histórico.
 - [ ] 15.5 Actualizar las plantillas PDF para usar únicamente el snapshot empresarial de cada orden o factura; verificar nombre comercial, razón social, identificador fiscal, dirección y logo antes y después de modificar el perfil vigente.
 - [ ] 15.6 Añadir pruebas de integración y end-to-end del perfil empresarial, autorización y persistencia histórica; verificar edición por Admin, lectura por Billing, rechazo de modificación por Billing y regeneración estable de PDF.
 

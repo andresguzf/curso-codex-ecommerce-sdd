@@ -23,6 +23,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Incorporar mensajes flash reutilizables para autenticación, operaciones de catálogo y mutaciones del carrito, además de confirmación modal para toda acción destructiva.
 - Incorporar una lista de deseos persistente para cada cliente, con acciones para agregar o retirar productos y mover productos disponibles al carrito.
 - Ampliar el catálogo con slugs únicos, categorías administrables y etiquetas asociables a productos.
+- Permitir en el formulario administrativo de productos seleccionar etiquetas existentes o crear y asignar etiquetas nuevas por nombre, como chips o mediante entrada separada por comas, sin salir del formulario; ofrecer un slug de producto opcional y editable. Las categorías se crean exclusivamente en su administración y se seleccionan desde un desplegable de categorías existentes.
 - Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal, dirección física y logo, administrable desde el back office y preservado como snapshot en órdenes y facturas.
 - Incorporar autocompletado remoto y paginado de clientes y productos al crear facturas manuales.
 - Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
@@ -72,6 +73,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Nuevas dependencias de frontend para React/Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y TanStack Query; y dependencias de backend para REST, persistencia, autenticación, OpenAPI y generación PDF.
 - Nuevas suites de pruebas unitarias, integración, contrato y flujos end-to-end para seguridad, catálogo, checkout, concurrencia de inventario y facturación.
 - Nuevas entidades y contratos REST para categorías, etiquetas, lista de deseos y perfil de empresa, además de búsquedas remotas para autocompletado.
+- Ampliación de las mutaciones REST de productos para resolver o crear etiquetas por nombre junto con sus asociaciones en una sola operación, sin creación de categorías en línea.
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.
 - Nuevas fixtures de desarrollo para productos, imágenes temporales deterministas de Lorem Picsum y usuarios, ampliación del modelo y contrato de imágenes de producto, una ruta explícita de migración posterior a Cloudinary y nuevas pruebas de galería y navegación entre landing y catálogo.

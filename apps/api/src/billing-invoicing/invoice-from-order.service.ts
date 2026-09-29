@@ -103,6 +103,12 @@ export class InvoiceFromOrderService {
       if (order.currency !== SYSTEM_CURRENCY || payment.currency !== SYSTEM_CURRENCY) {
         throw new TypeError("Stored order and payment currency must be USD");
       }
+      if (!order.issuerSnapshot) {
+        throw new ConflictException({
+          code: "ORDER_ISSUER_SNAPSHOT_UNAVAILABLE",
+          message: "This legacy order has no historical issuer snapshot",
+        });
+      }
 
       const now = new Date();
       let invoice = InvoiceAggregate.createDraft(
@@ -116,9 +122,7 @@ export class InvoiceFromOrderService {
           shippingTotal: order.shippingTotal,
           taxTotal: order.taxTotal,
           total: order.total,
-          // The company profile snapshot is added to orders by task 15.4. Until
-          // then the conversion preserves the available order-owned snapshots.
-          issuerSnapshot: {},
+          issuerSnapshot: structuredClone(order.issuerSnapshot),
           customerSnapshot: structuredClone(order.customerSnapshot),
           lines: storedLines.map((line, index) => orderLineSnapshot(line, index + 1)),
         },

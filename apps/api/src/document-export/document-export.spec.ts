@@ -11,6 +11,7 @@ const order: OrderSnapshot = {
   status: "PROCESSING",
   customerId: "3296f1d5-5a1d-4b94-9caa-b26878f447e4",
   customerSnapshot: { id: "3296f1d5-5a1d-4b94-9caa-b26878f447e4", displayName: "Cliente historico", email: "historic@example.com" },
+  issuerSnapshot: null,
   shippingAddressSnapshot: { recipientName: "Destinatario", line1: "Calle Historica 123", city: "Santiago", region: "RM", postalCode: "8320000", countryCode: "CL" },
   shippingMethodSnapshot: { method: "STANDARD", name: "Envio historico" },
   paymentSnapshot: { status: "APPROVED", method: "SIMULATED_CARD_APPROVED" },

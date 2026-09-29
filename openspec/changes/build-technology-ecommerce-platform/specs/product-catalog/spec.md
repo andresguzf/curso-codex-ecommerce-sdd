@@ -114,6 +114,25 @@ El sistema SHALL asignar a cada producto un slug único, SHALL permitir asociarl
 - **WHEN** una categoría o etiqueta se encuentra inactiva
 - **THEN** el sistema conserva sus referencias históricas pero no permite asignarla a nuevos productos ni ofrecerla como filtro público activo
 
+### Requirement: Clasificación desde el formulario de producto
+El formulario administrativo de creación y edición de productos SHALL permitir a `ADMIN` seleccionar una categoría activa ya creada mediante un desplegable, elegir etiquetas activas existentes y escribir nombres de etiquetas nuevas como chips removibles o separados por comas. SHALL ofrecer un campo opcional para editar explícitamente el slug del producto. El sistema SHALL crear las etiquetas nuevas y guardar sus asociaciones junto con el producto de forma atómica, sin ofrecer creación de categorías en este formulario.
+
+#### Scenario: Crear producto con etiquetas nuevas y existentes
+- **WHEN** un administrador selecciona una categoría existente, conserva una etiqueta activa y agrega nombres nuevos mediante coma o Enter antes de guardar el producto
+- **THEN** el sistema asigna la categoría seleccionada, reutiliza la etiqueta existente y crea y asocia las nuevas etiquetas una sola vez, mostrando las selecciones como chips removibles
+
+#### Scenario: Nombre de etiqueta ya utilizado
+- **WHEN** un administrador introduce un nombre de etiqueta que ya corresponde a una etiqueta activa o repite el mismo nombre con diferencias de mayúsculas o espacios
+- **THEN** el sistema reutiliza una sola etiqueta activa y no duplica la asociación; si el nombre corresponde a una etiqueta inactiva o no es válido, rechaza la asignación con un error de campo seguro
+
+#### Scenario: Guardado de producto fallido
+- **WHEN** una solicitud incluye nombres de etiquetas nuevas pero falla la validación o persistencia del producto o sus asociaciones
+- **THEN** la operación revierte todos sus cambios y no deja etiquetas nuevas sin producto
+
+#### Scenario: Slug opcional y categorías administradas aparte
+- **WHEN** un administrador crea un producto sin slug, edita uno sin modificar su slug o introduce explícitamente un slug válido, y abre la selección de categoría
+- **THEN** el sistema genera el slug únicamente cuando falta en la creación, conserva el slug existente en la edición o valida el cambio explícito, y el desplegable ofrece solo categorías existentes activas sin permitir crearlas desde el formulario
+
 ### Requirement: Administración de categorías y etiquetas
 El sistema SHALL permitir exclusivamente a `ADMIN` crear, listar, buscar, editar, activar, desactivar y eliminar lógicamente categorías y etiquetas con nombres y slugs únicos.
 
