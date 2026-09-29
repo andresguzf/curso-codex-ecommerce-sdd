@@ -1,6 +1,53 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/media/images/{storageKey}": {
+      "get": {
+        "operationId": "readCatalogImage",
+        "parameters": [
+          {
+            "name": "storageKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored image bytes",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found"
+          }
+        },
+        "summary": "Read an image from the configured catalog storage",
+        "tags": [
+          "catalog-media"
+        ]
+      }
+    },
     "/api/v1/auth/register": {
       "post": {
         "operationId": "registerCustomer",
@@ -1070,53 +1117,6 @@
         ]
       }
     },
-    "/api/v1/media/images/{storageKey}": {
-      "get": {
-        "operationId": "readCatalogImage",
-        "parameters": [
-          {
-            "name": "storageKey",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stored image bytes",
-            "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/webp": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Image not found"
-          }
-        },
-        "summary": "Read an image from the configured catalog storage",
-        "tags": [
-          "catalog-media"
-        ]
-      }
-    },
     "/api/v1/inventory/{productId}/adjustments": {
       "post": {
         "operationId": "adjustProductInventory",
@@ -1179,6 +1179,120 @@
         ]
       }
     },
+    "/api/v1/inventory": {
+      "get": {
+        "operationId": "listInventoryBalances",
+        "parameters": [
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "name",
+                "sku",
+                "status",
+                "availableQuantity",
+                "updatedAt"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "availability",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "IN_STOCK",
+                "OUT_OF_STOCK"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Literal match on product name or SKU",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryBalancePageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List paginated inventory balances",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
     "/api/v1/inventory/{productId}/movements": {
       "get": {
         "operationId": "listProductInventoryMovements",
@@ -1189,6 +1303,73 @@
             "in": "path",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "createdAt",
+                "type",
+                "quantityDelta",
+                "balanceAfter"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "OPENING",
+                "ADJUSTMENT",
+                "SALE",
+                "CANCELLATION"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Literal match on movement reason, reference, or actor",
+            "schema": {
               "type": "string"
             }
           },
@@ -1205,6 +1386,8 @@
             "required": false,
             "in": "query",
             "schema": {
+              "minimum": 1,
+              "maximum": 1000000,
               "type": "number"
             }
           }
@@ -2265,6 +2448,52 @@
         "operationId": "listWishlist",
         "parameters": [
           {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "createdAt",
+                "name",
+                "price"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "availability",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "AVAILABLE",
+                "UNAVAILABLE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Literal match on saved product name or SKU",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "pageSize",
             "required": false,
             "in": "query",
@@ -2293,7 +2522,7 @@
             }
           },
           "400": {
-            "description": "Invalid pagination"
+            "description": "Invalid wishlist query"
           },
           "401": {
             "description": "Authentication required"
@@ -4371,6 +4600,84 @@
           "version",
           "updatedAt",
           "movement"
+        ]
+      },
+      "InventoryBalanceItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "availableQuantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "productId",
+          "sku",
+          "name",
+          "status",
+          "availableQuantity",
+          "version",
+          "updatedAt"
+        ]
+      },
+      "InventoryBalancePageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryBalanceItemDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages"
         ]
       },
       "InventoryMovementActorDto": {

@@ -808,6 +808,25 @@ describe("administrative product lifecycle", () => {
       page: 2,
     });
 
+    const filteredHistory = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory/${product.id}/movements?search=Damaged%20units&type=ADJUSTMENT&sortBy=balanceAfter&sortOrder=asc&page=1&pageSize=1`,
+      headers: authorization(tokens.admin),
+    });
+    expect(filteredHistory.statusCode).toBe(200);
+    expect(filteredHistory.json()).toMatchObject({
+      page: 1,
+      pageSize: 1,
+      totalItems: 1,
+      totalPages: 1,
+      items: [{ balanceAfter: 2, reason: "Damaged units", type: "ADJUSTMENT" }],
+    });
+    const invalidHistoryQueries = await Promise.all([
+      server.inject({ method: "GET", url: `/api/v1/inventory/${product.id}/movements?page=0`, headers: authorization(tokens.admin) }),
+      server.inject({ method: "GET", url: `/api/v1/inventory/${product.id}/movements?createdFrom=2026-09-29T12:00:00Z&createdTo=2026-09-28T12:00:00Z`, headers: authorization(tokens.admin) }),
+    ]);
+    expect(invalidHistoryQueries.map((response) => response.statusCode)).toEqual([400, 400]);
+
     const [balance] = await database
       .select({
         availableQuantity: inventoryBalances.availableQuantity,

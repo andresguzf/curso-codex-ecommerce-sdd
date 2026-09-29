@@ -34,12 +34,21 @@ import {
 } from "./inventory-movement.types";
 
 const uuidSchema = z.string().uuid();
-const paginationSchema = z
+const querySchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    search: z.string().trim().min(1).max(200).optional(),
+    type: z.enum(INVENTORY_MOVEMENT_TYPES).optional(),
+    createdFrom: z.iso.datetime({ offset: true }).optional(),
+    createdTo: z.iso.datetime({ offset: true }).optional(),
+    sortBy: z.enum(["createdAt", "type", "quantityDelta", "balanceAfter"]).default("createdAt"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
   })
-  .strict();
+  .strict()
+  .refine((query) => !query.createdFrom || !query.createdTo || Date.parse(query.createdFrom) <= Date.parse(query.createdTo), {
+    message: "createdFrom must not be after createdTo",
+  });
 
 class InventoryMovementActorDto {
   @ApiProperty({ format: "uuid" }) id!: string;
@@ -87,8 +96,14 @@ export class InventoryMovementController {
     summary: "List a product's auditable inventory movements",
   })
   @ApiParam({ format: "uuid", name: "productId" })
-  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "page", required: false, type: Number, minimum: 1, maximum: 1_000_000 })
   @ApiQuery({ name: "pageSize", required: false, type: Number })
+  @ApiQuery({ name: "search", required: false, type: String, description: "Literal match on movement reason, reference, or actor" })
+  @ApiQuery({ name: "type", required: false, enum: INVENTORY_MOVEMENT_TYPES })
+  @ApiQuery({ name: "createdFrom", required: false, type: String, format: "date-time" })
+  @ApiQuery({ name: "createdTo", required: false, type: String, format: "date-time" })
+  @ApiQuery({ name: "sortBy", required: false, enum: ["createdAt", "type", "quantityDelta", "balanceAfter"] })
+  @ApiQuery({ name: "sortOrder", required: false, enum: ["asc", "desc"] })
   @ApiOkResponse({ type: InventoryMovementPageDto })
   @ApiBadRequestResponse({ description: "Invalid product identifier or pagination" })
   @ApiNotFoundResponse({ description: "Product not found" })
@@ -97,7 +112,7 @@ export class InventoryMovementController {
     @Query() query: Record<string, unknown>,
   ): Promise<InventoryMovementPage> {
     const parsedId = uuidSchema.safeParse(productId);
-    const parsedQuery = paginationSchema.safeParse(query);
+    const parsedQuery = querySchema.safeParse(query);
     if (!parsedId.success || !parsedQuery.success) {
       throw new BadRequestException({
         code: "REQUEST_VALIDATION_FAILED",
@@ -106,8 +121,7 @@ export class InventoryMovementController {
     }
     return this.inventory.listByProduct(
       parsedId.data,
-      parsedQuery.data.page,
-      parsedQuery.data.pageSize,
+      parsedQuery.data,
     );
   }
 }

@@ -11,12 +11,16 @@ import { z } from "zod";
 
 import type { AuthenticatedUser } from "../identity-access/auth.types";
 import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { WishlistProductUnavailableError, WishlistRepository, type WishlistPage } from "./wishlist.repository";
+import { WishlistProductUnavailableError, WishlistRepository, type WishlistListQuery, type WishlistPage } from "./wishlist.repository";
 
 const identifierSchema = z.uuid();
 const listSchema = z.object({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().min(1).max(200).optional(),
+  availability: z.enum(["AVAILABLE", "UNAVAILABLE"]).optional(),
+  sortBy: z.enum(["createdAt", "name", "price"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 }).strict();
 const addSchema = z.object({ productId: identifierSchema }).strict();
 
@@ -83,12 +87,16 @@ export class WishlistController {
   @ApiOkResponse({ type: WishlistPageDto })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "pageSize", required: false, type: Number })
-  @ApiBadRequestResponse({ description: "Invalid pagination" })
+  @ApiQuery({ name: "search", required: false, type: String, description: "Literal match on saved product name or SKU" })
+  @ApiQuery({ name: "availability", required: false, enum: ["AVAILABLE", "UNAVAILABLE"] })
+  @ApiQuery({ name: "sortBy", required: false, enum: ["createdAt", "name", "price"] })
+  @ApiQuery({ name: "sortOrder", required: false, enum: ["asc", "desc"] })
+  @ApiBadRequestResponse({ description: "Invalid wishlist query" })
   @ApiUnauthorizedResponse({ description: "Authentication required" })
   @ApiForbiddenResponse({ description: "CUSTOMER role required" })
   list(@Query() query: Record<string, unknown>, @CurrentUser() customer: AuthenticatedUser): Promise<WishlistPage> {
-    const { page, pageSize } = parse(listSchema, query);
-    return this.wishlist.listForCustomer(customer.id, page, pageSize);
+    const parsed = parse(listSchema, query) as WishlistListQuery;
+    return this.wishlist.listForCustomer(customer.id, parsed);
   }
 
   @Post("items")

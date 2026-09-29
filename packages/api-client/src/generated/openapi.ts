@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/media/images/{storageKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an image from the configured catalog storage */
+        get: operations["readCatalogImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -264,23 +281,6 @@ export interface paths {
         patch: operations["updateStoreProfile"];
         trace?: never;
     };
-    "/api/v1/media/images/{storageKey}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read an image from the configured catalog storage */
-        get: operations["readCatalogImage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/inventory/{productId}/adjustments": {
         parameters: {
             query?: never;
@@ -292,6 +292,23 @@ export interface paths {
         put?: never;
         /** Adjust available product inventory */
         post: operations["adjustProductInventory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List paginated inventory balances */
+        get: operations["listInventoryBalances"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1081,6 +1098,25 @@ export interface components {
             updatedAt: string;
             movement: components["schemas"]["InventoryAdjustmentMovementDto"];
         };
+        InventoryBalanceItemDto: {
+            /** Format: uuid */
+            productId: string;
+            sku: string;
+            name: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            availableQuantity: number;
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        InventoryBalancePageDto: {
+            items: components["schemas"]["InventoryBalanceItemDto"][];
+            page: number;
+            pageSize: number;
+            totalItems: number;
+            totalPages: number;
+        };
         InventoryMovementActorDto: {
             /** Format: uuid */
             id: string;
@@ -1678,6 +1714,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    readCatalogImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storageKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stored image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     registerCustomer: {
         parameters: {
             query?: never;
@@ -2559,37 +2626,6 @@ export interface operations {
             };
         };
     };
-    readCatalogImage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                storageKey: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Stored image bytes */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "image/jpeg": string;
-                    "image/png": string;
-                    "image/webp": string;
-                };
-            };
-            /** @description Image not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     adjustProductInventory: {
         parameters: {
             query?: never;
@@ -2650,9 +2686,58 @@ export interface operations {
             };
         };
     };
+    listInventoryBalances: {
+        parameters: {
+            query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "name" | "sku" | "status" | "availableQuantity" | "updatedAt";
+                availability?: "IN_STOCK" | "OUT_OF_STOCK";
+                status?: "ACTIVE" | "INACTIVE";
+                /** @description Literal match on product name or SKU */
+                search?: string;
+                pageSize?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryBalancePageDto"];
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listProductInventoryMovements: {
         parameters: {
             query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "type" | "quantityDelta" | "balanceAfter";
+                createdTo?: string;
+                createdFrom?: string;
+                type?: "OPENING" | "ADJUSTMENT" | "SALE" | "CANCELLATION";
+                /** @description Literal match on movement reason, reference, or actor */
+                search?: string;
                 pageSize?: number;
                 page?: number;
             };
@@ -3440,6 +3525,11 @@ export interface operations {
     listWishlist: {
         parameters: {
             query?: {
+                sortOrder?: "asc" | "desc";
+                sortBy?: "createdAt" | "name" | "price";
+                availability?: "AVAILABLE" | "UNAVAILABLE";
+                /** @description Literal match on saved product name or SKU */
+                search?: string;
                 pageSize?: number;
                 page?: number;
             };
@@ -3457,7 +3547,7 @@ export interface operations {
                     "application/json": components["schemas"]["WishlistPageDto"];
                 };
             };
-            /** @description Invalid pagination */
+            /** @description Invalid wishlist query */
             400: {
                 headers: {
                     [name: string]: unknown;

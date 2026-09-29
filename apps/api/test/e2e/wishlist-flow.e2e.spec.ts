@@ -99,9 +99,14 @@ async function login(email: string, password: string): Promise<{ response: Injec
   return { response, session: response.json<SessionResponse>() };
 }
 
-async function wishlist(accessToken: string, page = 1, pageSize = 20): Promise<WishlistPageResponse> {
+async function wishlist(
+  accessToken: string,
+  page = 1,
+  pageSize = 20,
+  filters = "",
+): Promise<WishlistPageResponse> {
   const response = await server.inject({
-    method: "GET", url: `/api/v1/wishlist?page=${page}&pageSize=${pageSize}`,
+    method: "GET", url: `/api/v1/wishlist?page=${page}&pageSize=${pageSize}${filters}`,
     headers: authorization(accessToken),
   });
   expect(response.statusCode).toBe(200);
@@ -220,6 +225,14 @@ describe("wishlist across two customers and sessions over HTTP", () => {
     expect(await wishlist(firstA.session.accessToken, 1, 1)).toMatchObject({
       page: 1, pageSize: 1, totalItems: 1, totalPages: 1,
       items: [{ productId, product: { isAvailable: true, stockAvailable: 5 } }],
+    });
+    expect(await wishlist(firstA.session.accessToken, 1, 1,
+      "&search=Teclado&availability=AVAILABLE&sortBy=price&sortOrder=asc")).toMatchObject({
+      page: 1, pageSize: 1, totalItems: 1, totalPages: 1,
+      items: [{ productId, product: { isAvailable: true, stockAvailable: 5 } }],
+    });
+    expect(await wishlist(firstA.session.accessToken, 1, 1, "&search=missing-product")).toMatchObject({
+      page: 1, pageSize: 1, totalItems: 0, totalPages: 0, items: [],
     });
     expect(await wishlist(firstA.session.accessToken, 2, 1)).toMatchObject({
       page: 2, pageSize: 1, totalItems: 1, totalPages: 1, items: [],

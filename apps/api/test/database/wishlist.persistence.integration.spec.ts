@@ -16,7 +16,11 @@ import {
   wishlists,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
-import { WishlistProductUnavailableError, WishlistRepository } from "../../src/product-catalog/wishlist.repository";
+import {
+  WishlistProductUnavailableError,
+  WishlistRepository,
+  type WishlistListQuery,
+} from "../../src/product-catalog/wishlist.repository";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for wishlist persistence tests");
@@ -40,6 +44,16 @@ let customerA: string;
 let customerB: string;
 let activeProduct: string;
 let laterInactiveProduct: string;
+
+function listQuery(overrides: Partial<WishlistListQuery> = {}): WishlistListQuery {
+  return {
+    page: 1,
+    pageSize: 20,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    ...overrides,
+  };
+}
 
 describe("wishlist persistence and ownership", () => {
   beforeAll(async () => {
@@ -109,14 +123,14 @@ describe("wishlist persistence and ownership", () => {
   });
 
   it("scopes reads and removal to the supplied customer", async () => {
-    expect((await repository.listForCustomer(customerB, 1, 20)).items).toEqual([]);
+    expect((await repository.listForCustomer(customerB, listQuery())).items).toEqual([]);
     expect(await repository.removeItem(customerB, activeProduct)).toBe(false);
-    expect((await repository.listForCustomer(customerA, 1, 20)).items.map((item) => item.productId)).toEqual([activeProduct]);
+    expect((await repository.listForCustomer(customerA, listQuery())).items.map((item) => item.productId)).toEqual([activeProduct]);
 
     expect(await repository.addItem(customerB, activeProduct)).toBe(true);
     expect(await repository.removeItem(customerB, activeProduct)).toBe(true);
-    expect((await repository.listForCustomer(customerB, 1, 20)).totalItems).toBe(0);
-    expect((await repository.listForCustomer(customerA, 1, 20)).totalItems).toBe(1);
+    expect((await repository.listForCustomer(customerB, listQuery())).totalItems).toBe(0);
+    expect((await repository.listForCustomer(customerA, listQuery())).totalItems).toBe(1);
   });
 
   it("retains the product reference after deactivation and logical deletion", async () => {
@@ -124,14 +138,23 @@ describe("wishlist persistence and ownership", () => {
     await database.update(products).set({ status: "INACTIVE", deletedAt: new Date() })
       .where(eq(products.id, laterInactiveProduct));
 
-    const page = await repository.listForCustomer(customerA, 1, 1);
+    const page = await repository.listForCustomer(customerA, listQuery({ pageSize: 1 }));
     expect(page).toMatchObject({ page: 1, pageSize: 1, totalItems: 2, totalPages: 2 });
-    const allItems = await repository.listForCustomer(customerA, 1, 20);
+    const allItems = await repository.listForCustomer(customerA, listQuery());
     expect(allItems.items.find((item) => item.productId === laterInactiveProduct)).toMatchObject({
       productStatus: "INACTIVE",
       productDeletedAt: expect.any(Date),
       product: { isAvailable: false },
     });
+    const filteredPage = await repository.listForCustomer(customerA, listQuery({
+      search: "Monitor",
+      availability: "UNAVAILABLE",
+      page: 2,
+      pageSize: 1,
+      sortBy: "name",
+      sortOrder: "asc",
+    }));
+    expect(filteredPage).toMatchObject({ page: 2, pageSize: 1, totalItems: 1, totalPages: 1, items: [] });
     await expect(repository.addItem(customerB, laterInactiveProduct)).rejects.toBeInstanceOf(WishlistProductUnavailableError);
     await expect(repository.addItem(customerB, randomUUID())).rejects.toBeInstanceOf(WishlistProductUnavailableError);
     await expect(database.delete(products).where(eq(products.id, laterInactiveProduct))).rejects.toMatchObject({

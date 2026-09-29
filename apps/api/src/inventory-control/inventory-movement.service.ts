@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
 import { InventoryMovementRepository } from "./inventory-movement.repository";
-import type { InventoryMovementPage } from "./inventory-movement.types";
+import type { InventoryMovementPage, InventoryMovementQuery } from "./inventory-movement.types";
 
 @Injectable()
 export class InventoryMovementService {
@@ -12,10 +12,9 @@ export class InventoryMovementService {
 
   async listByProduct(
     productId: string,
-    page: number,
-    pageSize: number,
+    query: InventoryMovementQuery,
   ): Promise<InventoryMovementPage> {
-    const result = await this.repository.listByProduct(productId, page, pageSize);
+    const result = await this.repository.listByProduct(productId, query);
     if (!result) {
       throw new NotFoundException({
         code: "PRODUCT_NOT_FOUND",

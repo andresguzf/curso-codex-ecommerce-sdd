@@ -6,6 +6,17 @@ export const INVENTORY_MOVEMENT_TYPES = [
 ] as const;
 
 export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
+export type InventoryMovementSortField = "createdAt" | "type" | "quantityDelta" | "balanceAfter";
+export type InventoryMovementQuery = Readonly<{
+  page: number;
+  pageSize: number;
+  search?: string;
+  type?: InventoryMovementType;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy: InventoryMovementSortField;
+  sortOrder: "asc" | "desc";
+}>;
 
 export type InventoryMovementActor = Readonly<{
   id: string;

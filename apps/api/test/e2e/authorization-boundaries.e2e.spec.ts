@@ -84,6 +84,22 @@ type PageResponse<Item> = Readonly<{
   totalItems: number;
 }>;
 
+type InventoryBalanceResponse = Readonly<{
+  items: readonly Readonly<{
+    productId: string;
+    sku: string;
+    name: string;
+    status: "ACTIVE" | "INACTIVE";
+    availableQuantity: number;
+    version: number;
+    updatedAt: string;
+  }>[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}>;
+
 type AuthorizationError = Readonly<{
   code: string;
   correlationId: string;
@@ -590,6 +606,65 @@ describe("authorization boundaries over HTTP", () => {
     ).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: invoice.id })]),
     );
+  });
+
+  it("returns inventory balances with the normalized page contract for Admin", async () => {
+    const response = await server.inject({
+      method: "GET",
+      url: "/api/v1/inventory?page=1&pageSize=10",
+      headers: authorization(adminSession.accessToken),
+    });
+    expect(response.statusCode).toBe(200);
+    const page = response.json<InventoryBalanceResponse>();
+    expect(page).toMatchObject({
+      page: 1,
+      pageSize: 10,
+      totalItems: expect.any(Number),
+      totalPages: expect.any(Number),
+    });
+    expect(page.items).toContainEqual(expect.objectContaining({
+      productId: product.id,
+      sku: product.sku,
+      name: product.name,
+      status: "ACTIVE",
+      availableQuantity: 4,
+      version: 2,
+    }));
+
+    const filtered = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory?search=${encodeURIComponent(product.sku)}&status=ACTIVE&availability=IN_STOCK&sortBy=availableQuantity&sortOrder=asc&page=1&pageSize=1`,
+      headers: authorization(adminSession.accessToken),
+    });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json<InventoryBalanceResponse>()).toMatchObject({
+      page: 1,
+      pageSize: 1,
+      totalItems: 1,
+      totalPages: 1,
+      items: [expect.objectContaining({ productId: product.id, availableQuantity: 4 })],
+    });
+
+    const noMatches = await server.inject({
+      method: "GET",
+      url: `/api/v1/inventory?search=${encodeURIComponent(product.sku)}&availability=OUT_OF_STOCK`,
+      headers: authorization(adminSession.accessToken),
+    });
+    expect(noMatches.statusCode).toBe(200);
+    expect(noMatches.json<InventoryBalanceResponse>()).toMatchObject({
+      totalItems: 0,
+      totalPages: 0,
+      items: [],
+    });
+
+    for (const token of [billingSession.accessToken, ownerSession.accessToken]) {
+      const forbidden = await server.inject({
+        method: "GET",
+        url: "/api/v1/inventory?page=1&pageSize=10",
+        headers: authorization(token),
+      });
+      expect(forbidden.statusCode).toBe(403);
+    }
   });
 
   it("scopes wishlist REST operations to the customer and paginates without duplicates", async () => {

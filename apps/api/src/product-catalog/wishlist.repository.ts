@@ -1,10 +1,30 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, isNull, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 
 import { DatabaseService } from "../database/database.service";
 import { inventoryBalances, productImages, products, wishlistItems, wishlists } from "../database/schema";
 
 export class WishlistProductUnavailableError extends Error {}
+
+export type WishlistListQuery = Readonly<{
+  page: number;
+  pageSize: number;
+  search?: string;
+  availability?: "AVAILABLE" | "UNAVAILABLE";
+  sortBy: "createdAt" | "name" | "price";
+  sortOrder: "asc" | "desc";
+}>;
+
+const stockAvailable = sql<number>`coalesce(${inventoryBalances.availableQuantity}, 0)`.mapWith(Number);
+const availableProduct = and(
+  eq(products.status, "ACTIVE"),
+  isNull(products.deletedAt),
+  gt(stockAvailable, 0),
+);
+
+function escapeLikePattern(value: string): string {
+  return `%${value.replace(/[\\%_]/g, "\\$&")}%`;
+}
 
 export type WishlistItemRecord = Readonly<{
   id: string;
@@ -39,14 +59,31 @@ export class WishlistRepository {
     private readonly database: Pick<DatabaseService, "client">,
   ) {}
 
-  async listForCustomer(customerId: string, page: number, pageSize: number): Promise<WishlistPage> {
+  async listForCustomer(customerId: string, query: WishlistListQuery): Promise<WishlistPage> {
     return this.database.client.transaction(async (transaction) => {
-      const owner = eq(wishlists.customerId, customerId);
+      const conditions = [eq(wishlists.customerId, customerId)];
+      if (query.search) {
+        const pattern = escapeLikePattern(query.search);
+        conditions.push(or(ilike(products.name, pattern), ilike(products.sku, pattern))!);
+      }
+      if (query.availability === "AVAILABLE") conditions.push(availableProduct!);
+      if (query.availability === "UNAVAILABLE") {
+        conditions.push(or(ne(products.status, "ACTIVE"), isNotNull(products.deletedAt), lte(stockAvailable, 0))!);
+      }
+      const where = and(...conditions);
+      const sortColumn = {
+        createdAt: wishlistItems.createdAt,
+        name: products.name,
+        price: products.price,
+      }[query.sortBy];
+      const direction = query.sortOrder === "asc" ? asc : desc;
       const [{ totalItems = 0 } = {}] = await transaction
         .select({ totalItems: count() })
         .from(wishlistItems)
         .innerJoin(wishlists, eq(wishlistItems.wishlistId, wishlists.id))
-        .where(owner);
+        .innerJoin(products, eq(wishlistItems.productId, products.id))
+        .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
+        .where(where);
       const rows = await transaction
         .select({
           id: wishlistItems.id,
@@ -67,10 +104,10 @@ export class WishlistRepository {
         .innerJoin(products, eq(wishlistItems.productId, products.id))
         .leftJoin(productImages, eq(productImages.productId, products.id))
         .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
-        .where(owner)
-        .orderBy(desc(wishlistItems.createdAt), desc(wishlistItems.id))
-        .limit(pageSize)
-        .offset((page - 1) * pageSize);
+        .where(where)
+        .orderBy(direction(sortColumn), direction(wishlistItems.id))
+        .limit(query.pageSize)
+        .offset((query.page - 1) * query.pageSize);
 
       const items = rows.map((row) => ({
         id: row.id,
@@ -92,7 +129,13 @@ export class WishlistRepository {
         },
       }));
 
-      return { items, page, pageSize, totalItems, totalPages: Math.ceil(totalItems / pageSize) };
+      return {
+        items,
+        page: query.page,
+        pageSize: query.pageSize,
+        totalItems,
+        totalPages: Math.ceil(totalItems / query.pageSize),
+      };
     }, { isolationLevel: "repeatable read" });
   }
 

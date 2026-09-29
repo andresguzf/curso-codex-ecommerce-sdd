@@ -26,20 +26,45 @@ type OpenApiOperation = Readonly<{
     Record<
       string,
       Readonly<{
-        content?: Readonly<
-          Record<string, Readonly<{ schema?: Readonly<Record<string, unknown>> }>>
-        >;
+        content?: Readonly<Record<string, Readonly<{ schema?: OpenApiSchema }>>>;
       }>
     >
   >;
 }>;
 
+type OpenApiSchema = Readonly<{
+  $ref?: string;
+  type?: string;
+  minimum?: number;
+  maximum?: number;
+  required?: readonly string[];
+  properties?: Readonly<Record<string, OpenApiSchema>>;
+  items?: OpenApiSchema;
+}>;
+
+type OpenApiComponents = Readonly<{
+  schemas?: Readonly<Record<string, OpenApiSchema>>;
+}>;
+
 type ContractDocument = Readonly<{
-  components?: Readonly<Record<string, unknown>>;
+  components?: OpenApiComponents;
   paths: Readonly<
     Record<string, Partial<Record<HttpMethod, OpenApiOperation>>>
   >;
 }>;
+
+const PAGINATED_COLLECTIONS = [
+  { path: "/api/v1/users", label: "users" },
+  { path: "/api/v1/products", label: "products" },
+  { path: "/api/v1/categories", label: "categories" },
+  { path: "/api/v1/tags", label: "tags" },
+  { path: "/api/v1/wishlist", label: "wishlist" },
+  { path: "/api/v1/inventory", label: "inventory balances" },
+  { path: "/api/v1/inventory/{productId}/movements", label: "inventory movements" },
+  { path: "/api/v1/orders", label: "administrative orders" },
+  { path: "/api/v1/orders/mine", label: "customer orders" },
+  { path: "/api/v1/invoices", label: "invoices" },
+] as const;
 
 type JsonResponseCase = Readonly<{
   method: Extract<HttpMethod, "get">;
@@ -110,6 +135,33 @@ function createResponseValidator(
   return ajv.compile(qualifyLocalReferences(schema) as AnySchema);
 }
 
+function resolveSchema(
+  document: ContractDocument,
+  schema: OpenApiSchema,
+): OpenApiSchema {
+  if (!schema.$ref) return schema;
+  const match = /^#\/components\/schemas\/([^/]+)$/.exec(schema.$ref);
+  if (!match?.[1]) throw new Error(`Unsupported OpenAPI schema reference: ${schema.$ref}`);
+  const resolved = document.components?.schemas?.[match[1]];
+  if (!resolved) throw new Error(`OpenAPI schema not found: ${match[1]}`);
+  return resolveSchema(document, resolved);
+}
+
+function paginatedResponseSchema(
+  document: ContractDocument,
+  path: string,
+): OpenApiSchema {
+  const responseSchema =
+    document.paths[path]?.get?.responses?.["200"]?.content?.["application/json"]
+      ?.schema;
+  if (!responseSchema) {
+    throw new Error(
+      `OpenAPI does not declare a JSON 200 response for GET ${path}`,
+    );
+  }
+  return resolveSchema(document, responseSchema);
+}
+
 function collectOperations(document: ContractDocument) {
   return Object.entries(document.paths).flatMap(([path, pathItem]) =>
     HTTP_METHODS.flatMap((method) => {
@@ -164,6 +216,41 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
       expect(generatedClientSource).toContain(`    ${operationId}: {`);
     }
   });
+
+  it.each(PAGINATED_COLLECTIONS)(
+    "exposes the normalized pagination shape for $label",
+    ({ path }) => {
+      const schema = paginatedResponseSchema(document, path);
+      const required = schema.required ?? [];
+      const properties = schema.properties ?? {};
+
+      expect(required).toEqual(
+        expect.arrayContaining([
+          "items",
+          "page",
+          "pageSize",
+          "totalItems",
+          "totalPages",
+        ]),
+      );
+      expect(properties.items).toMatchObject({ type: "array" });
+      expect(properties.items?.items).toBeDefined();
+      expect(properties.page).toMatchObject({ type: "number", minimum: 1 });
+      expect(properties.pageSize).toMatchObject({
+        type: "number",
+        minimum: 1,
+        maximum: 100,
+      });
+      expect(properties.totalItems).toMatchObject({
+        type: "number",
+        minimum: 0,
+      });
+      expect(properties.totalPages).toMatchObject({
+        type: "number",
+        minimum: 0,
+      });
+    },
+  );
 
   it.each<JsonResponseCase>([
     {

@@ -63,6 +63,20 @@ export const inventoryMovementPageSchema = paginationMetadataSchema.extend({
   items: z.array(inventoryMovementSchema),
 });
 
+export const inventoryBalanceSchema = z.object({
+  productId: z.uuid(),
+  sku: z.string().trim().min(1).max(64),
+  name: z.string().trim().min(1).max(200),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
+  availableQuantity: z.number().int().nonnegative(),
+  version: z.number().int().nonnegative(),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+
+export const inventoryBalancePageSchema = paginationMetadataSchema.extend({
+  items: z.array(inventoryBalanceSchema),
+});
+
 export type InventoryAdjustmentRequest = z.infer<
   typeof inventoryAdjustmentRequestSchema
 >;
@@ -76,3 +90,5 @@ export type InventoryMovementType = z.infer<typeof inventoryMovementTypeSchema>;
 export type InventoryMovementActor = z.infer<typeof inventoryMovementActorSchema>;
 export type InventoryMovement = z.infer<typeof inventoryMovementSchema>;
 export type InventoryMovementPage = z.infer<typeof inventoryMovementPageSchema>;
+export type InventoryBalance = z.infer<typeof inventoryBalanceSchema>;
+export type InventoryBalancePage = z.infer<typeof inventoryBalancePageSchema>;

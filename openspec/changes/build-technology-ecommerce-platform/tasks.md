@@ -145,8 +145,8 @@
 
 ## 16. Listas, sidebars y paginación uniforme
 
-- [ ] 16.1 Normalizar en OpenAPI la respuesta `items`, `page`, `pageSize`, `totalItems` y `totalPages` para usuarios, productos, categorías, etiquetas, wishlist, inventario, órdenes y facturas; verificar pruebas de contrato para cada colección.
-- [ ] 16.2 Completar consultas backend de búsqueda, filtros permitidos, orden y conteo previo a paginación para todas las colecciones; verificar que ningún endpoint descarga el conjunto completo ni pagina en memoria.
+- [x] 16.1 Normalizar en OpenAPI la respuesta `items`, `page`, `pageSize`, `totalItems` y `totalPages` para usuarios, productos, categorías, etiquetas, wishlist, inventario, órdenes y facturas; verificar pruebas de contrato para cada colección.
+- [x] 16.2 Completar consultas backend de búsqueda, filtros permitidos, orden y conteo previo a paginación para todas las colecciones; verificar que ningún endpoint descarga el conjunto completo ni pagina en memoria.
 - [ ] 16.3 Implementar el sidebar izquierdo colapsable de filtros del catálogo y su drawer responsive; verificar conservación de criterios, accesibilidad, URL y reinicio de página.
 - [ ] 16.4 Implementar slots compartidos de búsqueda superior y sidebar derecho colapsable para listas del backoffice; verificar productos, usuarios, clientes, categorías, etiquetas, inventario, órdenes y facturas en escritorio y pantalla pequeña.
 - [ ] 16.5 Reutilizar el control numerado con primera, anterior, hasta cuatro páginas a cada lado, siguiente, última y elipsis en todas las listas; verificar extremos, página intermedia, una sola página y ausencia de duplicados.

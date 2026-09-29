@@ -90,6 +90,8 @@ export {
   type UpdateTagRequest,
 } from "./classifications";
 export {
+  inventoryBalancePageSchema,
+  inventoryBalanceSchema,
   inventoryAdjustmentMovementSchema,
   inventoryAdjustmentRequestSchema,
   inventoryAdjustmentResponseSchema,
@@ -100,6 +102,8 @@ export {
   type InventoryAdjustmentMovement,
   type InventoryAdjustmentRequest,
   type InventoryAdjustmentResponse,
+  type InventoryBalance,
+  type InventoryBalancePage,
   type InventoryMovement,
   type InventoryMovementActor,
   type InventoryMovementPage,
