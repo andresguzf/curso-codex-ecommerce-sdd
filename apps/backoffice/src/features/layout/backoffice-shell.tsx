@@ -145,11 +145,11 @@ export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>)
             hidden={!isMobileMenuOpen}
             id="backoffice-mobile-navigation"
           >
-            <NavigationLinks items={navigation} onNavigate={closeMobileNavigation} />
+            <NavigationLinks items={navigation} onNavigate={closeMobileNavigation} surface="mobile" />
           </nav>
         </header>
 
-        <div className="min-w-0 flex-1" id="backoffice-main-content" tabIndex={-1}>
+        <div className="min-w-0 flex-1 scroll-mt-24" id="backoffice-main-content" tabIndex={-1}>
           {children}
         </div>
       </div>
@@ -161,10 +161,12 @@ function NavigationLinks({
   collapsed = false,
   items,
   onNavigate,
+  surface = "sidebar",
 }: Readonly<{
   collapsed?: boolean;
   items: readonly NavigationItem[];
   onNavigate?: () => void;
+  surface?: "sidebar" | "mobile";
 }>) {
   return (
     <ul className="m-0 grid list-none gap-1 p-0">
@@ -172,7 +174,7 @@ function NavigationLinks({
         <li key={item.href}>
           <Link
             aria-label={collapsed ? item.label : undefined}
-            className={`group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${collapsed ? "justify-center" : ""}`}
+            className={`group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 ${surface === "mobile" ? "text-slate-700 hover:bg-slate-100 focus-visible:ring-blue-600" : "text-slate-200 hover:bg-white/10 hover:text-white focus-visible:ring-cyan-300"} ${collapsed ? "justify-center" : ""}`}
             href={item.href}
             onClick={onNavigate}
             title={collapsed ? item.label : undefined}

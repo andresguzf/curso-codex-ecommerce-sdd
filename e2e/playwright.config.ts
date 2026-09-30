@@ -15,12 +15,12 @@ export default defineConfig({
   projects: [
     {
       name: "storefront",
-      testMatch: /storefront-catalog\.spec\.ts/,
+      testMatch: /storefront-(catalog|accessibility)\.spec\.ts/,
       use: { baseURL: "http://localhost:3000" },
     },
     {
       name: "backoffice",
-      testMatch: /backoffice-catalog\.spec\.ts/,
+      testMatch: /backoffice-(catalog|accessibility)\.spec\.ts/,
       use: { baseURL: "http://localhost:3002" },
     },
   ],

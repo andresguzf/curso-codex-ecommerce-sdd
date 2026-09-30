@@ -18,7 +18,7 @@ body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-slot="filter-drawer"] > aside {
+  [data-slot="filter-drawer"] > [role="dialog"] {
     animation: filter-drawer-in 180ms ease-out;
   }
 }

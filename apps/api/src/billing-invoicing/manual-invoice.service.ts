@@ -31,7 +31,7 @@ const moneySchema = z.string().regex(/^\d{1,12}\.\d{2}$/);
 const taxRateSchema = z
   .string()
   .regex(/^\d{1,3}\.\d{4}$/)
-  .refine((value) => BigInt(value.replace(".", "")) <= 1_000_000n);
+  .pipe(z.string().refine((value) => BigInt(value.replace(".", "")) <= 1_000_000n));
 
 const manualInvoiceLineSchema = z
   .object({

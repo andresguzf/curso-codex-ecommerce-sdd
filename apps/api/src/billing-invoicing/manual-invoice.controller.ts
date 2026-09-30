@@ -37,13 +37,13 @@ class ManualInvoiceLineRequestDto {
   @ApiProperty({ required: false, maxLength: 5_000 })
   description?: string;
 
-  @ApiProperty({ minimum: 1, maximum: 1_000_000 })
+  @ApiProperty({ type: "integer", minimum: 1, maximum: 1_000_000 })
   quantity!: number;
 
   @ApiProperty({ pattern: "^\\d{1,12}\\.\\d{2}$", example: "100.00" })
   unitPrice!: string;
 
-  @ApiProperty({ pattern: "^\\d{1,3}\\.\\d{4}$", example: "19.0000" })
+  @ApiProperty({ pattern: "^(?:(?:[0-9]{1,2}|0[0-9]{2})\\.[0-9]{4}|100\\.0000)$", example: "19.0000", description: "Percentage from 0 to 100 inclusive, with four decimal places" })
   taxRate!: string;
 }
 

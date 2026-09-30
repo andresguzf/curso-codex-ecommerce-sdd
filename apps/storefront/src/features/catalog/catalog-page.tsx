@@ -75,7 +75,7 @@ export function CatalogPage() {
     <main className="min-h-screen bg-[#f8fafc]">
       <section className="mx-auto max-w-7xl px-6 py-9 lg:px-10 lg:py-14">
         <nav aria-label="Migas de pan" className="mb-6 text-sm font-semibold text-slate-500">
-          <Link className="rounded-sm text-blue-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href="/">
+          <Link className="rounded-sm text-blue-800 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href="/">
             Inicio
           </Link>
           <span aria-hidden="true" className="px-2 text-slate-400">/</span>

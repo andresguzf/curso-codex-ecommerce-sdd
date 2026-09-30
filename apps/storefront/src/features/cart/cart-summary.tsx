@@ -45,7 +45,7 @@ export function CartSummary({ cart }: Readonly<{ cart: ActiveCart }>) {
           Envío y forma de pago se seleccionan al confirmar la compra.
         </p>
         <Link
-          className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081426]"
+          className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081426]"
           href="/checkout"
         >
           Continuar al checkout

@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, Ref } from "react";
 
 import { classNames } from "./class-names";
 
@@ -46,6 +46,7 @@ export function Icon({ name }: Readonly<{ name: IconName }>) {
 
 /** Icon-only action button with an accessible name and native tooltip. */
 export function IconButton({
+  ariaControls,
   ariaExpanded,
   busy,
   className,
@@ -53,8 +54,10 @@ export function IconButton({
   icon,
   label,
   onClick,
+  ref,
   type = "button",
 }: Readonly<{
+  ariaControls?: string;
   ariaExpanded?: boolean;
   busy?: boolean;
   className?: string;
@@ -62,10 +65,12 @@ export function IconButton({
   icon: IconName;
   label: string;
   onClick?: () => void;
+  ref?: Ref<HTMLButtonElement>;
   type?: "button" | "submit";
 }>) {
   return (
     <button
+      aria-controls={ariaControls}
       aria-label={label}
       aria-busy={busy}
       aria-expanded={ariaExpanded}
@@ -75,6 +80,7 @@ export function IconButton({
       )}
       disabled={disabled}
       onClick={onClick}
+      ref={ref}
       title={label}
       type={type}
     >

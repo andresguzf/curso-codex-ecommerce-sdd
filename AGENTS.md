@@ -1,13 +1,15 @@
 # Project context
 
-Este repositorio contiene la planificación y futura implementación de una plataforma e-commerce para productos tecnológicos.
+Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado actual al redactar estas instrucciones:
+Estado revisado en la tarea 18.4, el 30 de septiembre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 135 tareas verificables.
-- Todavía no existe una implementación funcional de las aplicaciones.
+- Existen propuesta, diseño, siete especificaciones y 145 tareas verificables.
+- Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
+- La revisión 18.5 está registrada en `e2e/VALIDATION-18.5.md`, con escenarios futuros y diferencias explícitamente pendientes; siguen abiertas las fases 19–21 salvo 20.8 (catálogo completo separado). No confundas planificación o validación estructural completa con implementación completa.
+- Los informes `e2e/ACCESSIBILITY.md` y `e2e/VALIDATION-18.3.md` documentan la verificación del alcance completado; no acreditan los temas, dashboard, galería o landing editorial pendientes.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
 ## Sources of truth
@@ -25,7 +27,7 @@ Cuando una solicitud cambie requisitos, arquitectura o alcance, no modifiques si
 
 # Product summary
 
-La solución ofrecerá:
+Alcance total aprobado (incluye capacidades futuras, no es un checklist de implementación):
 
 - Storefront público con landing page, hero y catálogo tecnológico.
 - Identidad visual comercial propia de un e-commerce tecnológico.
@@ -48,7 +50,7 @@ La solución ofrecerá:
 
 # Architecture
 
-La arquitectura planificada es un monorepo con aplicaciones desplegables de forma independiente:
+La arquitectura implementada es un monorepo con aplicaciones desplegables de forma independiente:
 
 ```text
 +---------------------+       +---------------------+
@@ -70,7 +72,7 @@ La arquitectura planificada es un monorepo con aplicaciones desplegables de form
 
 Frontend y backend comparten repositorio, pero no ejecución ni acceso a datos.
 
-## Planned repository structure
+## Repository structure
 
 ```text
 apps/
@@ -85,12 +87,18 @@ packages/
   config-*/         TypeScript, ESLint y Tailwind compartidos
 
 infra/
-  database/         PostgreSQL, migraciones y entorno local
+  database/         Guía de infraestructura de PostgreSQL
   docker/           Imágenes y composición de servicios
   deployment/       Configuración de despliegue
 ```
 
-No fuerces esta estructura si ya existe una implementación equivalente. Conserva las convenciones reales del repositorio y mantén los límites arquitectónicos.
+El esquema Drizzle, las migraciones y el seed ejecutable están en `apps/api/src/database/`, no en `infra/database/`. Conserva las convenciones reales del repositorio y mantén los límites arquitectónicos.
+
+## Implemented application routes
+
+- Storefront: `/`, `/products`, `/products/[productId]`, `/login`, `/register`, `/cart`, `/checkout`, `/checkout/orders/[orderId]`, `/account`, `/account/wishlist`, `/account/orders`, `/account/orders/[orderId]`, `/account/invoices` y `/account/invoices/[invoiceId]`.
+- Backoffice: `/`, `/login`, `/users`, `/products`, `/products/[productId]/inventory`, `/inventory`, `/categories`, `/tags`, `/orders`, `/orders/[orderId]`, `/invoices`, `/invoices/[invoiceId]` y `/store-profile`. Crear/editar productos usa formularios dentro de `/products`.
+- `BILLING` tiene navegación hacia órdenes, facturas y consulta del perfil empresarial; el CRUD del perfil y logo sigue siendo exclusivo de `ADMIN`. La portada del backoffice todavía no implementa las métricas previstas en 19.5–19.6.
 
 ## Dependency boundaries
 
@@ -110,7 +118,9 @@ frontend    -x-> entidades internas del backend
 - Checkout coordina catálogo, carrito, pago simulado, órdenes e inventario mediante operaciones de módulo.
 - Mantén el backend como monolito modular; no introduzcas microservicios sin un cambio OpenSpec explícito.
 
-## Planned UI shells
+## UI shells and pending visual requirements
+
+Los shells separados ya existen. El storefront usa actualmente un tema claro con navbar azul oscuro fijo y translúcido al desplazar. El backoffice usa oscuro para `ADMIN` y claro para `BILLING`; switch, persistencia y preferencia inicial del sistema pertenecen a la fase 19 pendiente. Las reglas de cuatro temas que siguen describen el objetivo aprobado.
 
 ```text
 StorefrontShell
@@ -127,7 +137,7 @@ BackofficeShell
 ```
 
 - Comparte primitivas visuales mediante `packages/ui`, pero conserva shells independientes por aplicación.
-- En pantallas pequeñas, transforma los sidebars en drawers accesibles.
+- Los filtros usan drawers accesibles en pantallas pequeñas, bloqueo del fondo y restauración de foco. La navegación móvil actual del backoffice se despliega en el header; no la describas como un drawer ya implementado.
 - Mantén búsqueda, filtros, orden y página en la URL; cambiar criterios reinicia `page=1`.
 - Usa estado local o Zustand únicamente para apertura visual compartida de paneles, nunca para duplicar resultados del API.
 - Los mensajes flash usan una región `aria-live` y se disparan desde handlers o callbacks de mutación.
@@ -141,6 +151,8 @@ BackofficeShell
 - Exige contraste WCAG AA, foco visible y significado no dependiente solo del color en todos los componentes y estados.
 
 # Technology conventions
+
+Las convenciones de temas, dashboard, múltiples imágenes y composición editorial son requisitos normativos de fases pendientes, no evidencia de que ya existan.
 
 ## Monorepo
 
@@ -279,7 +291,7 @@ Invoice: DRAFT --> PENDING_PAYMENT --> PAID
 
 # REST API and OpenAPI status
 
-El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, se sirve en `/api/v1/openapi.json` y expone Swagger UI en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Health, autenticación, carrito, checkout, órdenes e invoice flows de las tareas completadas ya tienen rutas implementadas; el resto de este mapa continúa planificado. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
+El contrato implementado en `apps/api/openapi/openapi.json` contiene 44 paths; se sirve en `/api/v1/openapi.json` y expone Swagger UI interactivo en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Están implementadas las rutas de salud, autenticación, usuarios, productos, categorías, etiquetas, wishlist, inventario, carrito, checkout, órdenes, facturas, PDF, perfil empresarial y medios que siguen. `/catalog/landing`, `/dashboard/summary` y el CRUD de imágenes de producto son planificación pendiente y aún no están en OpenAPI. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
 
 ## Health
 
@@ -289,9 +301,12 @@ El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, 
 
 - `POST /api/v1/auth/register`: registro público como `CUSTOMER`.
 - `POST /api/v1/auth/login`: autenticación.
+- `GET /api/v1/auth/csrf`: obtiene la protección para refresh/logout.
 - `POST /api/v1/auth/refresh`: renovación protegida de sesión.
 - `POST /api/v1/auth/logout`: revocación de sesión.
 - `GET /api/v1/auth/me`: identidad y rol actuales.
+
+Los access tokens viajan como Bearer y se conservan solo en memoria. La cookie de refresh es `HttpOnly`; la sesión se recupera mediante refresh y no persistiendo tokens en localStorage. Las contraseñas nuevas usan Argon2id; se verifican hashes scrypt anteriores y se actualizan al autenticar cuando corresponde.
 
 ## User administration
 
@@ -303,20 +318,21 @@ El contrato OpenAPI base está implementado en `apps/api/openapi/openapi.json`, 
 
 ## Products and catalog
 
-- `GET /api/v1/catalog/landing`: composición pública agregada de destacados, recientes y categorías importantes.
+- `GET /api/v1/catalog/landing` (pendiente 21.3): composición pública agregada de destacados, recientes y categorías importantes.
 - `GET /api/v1/products`: catálogo, listado administrativo o autocomplete autorizado con `page`, `pageSize`, `search`, categoría, etiquetas, disponibilidad, precio, filtros y orden.
 - `POST /api/v1/products`: creación por `ADMIN`.
 - `GET /api/v1/products/:productId`: detalle autorizado.
+- `GET /api/v1/products/slug/:slug`: detalle público por slug único.
 - `PATCH /api/v1/products/:productId`: edición por `ADMIN`.
 - `DELETE /api/v1/products/:productId`: eliminación lógica por `ADMIN`.
 - `PATCH /api/v1/products/:productId/status`: activar o desactivar.
-- `POST /api/v1/products/:productId/images`: agregar una imagen mediante el adaptador de almacenamiento.
-- `PATCH /api/v1/products/:productId/images/:imageId`: editar texto alternativo, orden o portada.
-- `DELETE /api/v1/products/:productId/images/:imageId`: eliminar una imagen sin dejar un producto activo sin portada.
+- `POST /api/v1/products/:productId/images` (pendiente 20.2): agregar una imagen mediante el adaptador de almacenamiento.
+- `PATCH /api/v1/products/:productId/images/:imageId` (pendiente 20.2): editar texto alternativo, orden o portada.
+- `DELETE /api/v1/products/:productId/images/:imageId` (pendiente 20.2): eliminar una imagen sin dejar un producto activo sin portada.
 
-Los listados devuelven `coverImage`; el detalle devuelve `images` ordenadas. El detalle público deberá resolverse también mediante slug conforme al contrato OpenAPI definitivo; no inventes una ruta paralela antes de definirla en OpenAPI y specs.
+El contrato actual devuelve `image`; `coverImage` e `images` ordenadas pertenecen a 20.6 pendiente. No inventes rutas paralelas a `/products/slug/:slug`. Los filtros administrativos incluyen precio, categoría, etiquetas y `createdFrom`/`createdTo` como fechas ISO `YYYY-MM-DD`; los rangos de órdenes/facturas usan fecha-hora ISO. El formulario permite crear/asignar etiquetas por nombre y slug opcional; las categorías se administran aparte y se seleccionan.
 
-`PATCH /products/:productId` administra `isFeatured` y actualiza `featuredAt` únicamente al destacar. `PATCH /categories/:categoryId` administra `showOnLanding` y `landingOrder`; rechaza una cuarta categoría importante. Ambos requieren `ADMIN` y auditoría.
+Objetivo pendiente 21.1–21.2: ampliar `PATCH /products/:productId` con `isFeatured` y `featuredAt`, y `PATCH /categories/:categoryId` con `showOnLanding` y `landingOrder`, rechazando una cuarta categoría importante. Estos campos aún no están implementados. Ambos requerirán `ADMIN` y auditoría.
 
 ## Categories and tags
 
@@ -349,10 +365,11 @@ No expongas una actualización genérica de `stock` dentro del `PATCH` de produc
 
 ## Cart and checkout
 
-- `GET /api/v1/cart`: carrito activo del cliente.
+- `GET /api/v1/cart`: carrito activo del visitante o cliente; no exige login al visitante.
 - `POST /api/v1/cart/items`: agregar producto.
 - `PATCH /api/v1/cart/items/:itemId`: cambiar cantidad.
 - `DELETE /api/v1/cart/items/:itemId`: eliminar línea.
+- `POST /api/v1/cart/claim`: reclama el carrito del visitante para el cliente autenticado. La cookie anónima opaca es `HttpOnly`; el carrito no reserva stock y el checkout exige `CUSTOMER`.
 - `POST /api/v1/checkout`: validar, simular pago/envío y confirmar compra; requiere `Idempotency-Key`.
 - `GET /api/v1/checkout/shipping-methods`: costos configurados del envío simulado en USD; requiere `CUSTOMER`.
 - `GET /api/v1/checkout/orders/:orderId`: confirmación histórica del checkout propio desde su resultado idempotente; requiere `CUSTOMER` y comprueba propiedad. No representa el estado operativo vigente de la orden.
@@ -376,26 +393,26 @@ Implementado en 7.7: `ADMIN` y `BILLING` pueden completar una orden `INVOICED` m
 - `GET /api/v1/orders/:orderId`: detalle con comprobación de propiedad o rol.
 - `PATCH /api/v1/orders/:orderId/status`: transición administrativa permitida.
 - `POST /api/v1/orders/:orderId/cancel`: implementado en 7.4 y extendido a `BILLING` en 7.7, recibe `reason` obligatorio de 1–500 caracteres tras trim. Cancela `PROCESSING` o `INVOICED` únicamente sin facturas distintas de `VOID`; responde `409 ORDER_ACTIVE_INVOICE` si debe anularse primero una factura. Bloquea la orden antes de los balances y restituye las cantidades de sus movimientos `SALE`, con movimientos `CANCELLATION` y auditoría atómicos. Reintentos sobre `CANCELLED` devuelven el resultado existente, sin duplicar movimientos ni sobrescribir el primer motivo y actor. No modifica pagos ni facturas. El futuro flujo de emisión debe bloquear la misma orden y revalidar su estado para coordinarse con la cancelación.
-- `POST /api/v1/orders/:orderId/invoice`: implementado en 8.2 para `ADMIN` y `BILLING`; bloquea una orden `PROCESSING`, comprueba que tenga pago y no exista otra factura activa, crea y emite la factura desde los snapshots históricos y cambia la orden a `INVOICED` en una sola transacción. Un pago `APPROVED` deja la factura `PAID`; otro pago registrado la deja `PENDING_PAYMENT`. La operación audita ambos agregados y no modifica inventario. El snapshot empresarial real se añadirá a la orden en 15.4.
+- `POST /api/v1/orders/:orderId/invoice`: implementado en 8.2 para `ADMIN` y `BILLING`; bloquea una orden `PROCESSING`, comprueba que tenga pago y no exista otra factura activa, crea y emite la factura desde los snapshots históricos y cambia la orden a `INVOICED` en una sola transacción. Un pago `APPROVED` deja la factura `PAID`; otro pago registrado la deja `PENDING_PAYMENT`. La operación audita ambos agregados y no modifica inventario. Desde 15.4 conserva el snapshot empresarial histórico capturado en la orden.
 - `GET /api/v1/orders/:orderId/pdf`: descargar PDF autorizado.
 
 ## Invoices
 
 Implementado en 8.1: `InvoiceAggregate` crea borradores `DRAFT` sin número, valida origen, referencias, líneas, importes de precisión fija, impuestos, moneda `USD`, snapshots y fechas, y copia los datos en sus fronteras para mantenerlos inmutables. Al emitir a `PENDING_PAYMENT` asigna el número determinista y único `INV-<UUID>`; después admite `PAID` y permite anular desde `DRAFT`, `PENDING_PAYMENT` o `PAID`. `InvoiceLifecycleService` bloquea la factura, persiste exclusivamente los campos de ciclo de vida y registra `INVOICE_STATUS_CHANGED` en la misma transacción para `ADMIN` o `BILLING`. Un fallo de auditoría revierte la transición.
 
-Implementado en 8.2: `InvoiceFromOrderService` coordina orden y factura dentro de una transacción PostgreSQL. Bloquea primero la orden igual que el flujo de cancelación, rechaza estados no elegibles, pagos ausentes y facturas activas, y conserva líneas, precios, impuestos, totales y cliente desde la orden sin consultar producto o usuario vigente. Persiste factura, líneas, estado `INVOICED` y dos entradas de auditoría de forma atómica. La restricción parcial `invoices_active_order_unique` sirve como defensa adicional contra duplicados. No importa ni invoca operaciones de inventario. El snapshot empresarial completo depende de 15.4.
+Implementado en 8.2: `InvoiceFromOrderService` coordina orden y factura dentro de una transacción PostgreSQL. Bloquea primero la orden igual que el flujo de cancelación, rechaza estados no elegibles, pagos ausentes y facturas activas, y conserva líneas, precios, impuestos, totales y cliente desde la orden sin consultar producto o usuario vigente. Persiste factura, líneas, estado `INVOICED` y dos entradas de auditoría de forma atómica. La restricción parcial `invoices_active_order_unique` sirve como defensa adicional contra duplicados. No importa ni invoca operaciones de inventario. El snapshot empresarial completo está implementado desde 15.4.
 
-Implementado en 8.3: `POST /api/v1/invoices` crea un borrador manual `MANUAL` sin orden para `ADMIN` o `BILLING`. Valida un cliente activo con rol `CUSTOMER`, líneas personalizadas o referencias a productos activos, cantidades, importes y tasas; cuando existe `productId`, captura SKU, nombre y descripción vigentes del backend en vez de confiar en esos textos del cliente. Calcula subtotal, impuesto por línea con redondeo a centavos y total en `USD`, y persiste factura, líneas y `MANUAL_INVOICE_CREATED` atómicamente. No importa ni invoca orden, pago o inventario. El snapshot empresarial completo depende de 15.4.
+Implementado en 8.3: `POST /api/v1/invoices` crea un borrador manual `MANUAL` sin orden para `ADMIN` o `BILLING`. Valida un cliente activo con rol `CUSTOMER`, líneas personalizadas o referencias a productos activos, cantidades, importes y tasas; cuando existe `productId`, captura SKU, nombre y descripción vigentes del backend en vez de confiar en esos textos del cliente. Calcula subtotal, impuesto por línea con redondeo a centavos y total en `USD`, y persiste factura, líneas y `MANUAL_INVOICE_CREATED` atómicamente. No importa ni invoca orden, pago o inventario. El snapshot empresarial completo está implementado desde 15.4.
 
 Implementado en 8.4: `InvoiceQueryService` y `InvoiceController` exponen `GET /api/v1/invoices` con búsqueda, filtros por cliente/estado/origen/fechas, ordenamiento explícito y paginación backend; `GET /api/v1/invoices/:invoiceId` reconstruye el detalle desde snapshots y líneas históricas. `CUSTOMER` queda limitado por API a sus propias facturas, mientras `ADMIN` y `BILLING` consultan el ámbito administrativo. `PATCH /api/v1/invoices/:invoiceId/status` delega en el agregado y `InvoiceLifecycleService` para aplicar transiciones válidas, bloqueo y auditoría atómica únicamente a `ADMIN`/`BILLING`; las operaciones no tocan inventario.
 
-Implementado en 8.5: el back office ofrece `/invoices` y `/invoices/:invoiceId` con tabla paginada, búsqueda superior, filtros colapsables, detalle histórico y acciones de transición para `ADMIN` y `BILLING`. `ManualInvoiceForm` usa React Hook Form con `zodResolver` y Zod, permite líneas manuales y envía solo identificadores/valores validados al API; la conversión desde una orden usa `POST /api/v1/orders/:orderId/invoice`. Los clientes no tienen acceso al workspace administrativo. El autocomplete remoto se incorpora posteriormente en 17.3.
+Implementado en 8.5: el back office ofrece `/invoices` y `/invoices/:invoiceId` con tabla paginada, búsqueda superior, filtros colapsables, detalle histórico y acciones de transición para `ADMIN` y `BILLING`. `ManualInvoiceForm` usa React Hook Form con `zodResolver` y Zod, permite líneas manuales y envía solo identificadores/valores validados al API; la conversión desde una orden usa `POST /api/v1/orders/:orderId/invoice`. Los clientes no tienen acceso al workspace administrativo. El autocomplete remoto está implementado desde 17.3.
 
 El listado y el detalle de órdenes también exponen `Facturar orden` para órdenes `PROCESSING` en ambos roles administrativos. La acción usa confirmación, llama al endpoint de conversión atómica y actualiza las consultas de órdenes y facturas, sin mostrar avisos de una fase futura.
 
 Implementado en 8.6: el storefront ofrece `/account/invoices` y `/account/invoices/:invoiceId` exclusivamente a `CUSTOMER`. El listado consulta una sola página con `GET /api/v1/invoices`, conserva `page` en la URL y presenta paginación; el detalle usa `GET /api/v1/invoices/:invoiceId` y muestra únicamente líneas, totales, estado, origen y snapshots históricos reconocidos. Las consultas privadas incluyen el identificador del cliente en la clave de TanStack Query, no persisten respuestas y no exponen acciones de cambio de estado. La autorización sigue siendo del API: `CUSTOMER` solo recibe sus facturas y una factura ajena responde como no encontrada, sin renderizar sus datos.
 
-Implementado en 9.1: `apps/api/src/document-export` define un puerto de renderizado, un adaptador PDF autocontenido y plantillas independientes para órdenes y facturas. Ambos documentos se generan bajo demanda exclusivamente desde snapshots históricos, con importes `USD`, campos reconocidos y marca visible de borrador; no consultan el catálogo, usuarios ni perfil vigente. El módulo permite sustituir el adaptador por almacenamiento de objetos o un worker sin cambiar el contrato interno. Los endpoints de descarga y su autorización pertenecen a la tarea 9.2.
+Implementado en 9.1: `apps/api/src/document-export` define un puerto de renderizado, un adaptador PDF autocontenido y plantillas independientes para órdenes y facturas. Ambos documentos se generan bajo demanda exclusivamente desde snapshots históricos, con importes `USD`, campos reconocidos y marca visible de borrador; no consultan el catálogo, usuarios ni perfil vigente. El módulo permite sustituir el adaptador por almacenamiento de objetos o un worker sin cambiar el contrato interno. Los endpoints de descarga y su autorización están implementados desde 9.2.
 
 Implementado en 9.2: `GET /api/v1/orders/:orderId/pdf` y `GET /api/v1/invoices/:invoiceId/pdf` descargan PDFs como adjuntos `application/pdf` después de autenticar al actor. `ADMIN` y `BILLING` pueden consultar cualquier documento; `CUSTOMER` solo el propio y una referencia ajena se responde como `404` sin contenido histórico. Los controladores cargan el snapshot mediante los servicios de consulta existentes y delegan el renderizado en `DocumentExportService`, sin consultar datos maestros.
 
@@ -413,10 +430,12 @@ Implementado en 9.4: los detalles de órdenes y facturas de storefront y backoff
 
 - `GET /api/v1/store-profile`: consulta autorizada para `ADMIN` y `BILLING`.
 - `PATCH /api/v1/store-profile`: modificación exclusiva de `ADMIN` con auditoría.
+- `POST /api/v1/store-profile/logo`: carga validada por `ADMIN`; persiste el asset mediante el adaptador y su referencia `StoreLogoAsset`.
+- `GET /api/v1/media/images/:storageKey`: entrega de imágenes conforme al contrato de medios.
 
-El perfil contiene al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo. La identidad visual pública del storefront debe obtenerse mediante una proyección pública o configuración que se defina explícitamente en OpenAPI; no expongas por defecto todos los datos fiscales. Las facturas manuales reutilizan `GET /users` y `GET /products` para autocomplete remoto paginado; el backend vuelve a validar todos los identificadores seleccionados.
+El perfil contiene al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo. Su snapshot está implementado desde 15.4 para órdenes, facturas y PDF. La identidad visual pública del storefront debe obtenerse mediante una proyección pública o configuración que se defina explícitamente en OpenAPI; no expongas por defecto todos los datos fiscales. Los autocompletes usan `purpose=autocomplete`, `search` mínimo de tres caracteres, `page=1` y `pageSize` máximo 20; usuarios se limita a clientes activos y productos usa `view=public`. El backend vuelve a validar todos los identificadores seleccionados.
 
-## Dashboard
+## Dashboard (pending phase 19)
 
 - `GET /api/v1/dashboard/summary`: resumen agregado autorizado por rol.
 
@@ -434,7 +453,9 @@ Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. 
 
 # Catalog and pagination behavior
 
-Cada producto incluye al menos ID, SKU, slug, nombre, descripción, precio en `USD`, código de moneda fijo `USD`, portada, galería ordenada, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada. Una futura multimoneda deberá configurarse globalmente mediante un cambio OpenSpec explícito, nunca por producto.
+El seed ejecutable actual de desarrollo/pruebas contiene tres productos (dos activos, uno inactivo), una imagen Picsum por producto, inventario de apertura, cuentas `ADMIN`/`BILLING`/`CUSTOMER` y perfil empresarial ficticio. Rechaza producción y requiere ejecución explícita. Las veinte referencias de producto, sesenta imágenes y configuración editorial descritas como objetivo no están implementadas todavía; no las asumas para pruebas ni marques 20–21 completadas por la existencia del seed básico.
+
+Cada producto implementado incluye ID, SKU, slug, nombre, descripción, precio y moneda fija `USD`, `image`, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada. Portada/galería ordenada pertenecen a la ampliación 20. Las reglas siguientes sobre dashboard, cuatro temas, seed ampliado y landing editorial son objetivos de 19–21. Una futura multimoneda deberá configurarse globalmente mediante un cambio OpenSpec explícito, nunca por producto.
 
 - El storefront solo muestra productos activos.
 - Un producto agotado puede mostrarse, pero no agregarse al carrito.
@@ -522,7 +543,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 135 tareas distribuidas en 21 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial.
+- El plan contiene 145 tareas distribuidas en 21 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.

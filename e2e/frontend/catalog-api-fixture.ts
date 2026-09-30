@@ -16,6 +16,12 @@ const users = {
     id: "6ec53bda-6010-4582-8a66-59e042e875be",
     role: "CUSTOMER",
   },
+  BILLING: {
+    displayName: "Prueba de Facturación",
+    email: "billing@example.test",
+    id: "38e178f4-6719-4552-8aae-206b465d0de9",
+    role: "BILLING",
+  },
 } as const;
 
 function corsHeaders(request: Request): Record<string, string> {
@@ -55,8 +61,10 @@ function productPage(page: number, pageSize: number) {
   };
 }
 
-export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER") {
+export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS") {
   const productRequests: URL[] = [];
+  let cartHasItem = true;
+  let productDeleteFails = false;
   const emptyClassificationPage = {
     items: [],
     page: 1,
@@ -85,6 +93,10 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     }
 
     if (url.pathname === "/api/v1/auth/refresh" || url.pathname === "/api/v1/auth/me") {
+      if (role === "ANONYMOUS") {
+        await route.fulfill({ status: 401, headers, contentType: "application/json", body: JSON.stringify({ code: "AUTH_REQUIRED", message: "Sesión requerida", correlationId: "playwright" }) });
+        return;
+      }
       const user = users[role];
       const body = url.pathname.endsWith("/me")
         ? user
@@ -100,6 +112,28 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
         contentType: "application/json",
         headers: { ...headers, "X-CSRF-Token": csrfToken },
       });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/cart" || url.pathname.startsWith("/api/v1/cart/items/")) {
+      if (request.method() === "DELETE") cartHasItem = false;
+      const product = productPage(1, 12).items[0]!;
+      const timestamp = "2026-09-04T12:00:00.000Z";
+      const cart = {
+        id: "208d27de-e0d6-4ef8-83c1-72e4a2dbe952", customerId: role === "CUSTOMER" ? users.CUSTOMER.id : null,
+        status: "ACTIVE", currency: "USD", subtotal: cartHasItem ? "299.90" : "0.00", total: cartHasItem ? "299.90" : "0.00",
+        totalQuantity: cartHasItem ? 1 : 0, createdAt: timestamp, updatedAt: timestamp,
+        items: cartHasItem ? [{ id: "739f9d74-7c79-4e8e-b76b-c1d4076762df", productId: product.id, quantity: 1, subtotal: "299.90",
+          product: { ...product, isAvailable: true }, createdAt: timestamp, updatedAt: timestamp }] : [],
+      };
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify(cart) });
+      return;
+    }
+
+    if (request.method() === "DELETE" && url.pathname.startsWith("/api/v1/products/")) {
+      await route.fulfill(productDeleteFails
+        ? { status: 500, headers, contentType: "application/json", body: JSON.stringify({ code: "INTERNAL_ERROR", message: "Error interno", correlationId: "playwright" }) }
+        : { status: 204, headers });
       return;
     }
 
@@ -132,7 +166,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     });
   });
 
-  return { productRequests };
+  return { productRequests, failProductDeletion: () => { productDeleteFails = true; } };
 }
 
 export async function waitForProductQuery(

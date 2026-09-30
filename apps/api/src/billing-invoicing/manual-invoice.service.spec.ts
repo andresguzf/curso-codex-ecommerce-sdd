@@ -13,6 +13,7 @@ describe("manual invoice service boundary", () => {
       { ...request, customerId: "fake" },
       { ...request, lines: [{ ...request.lines[0], quantity: -1 }] },
       { ...request, lines: [{ ...request.lines[0], taxRate: "101.0000" }] },
+      { ...request, lines: [{ ...request.lines[0], taxRate: "abc" }] },
       { ...request, lines: [{ ...request.lines[0], unitPrice: "-10.00" }] },
     ]) {
       expect(() => service.create(actor, invalid as ManualInvoiceRequest)).toThrow("Invalid manual invoice request");

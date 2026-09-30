@@ -15,11 +15,13 @@
     "test:e2e": "pnpm --filter @technology-ecommerce/api test:e2e && pnpm test:e2e:frontends && pnpm test:e2e:invoices",
     "test:e2e:invoices": "playwright test --config=e2e/invoice-autocomplete.config.ts",
     "test:e2e:frontends": "playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:accessibility": "playwright test --config=e2e/playwright.config.ts --grep accessibility --workers=2",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "axe-core": "4.13.0",
     "turbo": "2.10.12",
     "typescript": "6.0.3"
   }

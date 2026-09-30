@@ -46,7 +46,7 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
         </div>
       </header>
 
-      <div className="min-w-0 flex-1" id="main-content" tabIndex={-1}>
+      <div className="min-w-0 flex-1 scroll-mt-80 md:scroll-mt-40" id="main-content" tabIndex={-1}>
         {children}
       </div>
 

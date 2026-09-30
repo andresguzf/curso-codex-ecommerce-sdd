@@ -3,7 +3,7 @@
 import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
 import { IconButton, FilterDrawer } from "@technology-ecommerce/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import type { CatalogQuery } from "./catalog-query";
 
@@ -55,6 +55,30 @@ export function CatalogFilters({
   const mobilePanelId = useId();
   const titleId = useId();
   const closeMobilePanel = useCallback(() => setMobileOpen(false), []);
+  const hideFiltersRef = useRef<HTMLButtonElement>(null);
+  const showFiltersRef = useRef<HTMLButtonElement>(null);
+  const restoreToggleFocus = useRef(false);
+
+  useEffect(() => {
+    if (!restoreToggleFocus.current) return;
+    restoreToggleFocus.current = false;
+    (collapsed ? showFiltersRef : hideFiltersRef).current?.focus();
+  }, [collapsed]);
+
+  function toggleDesktopFilters(nextCollapsed: boolean) {
+    restoreToggleFocus.current = true;
+    onCollapsedChange(nextCollapsed);
+  }
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(min-width: 1024px)");
+    function closeOnDesktop() {
+      if (media.matches) setMobileOpen(false);
+    }
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, []);
   const classificationsEnabled = !collapsed || mobileOpen;
   const categoriesQuery = useQuery({
     enabled: classificationsEnabled,
@@ -126,11 +150,13 @@ export function CatalogFilters({
               <h2 className="mb-0 mt-1 text-base font-black tracking-tight text-slate-950" id={titleId}>Filtros</h2>
             </div>
             <IconButton
+              ariaControls={panelId}
               ariaExpanded={!collapsed}
               className="border-slate-300 bg-white text-slate-600 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
               icon="chevron-left"
               label="Ocultar filtros del catálogo"
-              onClick={() => onCollapsedChange(true)}
+              onClick={() => toggleDesktopFilters(true)}
+              ref={hideFiltersRef}
             />
           </header>
           <div className="p-4">
@@ -142,11 +168,13 @@ export function CatalogFilters({
       {collapsed ? (
         <div className="hidden lg:block">
           <IconButton
+            ariaControls={panelId}
             ariaExpanded={false}
             className="border-slate-300 bg-white text-slate-600 shadow-sm hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
             icon="chevron-right"
             label="Mostrar filtros del catálogo"
-            onClick={() => onCollapsedChange(false)}
+            onClick={() => toggleDesktopFilters(false)}
+            ref={showFiltersRef}
           />
         </div>
       ) : null}

@@ -989,7 +989,10 @@ export interface components {
             quantity: number;
             /** @example 100.00 */
             unitPrice: string;
-            /** @example 19.0000 */
+            /**
+             * @description Percentage from 0 to 100 inclusive, with four decimal places
+             * @example 19.0000
+             */
             taxRate: string;
         };
         CreateManualInvoiceRequestDto: {

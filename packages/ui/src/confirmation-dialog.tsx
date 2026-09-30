@@ -47,6 +47,8 @@ export function ConfirmationDialog({
     const root = document.createElement("div");
     root.dataset.slot = "confirmation-dialog-portal";
     document.body.append(root);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const siblings = Array.from(document.body.children)
       .filter((element) => element !== root)
       .map((element) => ({ element, wasInert: element.hasAttribute("inert") }));
@@ -55,6 +57,7 @@ export function ConfirmationDialog({
     confirmLockedRef.current = false;
 
     return () => {
+      document.body.style.overflow = previousOverflow;
       for (const { element, wasInert } of siblings) {
         if (!wasInert) element.removeAttribute("inert");
       }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * A controlled, accessible filter panel that enters from the left.
@@ -26,15 +27,28 @@ export function FilterDrawer({
 }>) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    const root = document.createElement("div");
+    root.dataset.slot = "filter-drawer-portal";
+    document.body.append(root);
+    setPortalRoot(root);
+    return () => root.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!open || !portalRoot) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const siblings = Array.from(document.body.children)
+      .filter((element) => element !== portalRoot)
+      .map((element) => ({ element, wasInert: element.hasAttribute("inert") }));
+    for (const { element } of siblings) element.setAttribute("inert", "");
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -70,17 +84,27 @@ export function FilterDrawer({
     }
 
     document.addEventListener("keydown", handleKeyDown);
+    function keepFocusInside(event: FocusEvent) {
+      if (!panelRef.current?.contains(event.target as Node)) closeButtonRef.current?.focus();
+    }
+    document.addEventListener("focusin", keepFocusInside);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", keepFocusInside);
       document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
+      for (const { element, wasInert } of siblings) {
+        if (!wasInert) element.removeAttribute("inert");
+      }
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
-  }, [onClose, open]);
+  }, [onClose, open, portalRoot]);
 
-  return (
+  if (!portalRoot) return null;
+
+  return createPortal(
     <div
       aria-hidden={!open}
-      className={open ? "fixed inset-0 z-40" : "hidden"}
+      className={open ? "fixed inset-0 z-[60]" : "hidden"}
       data-slot="filter-drawer"
       inert={!open}
     >
@@ -88,9 +112,10 @@ export function FilterDrawer({
         aria-label="Cerrar panel de filtros"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
+        tabIndex={-1}
         type="button"
       />
-      <aside
+      <div
         aria-labelledby={titleId}
         aria-modal="true"
         className={`absolute inset-y-0 ${side === "right" ? "right-0 border-l" : "left-0 border-r"} flex w-[min(100%,24rem)] translate-x-0 flex-col border-slate-200 bg-white text-slate-950 shadow-2xl transition-transform duration-200 ease-out motion-reduce:transition-none`}
@@ -111,7 +136,8 @@ export function FilterDrawer({
           </button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
-      </aside>
-    </div>
+      </div>
+    </div>,
+    portalRoot,
   );
 }

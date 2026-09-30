@@ -164,11 +164,11 @@
 
 ## 18. Validación integral de las revisiones
 
-- [ ] 18.1 Regenerar OpenAPI, cliente TypeScript y esquemas Zod para todas las rutas y modelos añadidos; verificar repositorio sin diferencias de generación y typecheck de las tres aplicaciones.
-- [ ] 18.2 Ejecutar pruebas de accesibilidad y responsive para shells, navbar, hero, sidebars, drawers, mensajes y modales; corregir fallos hasta verificar teclado, foco, contraste y anuncios accesibles.
-- [ ] 18.3 Ejecutar lint, typecheck, pruebas unitarias, integración, contrato, componentes y end-to-end incluyendo categorías, wishlist, perfil empresarial y autocomplete; corregir fallos hasta obtener una suite completa exitosa.
-- [ ] 18.4 Actualizar README y AGENTS.md con las rutas, entidades, layouts y reglas incorporadas; verificar que la documentación coincide con OpenAPI, specs y design sin sustituirlos como fuentes de verdad.
-- [ ] 18.5 Ejecutar `openspec validate build-technology-ecommerce-platform --strict` y revisar todos los escenarios añadidos; verificar resultado válido y que ninguna tarea se marque completada sin evidencia.
+- [x] 18.1 Regenerar OpenAPI, cliente TypeScript y esquemas Zod para todas las rutas y modelos añadidos; verificar repositorio sin diferencias de generación y typecheck de las tres aplicaciones.
+- [x] 18.2 Ejecutar pruebas de accesibilidad y responsive para shells, navbar, hero, sidebars, drawers, mensajes y modales; corregir fallos hasta verificar teclado, foco, contraste y anuncios accesibles.
+- [x] 18.3 Ejecutar lint, typecheck, pruebas unitarias, integración, contrato, componentes y end-to-end incluyendo categorías, wishlist, perfil empresarial y autocomplete; corregir fallos hasta obtener una suite completa exitosa.
+- [x] 18.4 Actualizar README y AGENTS.md con las rutas, entidades, layouts y reglas incorporadas; verificar que la documentación coincide con OpenAPI, specs y design sin sustituirlos como fuentes de verdad.
+- [x] 18.5 Ejecutar `openspec validate build-technology-ecommerce-platform --strict` y revisar todos los escenarios añadidos; verificar resultado válido y que ninguna tarea se marque completada sin evidencia.
 
 ## 19. Identidades visuales, temas y dashboard
 

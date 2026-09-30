@@ -42,7 +42,8 @@ export const updateUserRequestSchema = z
   .refine((value) => Object.keys(value).length > 0);
 
 export const userListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  purpose: z.literal("autocomplete").optional(),
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().min(1).max(200).optional(),
   role: authRoleSchema.optional(),
@@ -51,7 +52,10 @@ export const userListQuerySchema = z.object({
     .enum(["createdAt", "displayName", "email", "role", "status"])
     .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
-});
+}).strict().refine((query) => query.purpose !== "autocomplete" || (
+  (query.search?.length ?? 0) >= 3 && query.pageSize <= 20 &&
+  (!query.role || query.role === "CUSTOMER") && (!query.status || query.status === "ACTIVE")
+), { message: "Autocomplete requires a minimum search term, bounded page and active customers" });
 
 export type AdministrativeUser = z.infer<typeof administrativeUserSchema>;
 export type UserPage = z.infer<typeof userPageSchema>;

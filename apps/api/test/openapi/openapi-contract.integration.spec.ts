@@ -14,6 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AppModule } from "../../src/app.module";
 import { configureApplication } from "../../src/application";
+import { manualInvoiceRequestSchema } from "../../src/billing-invoicing/manual-invoice.service";
 
 const OPENAPI_DOCUMENT_ID = "urn:technology-ecommerce:openapi";
 const HTTP_METHODS = ["delete", "get", "patch", "post", "put"] as const;
@@ -35,6 +36,7 @@ type OpenApiOperation = Readonly<{
 type OpenApiSchema = Readonly<{
   $ref?: string;
   type?: string;
+  pattern?: string;
   minimum?: number;
   maximum?: number;
   required?: readonly string[];
@@ -214,6 +216,20 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
     for (const { operationId, path } of operations) {
       expect(generatedClientSource).toContain(`    "${path}": {`);
       expect(generatedClientSource).toContain(`    ${operationId}: {`);
+    }
+  });
+
+  it("documents integer quantities and the same tax rate range enforced at runtime", () => {
+    const line = document.components?.schemas?.ManualInvoiceLineRequestDto;
+    expect(line?.properties?.quantity).toMatchObject({ type: "integer", minimum: 1, maximum: 1_000_000 });
+    const pattern = line?.properties?.taxRate?.pattern;
+    if (!pattern) throw new Error("Missing documented manual invoice tax format");
+    for (const taxRate of ["0.0000", "000.0000", "019.0000", "99.9999", "100.0000", "100.0001", "101.0000", "abc", "-1.0000", "19.00"]) {
+      const parsed = manualInvoiceRequestSchema.safeParse({
+        customerId: "3296f1d5-5a1d-4b94-9caa-b26878f447e4",
+        lines: [{ productId: "421d45a3-104e-4413-b79f-25290d1cb0a3", quantity: 1, unitPrice: "89.50", taxRate }],
+      });
+      expect(new RegExp(pattern).test(taxRate)).toBe(parsed.success);
     }
   });
 

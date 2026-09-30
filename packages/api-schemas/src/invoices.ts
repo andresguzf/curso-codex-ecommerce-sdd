@@ -62,8 +62,11 @@ export const manualInvoiceLineRequestSchema = z.object({
   description: z.string().trim().min(1).max(5_000).optional(),
   quantity: z.number().int().min(1).max(1_000_000),
   unitPrice: moneySchema,
-  taxRate: z.string().regex(/^\d{1,3}\.\d{4}$/),
-}).strict();
+  taxRate: z.string().regex(/^\d{1,3}\.\d{4}$/).pipe(z.string().refine((value) => Number(value) <= 100)),
+}).strict().superRefine((line, context) => {
+  if (line.productId == null && !line.name) context.addIssue({ code: "custom", path: ["name"], message: "A custom line requires a name" });
+  if (line.productId == null && !line.description) context.addIssue({ code: "custom", path: ["description"], message: "A custom line requires a description" });
+});
 export const createManualInvoiceRequestSchema = z.object({
   customerId: z.uuid(),
   shippingTotal: moneySchema.default("0.00"),

@@ -95,12 +95,15 @@ export const productPageSchema = paginationMetadataSchema.extend({
 
 export const productListQuerySchema = z
   .object({
+    purpose: z.literal("autocomplete").optional(),
+    createdFrom: z.iso.date().optional(),
+    createdTo: z.iso.date().optional(),
     availability: productAvailabilitySchema.optional(),
     categoryId: z.uuid().optional(),
     tagIds: z.array(z.uuid()).min(1).max(20).refine((ids) => new Set(ids).size === ids.length).optional(),
     maxPrice: productPriceSchema.optional(),
     minPrice: productPriceSchema.optional(),
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(200).optional(),
     sortBy: productSortFieldSchema.default("createdAt"),
@@ -109,6 +112,11 @@ export const productListQuerySchema = z
     view: productListViewSchema.default("public"),
   })
   .strict()
+  .refine((query) => query.purpose !== "autocomplete" || (
+    (query.search?.length ?? 0) >= 3 && query.pageSize <= 20 && query.view === "public" && !query.status
+  ))
+  .refine(({ createdFrom, createdTo }) => !createdFrom || !createdTo || createdFrom <= createdTo)
+  .refine(({ createdFrom, createdTo, view }) => (!createdFrom && !createdTo) || view === "administrative")
   .refine(
     ({ maxPrice, minPrice }) =>
       maxPrice === undefined ||
