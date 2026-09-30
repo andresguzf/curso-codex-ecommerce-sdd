@@ -1,11 +1,10 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { FlashRegion } from "@technology-ecommerce/ui";
+import { FlashRegion, ThemeProvider } from "@technology-ecommerce/ui";
 import { useState, type ReactNode } from "react";
 
 import { SessionProvider } from "@/features/auth/session-provider";
-import { AdminThemeController } from "@/features/theme/admin-theme-controller";
 
 export function Providers({ children }: Readonly<{ children: ReactNode }>) {
   const [queryClient] = useState(
@@ -19,9 +18,10 @@ export function Providers({ children }: Readonly<{ children: ReactNode }>) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AdminThemeController />
-      <SessionProvider>{children}</SessionProvider>
-      <FlashRegion appearance="backoffice" />
+      <ThemeProvider application="backoffice">
+        <SessionProvider>{children}</SessionProvider>
+        <FlashRegion appearance="backoffice" />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

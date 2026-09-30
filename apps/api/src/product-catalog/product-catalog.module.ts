@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../identity-access/auth.module";
+import { CatalogSummaryReader } from "./catalog-summary.reader";
 import { ImageStorageModule } from "./image-storage/image-storage.module";
 import { ProductAdministrationController } from "./product-administration.controller";
 import { ProductAdministrationRepository } from "./product-administration.repository";
@@ -15,7 +16,7 @@ import { WishlistController } from "./wishlist.controller";
 @Module({
   controllers: [ProductAdministrationController, ProductListingController, CategoryController, TagController, WishlistController],
   imports: [AuthModule, ImageStorageModule],
-  providers: [ProductAdministrationRepository, ProductAdministrationService, ClassificationRepository, ClassificationService, WishlistRepository],
-  exports: [ImageStorageModule],
+  providers: [CatalogSummaryReader, ProductAdministrationRepository, ProductAdministrationService, ClassificationRepository, ClassificationService, WishlistRepository],
+  exports: [ImageStorageModule, CatalogSummaryReader],
 })
 export class ProductCatalogModule {}

@@ -79,7 +79,7 @@ export function CheckoutForm() {
             <label className="flex gap-3 rounded-xl border p-4"><input type="radio" value="SIMULATED_CARD_REJECTED" {...form.register("paymentMethod")} />Tarjeta ficticia · rechazar pago</label>
           </fieldset>
         </div>
-        <aside className="rounded-3xl bg-[#081426] p-7 text-white lg:sticky lg:top-8">
+        <aside data-tone-region="inverse" className="rounded-3xl bg-[#081426] p-7 text-white lg:sticky lg:top-8">
           <h2 className="m-0 text-2xl font-black">Tu pedido</h2>
           <ul className="my-6 grid list-none gap-4 p-0">{cart.items.map((item) => <li key={item.id} className="flex justify-between gap-4 text-sm"><span>{item.product.name} × {item.quantity}</span><span>{formatProductPrice(item.subtotal)}</span></li>)}</ul>
           <dl className="grid gap-4 border-t border-white/20 pt-5"><div className="flex justify-between"><dt>Productos</dt><dd>{formatProductPrice(cart.subtotal)}</dd></div><div className="flex justify-between"><dt>Envío</dt><dd>{shippingCost ? formatProductPrice(shippingCost) : "—"}</dd></div><div className="flex justify-between text-xl font-black"><dt>Total (USD)</dt><dd>{shippingCost ? formatProductPrice(totalWithShipping(cart.subtotal, shippingCost)) : "—"}</dd></div></dl>

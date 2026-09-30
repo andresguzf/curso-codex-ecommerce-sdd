@@ -3,7 +3,7 @@ import { BackofficeLoginForm } from "@/features/auth/login-form";
 export default function BackofficeLoginPage() {
   return (
     <main className="relative grid min-h-screen overflow-hidden bg-[#e9eef3] lg:grid-cols-[minmax(18rem,38%)_1fr]">
-      <aside className="relative flex min-h-64 flex-col justify-between overflow-hidden bg-[#0c1d34] p-8 text-white lg:min-h-screen lg:p-12">
+      <aside data-tone-region="inverse" className="relative flex min-h-64 flex-col justify-between overflow-hidden bg-[#0c1d34] p-8 text-white lg:min-h-screen lg:p-12">
         <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.14)_1px,transparent_1px)] [background-size:42px_42px]" />
         <p className="relative font-mono text-xs tracking-[.2em] text-blue-300 uppercase">Nexo Operations</p>
         <div className="relative max-w-sm py-12">

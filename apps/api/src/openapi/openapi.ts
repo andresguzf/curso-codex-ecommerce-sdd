@@ -48,6 +48,7 @@ function createOpenApiConfig() {
     .addTag("cart", "Persistent customer or anonymous shopping cart")
     .addTag("checkout", "Transactional purchase confirmation")
     .addTag("orders", "Customer order history and historical detail")
+    .addTag("dashboard", "Administrative summaries scoped by role")
     .build();
 }
 

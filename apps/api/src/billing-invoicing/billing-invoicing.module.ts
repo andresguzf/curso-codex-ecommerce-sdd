@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../identity-access/auth.module";
+import { BillingSummaryReader } from "./billing-summary.reader";
 import { InvoiceFromOrderController } from "./invoice-from-order.controller";
 import { InvoiceFromOrderService } from "./invoice-from-order.service";
 import { InvoiceController } from "./invoice.controller";
@@ -18,6 +19,7 @@ import { ImageStorageModule } from "../product-catalog/image-storage/image-stora
   imports: [AuthModule, DocumentExportModule, ImageStorageModule],
   controllers: [InvoiceFromOrderController, InvoiceController, ManualInvoiceController, StoreProfileController],
   providers: [
+    BillingSummaryReader,
     InvoiceFromOrderService,
     InvoiceLifecycleService,
     InvoiceQueryService,
@@ -26,6 +28,7 @@ import { ImageStorageModule } from "../product-catalog/image-storage/image-stora
     StoreLogoService,
   ],
   exports: [
+    BillingSummaryReader,
     InvoiceFromOrderService,
     InvoiceLifecycleService,
     InvoiceQueryService,

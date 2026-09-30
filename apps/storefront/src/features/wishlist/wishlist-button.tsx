@@ -67,8 +67,8 @@ export function WishlistButton({ productId, productName, variant = "icon" }: Rea
       aria-label={label}
       aria-pressed={isCustomer ? isSaved : undefined}
       className={variant === "icon"
-        ? "inline-flex size-11 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-blue-700 shadow-sm backdrop-blur transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60"
-        : "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-5 py-3 font-bold text-blue-800 transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60"}
+        ? "inline-flex size-11 items-center justify-center rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--ds-accent)] shadow-sm backdrop-blur transition hover:border-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus)] disabled:cursor-wait disabled:opacity-60"
+        : "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-5 py-3 font-bold text-[var(--ds-accent)] transition hover:bg-[var(--ds-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus)] disabled:cursor-wait disabled:opacity-60"}
       disabled={status === "initializing" || (isCustomer && (membership.isPending || isPending)) || (status === "authenticated" && !isCustomer)}
       onClick={handleClick}
       title={status === "authenticated" && !isCustomer ? "Disponible para cuentas de cliente" : label}

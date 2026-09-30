@@ -52,7 +52,7 @@ export function BackofficeLoginForm() {
         {formState.errors.password ? <p id="password-error" role="alert" className="mt-2 text-sm text-red-700">{formState.errors.password.message}</p> : null}
       </div>
       <div aria-live="polite" aria-atomic="true" className="min-h-6 text-sm font-medium text-red-700">{message}</div>
-      <button disabled={formState.isSubmitting} className="flex w-full items-center justify-between rounded-lg bg-[#15345b] px-5 py-4 font-bold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700 disabled:cursor-wait disabled:opacity-60">
+      <button disabled={formState.isSubmitting} className="flex w-full items-center justify-between rounded-lg bg-[var(--ds-accent)] px-5 py-4 font-bold text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ds-focus)] disabled:cursor-wait disabled:opacity-60">
         <span>{formState.isSubmitting ? "Validando acceso…" : "Entrar al panel"}</span><span aria-hidden="true">→</span>
       </button>
       <p className="text-sm leading-6 text-slate-500">El acceso está reservado a administración y facturación. Las cuentas de clientes continúan en la tienda.</p>

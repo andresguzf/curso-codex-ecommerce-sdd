@@ -1,0 +1,4 @@
+/* Exclude Next's development indicator, not application UI, from baselines. */
+nextjs-portal {
+  display: none !important;
+}

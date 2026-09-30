@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "../styles/design-tokens.css";
+@import "../../../../packages/ui/src/theme-coverage.css";
 @source "../../../../packages/ui/src";
 
 :root {
@@ -10,6 +12,65 @@ body {
   background: #f8fafc;
   color: #0f172a;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html[data-design-system="storefront"][data-theme] body {
+  background: var(--ds-canvas);
+  color: var(--ds-text);
+  font-family: var(--ds-font-body);
+  line-height: var(--ds-line-body);
+}
+
+[data-slot="storefront-shell"] h1,
+[data-slot="storefront-shell"] h2 {
+  font-family: var(--ds-font-display);
+}
+
+html[data-design-system="storefront"] [data-slot="loading-state"] {
+  background: var(--ds-surface);
+  color: var(--ds-text-muted);
+  border-color: var(--ds-border);
+}
+html[data-design-system="storefront"] [data-slot="error-state"] {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+  border-color: var(--ds-danger);
+}
+
+/* Shared primitives use the storefront palette, including portalled drawers. */
+html[data-design-system="storefront"] [data-slot="filter-drawer"] [role="dialog"] {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+html[data-design-system="storefront"] [data-slot="filter-drawer"] header,
+html[data-design-system="storefront"] [data-slot="filter-drawer"] header button,
+html[data-design-system="storefront"] [data-slot="pagination"] button {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+html[data-design-system="storefront"] [data-slot="pagination"] p,
+html[data-design-system="storefront"] [data-slot="pagination"] span {
+  color: var(--ds-text-muted);
+}
+html[data-design-system="storefront"] [data-slot="pagination"] button[aria-current="page"] {
+  background: var(--ds-accent);
+  color: var(--ds-accent-text);
+}
+html[data-design-system="storefront"] [data-slot="pagination"] button:disabled:not([aria-current="page"]) {
+  background: var(--ds-disabled);
+  color: var(--ds-disabled-text);
+}
+html[data-design-system="storefront"] [data-slot="pagination"] button:enabled:hover,
+html[data-design-system="storefront"] [data-slot="filter-drawer"] header button:hover {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+}
+html[data-design-system="storefront"] [data-slot="pagination"] button:focus-visible,
+html[data-design-system="storefront"] [data-slot="filter-drawer"] header button:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
 }
 
 @keyframes filter-drawer-in {

@@ -14,7 +14,7 @@ vi.mock("next/link", () => ({
     <a href={href} {...props} />
   ),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
+vi.mock("next/navigation", () => ({ useRouter: () => navigation, usePathname: () => "/products" }));
 
 const sessionFor = (role: "ADMIN" | "BILLING" | "CUSTOMER"): AuthSession => ({
   accessToken: "test-access-token",
@@ -49,6 +49,8 @@ describe("BackofficeShell", () => {
     const sidebar = screen.getByRole("navigation", { name: "Navegación administrativa" });
 
     expect(within(sidebar).getByRole("link", { name: "Productos" })).toHaveAttribute("href", "/products");
+    expect(within(sidebar).getByRole("link", { name: "Productos" })).toHaveAttribute("aria-current", "page");
+    expect(document.querySelector('[data-slot="backoffice-shell"]')).toHaveClass("bg-[var(--ds-canvas)]");
     expect(within(sidebar).getByRole("link", { name: "Inventario" })).toHaveAttribute("href", "/inventory");
     expect(within(sidebar).getByRole("link", { name: "Categorías" })).toHaveAttribute("href", "/categories");
     expect(within(sidebar).getByRole("link", { name: "Etiquetas" })).toHaveAttribute("href", "/tags");

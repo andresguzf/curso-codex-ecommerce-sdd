@@ -72,27 +72,27 @@ export function CatalogPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f8fafc]">
+    <main className="min-h-screen bg-[var(--ds-canvas)]">
       <section className="mx-auto max-w-7xl px-6 py-9 lg:px-10 lg:py-14">
-        <nav aria-label="Migas de pan" className="mb-6 text-sm font-semibold text-slate-500">
-          <Link className="rounded-sm text-blue-800 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href="/">
+        <nav aria-label="Migas de pan" className="mb-6 text-sm font-semibold text-[var(--ds-text-muted)]">
+          <Link className="rounded-sm text-[var(--ds-accent)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href="/">
             Inicio
           </Link>
           <span aria-hidden="true" className="px-2 text-slate-400">/</span>
-          <span aria-current="page" className="text-slate-800">Productos</span>
+          <span aria-current="page" className="text-[var(--ds-text)]">Productos</span>
         </nav>
 
-        <header className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_60px_-50px_rgba(8,20,38,0.7)]">
+        <header className="mb-8 overflow-hidden rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[0_24px_60px_-50px_rgba(8,20,38,0.7)]">
           <div className="border-l-4 border-cyan-400 px-6 py-7 sm:px-9 sm:py-9">
-            <p className="m-0 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-blue-800">
+            <p className="m-0 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--ds-accent)]">
               Catálogo completo
             </p>
             <div className="mt-3 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)] lg:items-end">
               <div>
-                <h1 className="m-0 max-w-3xl text-3xl font-black leading-tight tracking-[-0.035em] text-[#081426] sm:text-4xl">
+                <h1 className="m-0 max-w-3xl text-3xl font-black leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-4xl">
                   Encuentra el equipo que va contigo.
                 </h1>
-                <p className="mb-0 mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                <p className="mb-0 mt-3 max-w-2xl text-sm leading-6 text-[var(--ds-text-muted)] sm:text-base">
                   Explora tecnología para trabajar, crear y jugar. Cada búsqueda y filtro se consulta directamente al catálogo.
                 </p>
               </div>
@@ -105,7 +105,7 @@ export function CatalogPage() {
               >
                 <label className="sr-only" htmlFor="complete-catalog-search">Buscar en todos los productos</label>
                 <input
-                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-700 focus:ring-4 focus:ring-blue-700/15"
+                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 text-sm text-[var(--ds-text)] outline-none placeholder:text-[var(--ds-text-muted)] focus:border-blue-700 focus:ring-4 focus:ring-blue-700/15"
                   defaultValue={query.search ?? ""}
                   id="complete-catalog-search"
                   maxLength={200}
@@ -113,7 +113,7 @@ export function CatalogPage() {
                   placeholder="Nombre, descripción o SKU"
                   type="search"
                 />
-                <button className="min-h-12 rounded-xl bg-[#15345b] px-5 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" type="submit">
+                <button className="min-h-12 rounded-xl bg-[var(--ds-accent)] px-5 py-2 text-sm font-black text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" type="submit">
                   Buscar
                 </button>
               </form>
@@ -145,12 +145,12 @@ export function CatalogPage() {
           />
 
           <section aria-label="Resultados del catálogo" className="min-w-0">
-            <div className="mb-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-              <p aria-live="polite" className="m-0 text-sm font-bold text-slate-700" role="status">
+            <div className="mb-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border-b border-[var(--ds-border)] pb-4">
+              <p aria-live="polite" className="m-0 text-sm font-bold text-[var(--ds-text-muted)]" role="status">
                 {pageData ? `${pageData.totalItems} productos encontrados` : "Consultando productos"}
               </p>
               {pageData && pageData.totalPages > 0 && !requestedPageIsOutOfRange ? (
-                <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.12em] text-[var(--ds-text-muted)]">
                   Página {pageData.page} de {pageData.totalPages}
                 </p>
               ) : null}
@@ -160,7 +160,7 @@ export function CatalogPage() {
             {productsQuery.isError ? (
               <ErrorState
                 action={(
-                  <button className="min-h-11 rounded-lg bg-red-800 px-4 py-2 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
+                  <button className="min-h-11 rounded-lg bg-[var(--ds-accent)] px-4 py-2 text-sm font-bold text-[var(--ds-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
                     Intentar nuevamente
                   </button>
                 )}
@@ -178,7 +178,7 @@ export function CatalogPage() {
                   <div className="mt-8">
                     <Pagination
                       ariaLabel="Paginación del catálogo"
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm"
+                      className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-5 shadow-sm"
                       onPageChange={navigateToPage}
                       page={pageData.page}
                       totalPages={pageData.totalPages}
@@ -186,7 +186,7 @@ export function CatalogPage() {
                   </div>
                 ) : requestedPageIsOutOfRange ? (
                   <div className="mt-6 text-center">
-                    <button className="min-h-11 rounded-xl border border-blue-200 bg-white px-5 py-2 text-sm font-bold text-blue-800 underline-offset-4 hover:bg-blue-50 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" onClick={() => navigateToPage(1)} type="button">
+                    <button className="min-h-11 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-5 py-2 text-sm font-bold text-[var(--ds-accent)] underline-offset-4 hover:bg-[var(--ds-accent-soft)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => navigateToPage(1)} type="button">
                       Volver a la primera página
                     </button>
                   </div>

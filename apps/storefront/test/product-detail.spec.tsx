@@ -91,6 +91,8 @@ describe("storefront product detail", () => {
     expect(screen.getByRole("img", { name: "Teclado Relay 75" })).toBeInTheDocument();
     expect(screen.getByText(availableProduct.description)).toBeInTheDocument();
     expect(screen.getByText("$149.90")).toBeInTheDocument();
+    expect(screen.getByRole("article")).toHaveClass("bg-[var(--ds-surface)]");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByText("8 unidades disponibles")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar Teclado Relay 75 al carrito" })).toBeEnabled();
     expect(getPublicProduct).toHaveBeenCalledWith(availableProduct.id);

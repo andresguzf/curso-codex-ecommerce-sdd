@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { FlashRegion } from "@technology-ecommerce/ui";
+import { FlashRegion, ThemeProvider } from "@technology-ecommerce/ui";
 import { useState, type ReactNode } from "react";
 
 import { SessionProvider } from "@/features/auth/session-provider";
@@ -22,10 +22,12 @@ export function StorefrontProviders({ children }: Readonly<{ children: ReactNode
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        {children}
-        <FlashRegion appearance="storefront" />
-      </SessionProvider>
+      <ThemeProvider application="storefront">
+        <SessionProvider>
+          {children}
+          <FlashRegion appearance="storefront" />
+        </SessionProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

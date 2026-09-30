@@ -76,6 +76,7 @@ describe("shared UI primitives", () => {
     );
 
     expect(screen.getByRole("table", { name: "Productos del catálogo" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Productos del catálogo" })).toHaveAttribute("tabIndex", "0");
     expect(screen.getByRole("columnheader", { name: "Producto" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Notebook Atlas" })).toBeInTheDocument();
 

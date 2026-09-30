@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../identity-access/auth.module";
+import { InventorySummaryReader } from "./inventory-summary.reader";
 import { InventoryAdjustmentController } from "./inventory-adjustment.controller";
 import { InventoryAdjustmentRepository } from "./inventory-adjustment.repository";
 import { InventoryAdjustmentService } from "./inventory-adjustment.service";
@@ -16,8 +17,9 @@ import { InventoryStockService } from "./inventory-stock.service";
 @Module({
   controllers: [InventoryAdjustmentController, InventoryBalanceController, InventoryMovementController],
   imports: [AuthModule],
-  exports: [InventoryStockService],
+  exports: [InventoryStockService, InventorySummaryReader],
   providers: [
+    InventorySummaryReader,
     InventoryAdjustmentRepository,
     InventoryAdjustmentService,
     InventoryBalanceRepository,

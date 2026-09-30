@@ -767,6 +767,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Role-specific administrative counts from a single read-only database snapshot */
+        get: operations["dashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4313,6 +4330,81 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponseDto"];
                 };
+            };
+        };
+    };
+    dashboardSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "ADMIN";
+                        /** Format: date-time */
+                        updatedAt: string;
+                        /** @enum {integer} */
+                        lowStockThreshold: 5;
+                        metrics: {
+                            /** @description Non-deleted CUSTOMER accounts, including inactive or blocked accounts */
+                            totalCustomers: number;
+                            /** @description Active, non-deleted products */
+                            activeProducts: number;
+                            /** @description Active products with available stock <= lowStockThreshold, including zero or missing balances */
+                            lowStockProducts: number;
+                            /** @description All orders in PROCESSING */
+                            processingOrders: number;
+                            /** @description All invoices in PENDING_PAYMENT, independent of age or origin */
+                            pendingInvoices: number;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        role: "BILLING";
+                        /** Format: date-time */
+                        updatedAt: string;
+                        period: {
+                            /** Format: date-time */
+                            from: string;
+                            /** Format: date-time */
+                            to: string;
+                            /** @enum {string} */
+                            basis: "paidAt";
+                        };
+                        metrics: {
+                            /** @description PROCESSING orders without a non-VOID invoice and with a recorded payment; conversion revalidates transactionally */
+                            ordersEligibleForInvoicing: number;
+                            /** @description PROCESSING orders without a non-VOID invoice, even if payment is missing */
+                            ordersAwaitingInvoice: number;
+                            /** @description All invoices in PENDING_PAYMENT, independent of age or origin */
+                            pendingInvoices: number;
+                            /** @description Invoices currently PAID whose paidAt falls in the inclusive rolling 30-day period */
+                            paidInvoices: number;
+                        };
+                    };
+                };
+            };
+            /** @description Invalid or expired session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description CUSTOMER has no access to administrative indicators */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

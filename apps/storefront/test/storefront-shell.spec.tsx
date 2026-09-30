@@ -32,6 +32,10 @@ describe("StorefrontShell", () => {
     expect(header).toHaveClass("sticky", "top-0", "bg-[#041326]/98", "backdrop-blur-xl");
     expect(within(header).getByRole("link", { name: "Technology Store, inicio" })).toHaveAttribute("href", "/");
     expect(within(header).getByRole("navigation", { name: "Navegación principal" })).toHaveTextContent("Inicio");
+    expect(within(header).getByRole("link", { name: "Productos" })).toHaveAttribute("href", "/products");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /administración/i })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="storefront-shell"]')).toHaveClass("bg-[var(--ds-canvas)]");
     expect(within(header).getByRole("navigation", { name: "Acceso rápido al carrito" })).toBeInTheDocument();
     expect(main).toContainElement(screen.getByRole("heading", { name: "Catálogo disponible" }));
     expect(document.querySelector("#main-content")).toContainElement(main);

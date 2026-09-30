@@ -125,7 +125,7 @@ export function CatalogFilters({
         <button
           aria-controls={mobilePanelId}
           aria-expanded={mobileOpen}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-800 shadow-sm transition hover:border-blue-600 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-2 text-sm font-black text-[var(--ds-text)] shadow-sm transition hover:border-[var(--ds-accent)] hover:text-[var(--ds-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2"
           onClick={() => setMobileOpen(true)}
           type="button"
         >
@@ -143,16 +143,16 @@ export function CatalogFilters({
         id={panelId}
         inert={collapsed}
       >
-        <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_20px_55px_-45px_rgba(15,23,42,0.55)]">
-          <header className="flex items-center justify-between gap-3 border-b border-slate-200 border-t-2 border-t-blue-700 px-4 py-4">
+        <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[var(--ds-elevation)]">
+          <header className="flex items-center justify-between gap-3 border-b border-[var(--ds-border)] border-t-2 border-t-[var(--ds-accent)] px-4 py-4">
             <div className="min-w-0">
-              <p className="m-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Refina la selección</p>
-              <h2 className="mb-0 mt-1 text-base font-black tracking-tight text-slate-950" id={titleId}>Filtros</h2>
+              <p className="m-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Refina la selección</p>
+              <h2 className="mb-0 mt-1 text-base font-black tracking-tight text-[var(--ds-text)]" id={titleId}>Filtros</h2>
             </div>
             <IconButton
               ariaControls={panelId}
               ariaExpanded={!collapsed}
-              className="border-slate-300 bg-white text-slate-600 hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              className="border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--ds-text-muted)] hover:border-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)] hover:text-[var(--ds-accent)]"
               icon="chevron-left"
               label="Ocultar filtros del catálogo"
               onClick={() => toggleDesktopFilters(true)}
@@ -170,7 +170,7 @@ export function CatalogFilters({
           <IconButton
             ariaControls={panelId}
             ariaExpanded={false}
-            className="border-slate-300 bg-white text-slate-600 shadow-sm hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
+            className="border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--ds-text-muted)] shadow-sm hover:border-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)] hover:text-[var(--ds-accent)]"
             icon="chevron-right"
             label="Mostrar filtros del catálogo"
             onClick={() => toggleDesktopFilters(false)}
@@ -255,11 +255,11 @@ function CatalogFilterForm({
 
   return (
     <form aria-label="Filtros del catálogo" className="grid gap-5" onSubmit={handleSubmit}>
-      <label className="grid gap-2 text-sm font-bold text-slate-800">
+      <label className="grid gap-2 text-sm font-bold text-[var(--ds-text)]">
         Categoría
         {categories ? (
           <select
-            className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15"
+            className="min-h-11 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm font-medium text-[var(--ds-text)] outline-none focus:border-[var(--ds-accent)] focus:ring-4 focus:ring-[var(--ds-accent-soft)]"
             defaultValue={query.categoryId ?? ""}
             name="categoryId"
           >
@@ -269,42 +269,42 @@ function CatalogFilterForm({
           </select>
         ) : null}
       </label>
-      {categoriesPending ? <p className="m-0 text-xs text-slate-600">Cargando categorías…</p> : null}
+      {categoriesPending ? <p className="m-0 text-xs text-[var(--ds-text-muted)]">Cargando categorías…</p> : null}
       {categoriesError ? (
-        <div className="grid gap-2 text-xs text-red-700" role="alert">
+        <div className="grid gap-2 text-xs text-[var(--ds-danger)]" role="alert">
           <p className="m-0">No se pudieron cargar las categorías.</p>
-          <button className="min-h-9 justify-self-start rounded-lg border border-red-200 px-3 py-1.5 font-bold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700" onClick={onRetryCategories} type="button">Reintentar categorías</button>
+          <button className="min-h-9 justify-self-start rounded-lg border border-[var(--ds-danger)] px-3 py-1.5 font-bold text-[var(--ds-danger)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" onClick={onRetryCategories} type="button">Reintentar categorías</button>
         </div>
       ) : null}
 
-      <fieldset className="grid gap-2 border-0 border-t border-slate-200 p-0 pt-4">
-        <legend className="mb-1 px-0 text-sm font-bold text-slate-800">Etiquetas</legend>
+      <fieldset className="grid gap-2 border-0 border-t border-[var(--ds-border)] p-0 pt-4">
+        <legend className="mb-1 px-0 text-sm font-bold text-[var(--ds-text)]">Etiquetas</legend>
         {tags?.map((tag) => (
-          <label className="flex min-h-9 items-center gap-2 text-sm text-slate-700" key={tag.id}>
-            <input className="size-4 accent-blue-700" defaultChecked={query.tagIds?.includes(tag.id)} name="tagIds" type="checkbox" value={tag.id} />
+          <label className="flex min-h-9 items-center gap-2 text-sm text-[var(--ds-text-muted)]" key={tag.id}>
+            <input className="size-4 accent-[var(--ds-accent)]" defaultChecked={query.tagIds?.includes(tag.id)} name="tagIds" type="checkbox" value={tag.id} />
             {tag.name}
           </label>
         ))}
         {query.tagIds?.filter((id) => !tags?.some((tag) => tag.id === id)).map((id) => (
-          <label className="flex min-h-9 items-center gap-2 text-sm text-slate-600" key={id}>
-            <input className="size-4 accent-blue-700" defaultChecked name="tagIds" type="checkbox" value={id} />
+          <label className="flex min-h-9 items-center gap-2 text-sm text-[var(--ds-text-muted)]" key={id}>
+            <input className="size-4 accent-[var(--ds-accent)]" defaultChecked name="tagIds" type="checkbox" value={id} />
             Etiqueta no disponible
           </label>
         ))}
-        {tags?.length === 0 ? <p className="m-0 text-xs text-slate-600">No hay etiquetas activas.</p> : null}
-        {tagsPending ? <p className="m-0 text-xs text-slate-600">Cargando etiquetas…</p> : null}
+        {tags?.length === 0 ? <p className="m-0 text-xs text-[var(--ds-text-muted)]">No hay etiquetas activas.</p> : null}
+        {tagsPending ? <p className="m-0 text-xs text-[var(--ds-text-muted)]">Cargando etiquetas…</p> : null}
         {tagsError ? (
-          <div className="grid gap-2 text-xs text-red-700" role="alert">
+          <div className="grid gap-2 text-xs text-[var(--ds-danger)]" role="alert">
             <p className="m-0">No se pudieron cargar las etiquetas.</p>
-            <button className="min-h-9 justify-self-start rounded-lg border border-red-200 px-3 py-1.5 font-bold text-red-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700" onClick={onRetryTags} type="button">Reintentar etiquetas</button>
+            <button className="min-h-9 justify-self-start rounded-lg border border-[var(--ds-danger)] px-3 py-1.5 font-bold text-[var(--ds-danger)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" onClick={onRetryTags} type="button">Reintentar etiquetas</button>
           </div>
         ) : null}
       </fieldset>
 
-      <label className="grid gap-2 border-t border-slate-200 pt-4 text-sm font-bold text-slate-800">
+      <label className="grid gap-2 border-t border-[var(--ds-border)] pt-4 text-sm font-bold text-[var(--ds-text)]">
         Disponibilidad
         <select
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15"
+          className="min-h-11 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm font-medium text-[var(--ds-text)] outline-none focus:border-[var(--ds-accent)] focus:ring-4 focus:ring-[var(--ds-accent-soft)]"
           defaultValue={query.availability ?? ""}
           name="availability"
         >
@@ -314,12 +314,12 @@ function CatalogFilterForm({
         </select>
       </label>
 
-      <fieldset className="grid grid-cols-2 gap-3 border-0 border-t border-slate-200 p-0 pt-4">
-        <legend className="col-span-2 mb-1 px-0 text-sm font-bold text-slate-800">Rango de precio</legend>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+      <fieldset className="grid grid-cols-2 gap-3 border-0 border-t border-[var(--ds-border)] p-0 pt-4">
+        <legend className="col-span-2 mb-1 px-0 text-sm font-bold text-[var(--ds-text)]">Rango de precio</legend>
+        <label className="grid gap-1 text-xs font-semibold text-[var(--ds-text-muted)]">
           Mínimo
           <input
-            className="min-h-11 min-w-0 rounded-xl border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15"
+            className="min-h-11 min-w-0 rounded-xl bg-[var(--ds-surface)] border border-[var(--ds-border)] px-3 text-sm text-[var(--ds-text)] outline-none focus:border-[var(--ds-accent)] focus:ring-4 focus:ring-[var(--ds-accent-soft)]"
             defaultValue={query.minPrice ?? ""}
             min="0"
             name="minPrice"
@@ -328,10 +328,10 @@ function CatalogFilterForm({
             type="number"
           />
         </label>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+        <label className="grid gap-1 text-xs font-semibold text-[var(--ds-text-muted)]">
           Máximo
           <input
-            className="min-h-11 min-w-0 rounded-xl border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15"
+            className="min-h-11 min-w-0 rounded-xl bg-[var(--ds-surface)] border border-[var(--ds-border)] px-3 text-sm text-[var(--ds-text)] outline-none focus:border-[var(--ds-accent)] focus:ring-4 focus:ring-[var(--ds-accent-soft)]"
             defaultValue={query.maxPrice ?? ""}
             min="0"
             name="maxPrice"
@@ -342,10 +342,10 @@ function CatalogFilterForm({
         </label>
       </fieldset>
 
-      <label className="grid gap-2 border-t border-slate-200 pt-4 text-sm font-bold text-slate-800">
+      <label className="grid gap-2 border-t border-[var(--ds-border)] pt-4 text-sm font-bold text-[var(--ds-text)]">
         Ordenar por
         <select
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/15"
+          className="min-h-11 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 text-sm font-medium text-[var(--ds-text)] outline-none focus:border-[var(--ds-accent)] focus:ring-4 focus:ring-[var(--ds-accent-soft)]"
           defaultValue={`${query.sortBy}:${query.sortOrder}`}
           name="sort"
         >
@@ -357,11 +357,11 @@ function CatalogFilterForm({
         </select>
       </label>
 
-      <div className="flex gap-2 border-t border-slate-200 pt-4">
-        <button className="min-h-11 flex-1 rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canApply} type="submit">
+      <div className="flex gap-2 border-t border-[var(--ds-border)] pt-4">
+        <button className="min-h-11 flex-1 rounded-xl bg-[var(--ds-accent)] px-4 py-2 text-sm font-black text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canApply} type="submit">
           Aplicar
         </button>
-        <button className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" onClick={onClear} type="button">
+        <button className="min-h-11 rounded-xl border border-[var(--ds-border)] px-3 py-2 text-sm font-bold text-[var(--ds-text-muted)] transition hover:border-[var(--ds-border)] hover:bg-[var(--ds-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={onClear} type="button">
           Limpiar
         </button>
       </div>
@@ -373,7 +373,7 @@ function ActiveFilterBadge({ count }: Readonly<{ count: number }>) {
   if (count === 0) return null;
 
   return (
-    <span aria-label={`${count} filtros activos`} className="grid min-h-6 min-w-6 place-items-center rounded-full bg-blue-700 px-1.5 text-xs font-black text-white">
+    <span aria-label={`${count} filtros activos`} className="grid min-h-6 min-w-6 place-items-center rounded-full bg-[var(--ds-accent)] px-1.5 text-xs font-black text-[var(--ds-accent-text)]">
       {count}
     </span>
   );

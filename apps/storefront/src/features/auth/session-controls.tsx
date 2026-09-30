@@ -34,7 +34,7 @@ export function SessionControls() {
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-3">
-      <div aria-live="polite" className="w-full text-center text-sm text-slate-200">{notice}</div>
+      <div aria-live="polite" className={notice ? "w-full text-center text-sm text-slate-200" : "sr-only"}>{notice}</div>
       <nav aria-label="Cuenta y sesión" className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
         {status === "authenticated" && session ? (
           <>
@@ -77,10 +77,10 @@ export function SessionControls() {
           </>
         ) : status === "anonymous" ? (
           <>
-            <Link className="rounded-full bg-cyan-300 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-100" href="/login">
+            <Link className="rounded-full bg-cyan-300 px-3 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-100 sm:px-5" href="/login">
               Ingresar
             </Link>
-            <Link className="rounded-full border border-white/35 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200" href="/register">
+            <Link className="rounded-full border border-white/35 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200 sm:px-5" href="/register">
               Crear cuenta
             </Link>
           </>

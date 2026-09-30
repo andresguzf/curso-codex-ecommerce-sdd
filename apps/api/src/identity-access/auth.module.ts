@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthController } from "./auth.controller";
+import { IdentitySummaryReader } from "./identity-summary.reader";
 import { AuthCookieService } from "./auth-cookie.service";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
@@ -31,6 +32,7 @@ const authorizationProviders = [
   controllers: [AuthController, UserAdministrationController],
   providers: [
     AuthRepository,
+    IdentitySummaryReader,
     AuthService,
     AuthTokenService,
     AuthCookieService,
@@ -41,6 +43,6 @@ const authorizationProviders = [
     UserAdministrationService,
     ...authorizationProviders,
   ],
-  exports: [AuthService, PasswordService, ...authorizationProviders],
+  exports: [AuthService, PasswordService, IdentitySummaryReader, ...authorizationProviders],
 })
 export class AuthModule {}

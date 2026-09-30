@@ -15,7 +15,7 @@ export function CatalogHero({
   }
 
   return (
-    <section className="relative isolate overflow-hidden bg-[#081426] text-white" aria-labelledby="catalog-hero-title">
+    <section data-tone-region="inverse" className="relative isolate overflow-hidden bg-[#081426] text-white" aria-labelledby="catalog-hero-title">
       <Image
         alt=""
         aria-hidden="true"
@@ -25,7 +25,7 @@ export function CatalogHero({
         sizes="100vw"
         src="/images/hero-gaming-keyboard.png"
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,20,38,0.96),rgba(8,20,38,0.82))] lg:bg-[linear-gradient(90deg,rgba(8,20,38,0.98)_0%,rgba(8,20,38,0.9)_38%,rgba(8,20,38,0.18)_100%)]" />
+      <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,color-mix(in_srgb,var(--ds-inverse-surface)_96%,transparent),color-mix(in_srgb,var(--ds-inverse-surface)_82%,transparent))] lg:bg-[linear-gradient(90deg,var(--ds-inverse-surface)_0%,color-mix(in_srgb,var(--ds-inverse-surface)_90%,transparent)_38%,color-mix(in_srgb,var(--ds-inverse-surface)_18%,transparent)_100%)]" />
       <div className="relative mx-auto flex min-h-[30rem] max-w-7xl items-center px-6 py-16 sm:min-h-[34rem] lg:min-h-[36rem] lg:px-10 lg:py-24">
         <div className="w-full max-w-3xl">
           <p className="mb-5 flex items-center gap-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">

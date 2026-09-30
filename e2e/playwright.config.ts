@@ -4,6 +4,7 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: "./frontend",
+  outputDir: "../test-results/frontends",
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
@@ -15,12 +16,12 @@ export default defineConfig({
   projects: [
     {
       name: "storefront",
-      testMatch: /storefront-(catalog|accessibility)\.spec\.ts/,
+      testMatch: [/storefront-(catalog|accessibility|theme|design)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
       use: { baseURL: "http://localhost:3000" },
     },
     {
       name: "backoffice",
-      testMatch: /backoffice-(catalog|accessibility)\.spec\.ts/,
+      testMatch: [/backoffice-(catalog|accessibility|theme|design|dashboard)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
       use: { baseURL: "http://localhost:3002" },
     },
   ],

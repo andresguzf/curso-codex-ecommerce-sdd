@@ -84,7 +84,7 @@ describe("inventory administration", () => {
   it("shows current availability, movement history and author", async () => {
     renderInventory();
     expect(await screen.findByText("Teclado Nova 75")).toBeInTheDocument();
-    expect(screen.getByText("5", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText("5", { selector: "dd" })).toBeInTheDocument();
     expect(screen.getByText("Recepción de bodega")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();

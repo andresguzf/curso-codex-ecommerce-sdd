@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { LogoutButton } from "../auth/logout-button";
@@ -58,9 +59,9 @@ export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>)
 
   return (
     <div
-      className="flex min-h-dvh bg-slate-100 text-slate-950"
+      className="flex min-h-dvh bg-[var(--ds-canvas)] text-[var(--ds-text)]"
+      data-slot="backoffice-shell"
       onKeyDown={handleShellKeyDown}
-      style={{ backgroundColor: "var(--admin-page)", color: "var(--admin-text)" }}
     >
       <a
         className="sr-only z-50 rounded-lg bg-white px-4 py-3 font-bold text-slate-950 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
@@ -70,12 +71,13 @@ export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>)
       </a>
 
       <aside
+        data-tone-region="inverse"
         className={`sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/10 bg-[#0c1d34] text-slate-100 transition-[width] duration-200 motion-reduce:transition-none lg:flex ${isCollapsed ? "w-20" : "w-64"}`}
       >
-        <div className={`flex min-h-20 items-center gap-3 border-b border-white/10 px-4 ${isCollapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`flex min-h-16 items-center gap-3 border-b border-white/10 px-4 ${isCollapsed ? "justify-center" : "justify-between"}`}>
           <Link
             aria-label="Nexo Operations, inicio"
-            className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1d34]"
+            className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1d34]"
             href="/"
           >
             <NexoMark />
@@ -88,7 +90,7 @@ export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>)
             aria-controls="backoffice-desktop-navigation"
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? "Expandir navegación lateral" : "Contraer navegación lateral"}
-            className={`hidden min-h-10 min-w-10 items-center justify-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 lg:inline-flex ${isCollapsed ? "absolute right-[-0.8rem] top-[4.5rem] min-h-8 min-w-8 rounded-full border border-slate-300 bg-white text-slate-700 shadow-md hover:bg-slate-100 focus-visible:ring-blue-600" : "text-blue-100 hover:bg-white/10"}`}
+            className={`hidden min-h-10 min-w-10 items-center justify-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 lg:inline-flex ${isCollapsed ? "absolute right-[-0.8rem] top-[4.5rem] min-h-8 min-w-8 rounded-full border border-slate-300 bg-white text-slate-700 shadow-md hover:bg-slate-100 focus-visible:ring-blue-600" : "text-blue-100 hover:bg-white/10"}`}
             onClick={() => setIsCollapsed((collapsed) => !collapsed)}
             type="button"
           >
@@ -128,7 +130,7 @@ export function BackofficeShell({ children }: Readonly<{ children: ReactNode }>)
                 {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
               </button>
               <div className="min-w-0">
-                <p className="m-0 truncate text-sm font-black tracking-wide text-slate-900">Nexo Operations</p>
+                <p className="m-0 truncate text-sm font-semibold tracking-wide text-slate-900">Nexo Operations</p>
                 <p className="m-0 mt-0.5 text-xs text-slate-500">{roleLabel}</p>
               </div>
             </div>
@@ -168,13 +170,15 @@ function NavigationLinks({
   onNavigate?: () => void;
   surface?: "sidebar" | "mobile";
 }>) {
+  const pathname = usePathname();
   return (
-    <ul className="m-0 grid list-none gap-1 p-0">
+    <ul className="m-0 grid list-none gap-1 p-0" data-slot="admin-navigation-links">
       {items.map((item) => (
         <li key={item.href}>
           <Link
             aria-label={collapsed ? item.label : undefined}
-            className={`group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 ${surface === "mobile" ? "text-slate-700 hover:bg-slate-100 focus-visible:ring-blue-600" : "text-slate-200 hover:bg-white/10 hover:text-white focus-visible:ring-cyan-300"} ${collapsed ? "justify-center" : ""}`}
+            aria-current={pathname === item.href ? "page" : undefined}
+            className={`group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 ${surface === "mobile" ? "text-slate-700 hover:bg-slate-100 focus-visible:ring-blue-600" : "text-slate-200 hover:bg-white/10 hover:text-white focus-visible:ring-blue-300"} ${collapsed ? "justify-center" : ""}`}
             href={item.href}
             onClick={onNavigate}
             title={collapsed ? item.label : undefined}
@@ -190,7 +194,7 @@ function NavigationLinks({
 
 function NexoMark() {
   return (
-    <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-cyan-300/30 bg-[#15345b] text-lg font-black text-cyan-200 shadow-inner">
+    <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-300/30 bg-[#15345b] text-lg font-black text-blue-200 shadow-inner">
       <svg aria-hidden="true" className="size-6" fill="none" viewBox="0 0 24 24">
         <path d="M5 18V6l14 12V6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" />
       </svg>

@@ -173,3 +173,4 @@ export {
   type InvoiceStatusRequest,
   type InvoiceSummary,
 } from "./invoices";
+export { dashboardSummarySchema, adminDashboardSummarySchema, billingDashboardSummarySchema, type DashboardSummary } from "./dashboard";

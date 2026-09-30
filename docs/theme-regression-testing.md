@@ -1,0 +1,34 @@
+# Verificación de los cuatro temas — tarea 19.8
+
+## Cobertura
+
+La matriz nueva cubre storefront y backoffice, claro y oscuro, a 375 y 1440 píxeles. Sus ocho pruebas comparan dieciséis capturas de catálogo, detalle de producto, dashboard ADMIN y tabla administrativa con referencias versionadas. La suite existente complementa esta matriz con landing, dashboard BILLING, formularios, errores, mensajes, modales y drawers, incluidos foco, teclado y tamaños de 320 a 1440 píxeles.
+
+Cada caso nuevo verifica la preferencia inicial del sistema antes de aparecer el body, cambios del sistema sin preferencia guardada, selección por teclado con foco visible, persistencia al recargar y navegar, y aislamiento de la clave de la otra aplicación. Axe comprueba contraste y reglas WCAG AA en las vistas reales. La suite de tokens exige contraste de texto de 4.5:1 y de bordes/foco de 3:1; incluye ahora las regiones inversas de navbar y navegación administrativa. La automatización no sustituye una auditoría manual completa de accesibilidad.
+
+## Ejecutar y revisar
+
+- `pnpm test:e2e:themes`: compara las referencias, sin actualizarlas.
+- `pnpm test:e2e:frontends --workers=2`: ejecuta toda la cobertura de navegador, incluida la matriz nueva.
+- `pnpm test:e2e:design-tokens`: verifica contratos y contraste de tokens.
+- `pnpm test:e2e:themes --update-snapshots`: regenera las referencias únicamente después de revisar y aprobar un cambio visual intencional. Inspeccionar los PNG y su diferencia antes de aceptarlos; nunca actualizar automáticamente para ocultar una regresión.
+
+Las referencias viven en `e2e/frontend/theme-regression.spec.ts-snapshots/`. Se generaron con Chromium de Playwright en macOS (`darwin`); requieren el mismo sistema y versión de navegador. Linux necesita referencias propias revisadas, no reutilizar ni aceptar ciegamente las de macOS. La configuración conserva el sufijo de plataforma y proyecto para evitar comparaciones incompatibles.
+
+Los datos REST son fixtures deterministas: no se escribe en PostgreSQL ni se usan imágenes remotas. Se espera a fuentes e imágenes, se deshabilitan animaciones y se oculta únicamente el indicador de desarrollo de Next mediante `e2e/screenshot.css`. No se enmascaran productos, tablas, precios ni componentes de la aplicación; la comparación exige cero píxeles distintos. Los resultados de frontends y tokens usan directorios separados para evitar colisiones de trazas.
+
+## Archivos de la tarea
+
+- `e2e/frontend/theme-regression.spec.ts`: matriz de preferencias, foco y regresión visual.
+- `e2e/frontend/theme-regression.spec.ts-snapshots/`: dieciséis referencias PNG.
+- `e2e/frontend/design-tokens.spec.ts`: contraste de regiones inversas.
+- `e2e/screenshot.css`: exclusión del indicador de desarrollo.
+- `e2e/playwright.config.ts` y `e2e/design-tokens.config.ts`: integración y resultados separados.
+- `package.json`: comando específico de temas.
+- `docs/theme-regression-testing.md`: cobertura y mantenimiento.
+- `docs/theme-component-coverage.md`: enlace a la cobertura ampliada, antes pendiente.
+- `openspec/changes/build-technology-ecommerce-platform/tasks.md`: estado de 19.8.
+
+Esta tarea conserva la identidad visual existente, siguiendo las skills React y frontend-design para verificar accesibilidad y apariencia sin introducir un rediseño. README y AGENTS.md quedan para 19.9.
+
+Verificación: 57 pruebas de frontend y siete pruebas de tokens aprobadas; la matriz de ocho casos volvió a pasar con las dieciséis referencias definitivas sin actualizarlas. Comprobación TypeScript estricta de los archivos de pruebas y configuraciones y validación OpenSpec estricta aprobadas. Se inspeccionaron visualmente capturas representativas móviles y de escritorio. No se modificó código de las aplicaciones ni contratos REST.

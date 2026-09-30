@@ -26,23 +26,23 @@ export function ProductClassifications({
 
     return (
       <div aria-label="Clasificación del producto" className="mt-3 flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-        {visibleCategory ? <Link aria-label={`Ver productos de la categoría ${visibleCategory.name}`} className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-800 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href={classificationLink("categoryId", visibleCategory.id)}>{visibleCategory.name}</Link> : null}
-        {previewTags.map((tag) => <Link aria-label={`Ver productos con la etiqueta ${tag.name}`} className="rounded-full border border-slate-200 px-2.5 py-1 text-slate-700 hover:border-blue-300 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href={classificationLink("tagIds", tag.id)} key={tag.id}>{tag.name}</Link>)}
-        {visibleTags.length > previewTags.length ? <span className="text-slate-500">+{visibleTags.length - previewTags.length} etiquetas</span> : null}
+        {visibleCategory ? <Link aria-label={`Ver productos de la categoría ${visibleCategory.name}`} className="rounded-full bg-[var(--ds-accent-soft)] px-2.5 py-1 text-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href={classificationLink("categoryId", visibleCategory.id)}>{visibleCategory.name}</Link> : null}
+        {previewTags.map((tag) => <Link aria-label={`Ver productos con la etiqueta ${tag.name}`} className="rounded-full border border-[var(--ds-border)] px-2.5 py-1 text-[var(--ds-text-muted)] hover:border-[var(--ds-accent)] hover:text-[var(--ds-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href={classificationLink("tagIds", tag.id)} key={tag.id}>{tag.name}</Link>)}
+        {visibleTags.length > previewTags.length ? <span className="text-[var(--ds-text-muted)]">+{visibleTags.length - previewTags.length} etiquetas</span> : null}
       </div>
     );
   }
 
   return (
-    <section aria-label="Clasificación del producto" className="mt-7 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm sm:grid-cols-[7rem_minmax(0,1fr)]">
-      <p className="m-0 font-bold text-slate-700">Categoría</p>
-      {visibleCategory ? <Link className="w-fit font-semibold text-blue-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href={classificationLink("categoryId", visibleCategory.id)}>{visibleCategory.name}</Link> : <p className="m-0 text-slate-500">Sin categoría asignada</p>}
-      <p className="m-0 font-bold text-slate-700">Etiquetas</p>
+    <section aria-label="Clasificación del producto" className="mt-7 grid gap-4 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-subtle)] p-5 text-sm sm:grid-cols-[7rem_minmax(0,1fr)]">
+      <p className="m-0 font-bold text-[var(--ds-text-muted)]">Categoría</p>
+      {visibleCategory ? <Link className="w-fit font-semibold text-[var(--ds-accent)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href={classificationLink("categoryId", visibleCategory.id)}>{visibleCategory.name}</Link> : <p className="m-0 text-[var(--ds-text-muted)]">Sin categoría asignada</p>}
+      <p className="m-0 font-bold text-[var(--ds-text-muted)]">Etiquetas</p>
       {visibleTags.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {visibleTags.map((tag) => <Link aria-label={`Ver productos con la etiqueta ${tag.name}`} className="rounded-full border border-slate-300 bg-white px-3 py-1 font-semibold text-slate-700 hover:border-blue-500 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" href={classificationLink("tagIds", tag.id)} key={tag.id}>{tag.name}</Link>)}
+          {visibleTags.map((tag) => <Link aria-label={`Ver productos con la etiqueta ${tag.name}`} className="rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 py-1 font-semibold text-[var(--ds-text-muted)] hover:border-[var(--ds-accent)] hover:text-[var(--ds-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href={classificationLink("tagIds", tag.id)} key={tag.id}>{tag.name}</Link>)}
         </div>
-      ) : <p className="m-0 text-slate-500">Sin etiquetas asignadas</p>}
+      ) : <p className="m-0 text-[var(--ds-text-muted)]">Sin etiquetas asignadas</p>}
     </section>
   );
 }

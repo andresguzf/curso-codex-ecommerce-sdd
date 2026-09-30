@@ -59,7 +59,7 @@ export function CatalogLanding() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc]">
+    <main className="min-h-screen bg-[var(--ds-canvas)]">
       <CatalogHero
         initialSearchValue={query.search ?? ""}
         key={`hero-search:${query.search ?? ""}`}
@@ -68,18 +68,18 @@ export function CatalogLanding() {
       <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20" id="catalog">
         <div className="mb-9 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Catálogo activo</p>
-            <h2 className="mb-0 mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl" id="catalog-title">
+            <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Catálogo activo</p>
+            <h2 className="mb-0 mt-2 text-3xl font-black tracking-tight text-[var(--ds-text)] sm:text-4xl" id="catalog-title">
               Equipos listos para elegir
             </h2>
           </div>
           {productsQuery.data ? (
-            <p className="m-0 text-sm font-semibold text-slate-600">
+            <p className="m-0 text-sm font-semibold text-[var(--ds-text-muted)]">
               {productsQuery.data.totalItems} productos encontrados
             </p>
           ) : null}
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#15345b] px-5 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--ds-accent)] px-5 py-2 text-sm font-black text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2"
             href="/products"
           >
             Ver todos los productos
@@ -114,7 +114,7 @@ export function CatalogLanding() {
             {productsQuery.isError ? (
               <ErrorState
                 action={(
-                  <button className="min-h-11 rounded-lg bg-red-800 px-4 py-2 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
+                  <button className="min-h-11 rounded-lg bg-[var(--ds-accent)] px-4 py-2 text-sm font-bold text-[var(--ds-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
                     Intentar nuevamente
                   </button>
                 )}

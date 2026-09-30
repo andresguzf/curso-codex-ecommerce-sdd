@@ -1,0 +1,188 @@
+/* Backoffice only: bridge existing Tailwind primitives to the administrative palette. */
+html[data-design-system="backoffice"] [class~="bg-slate-100"],
+html[data-design-system="backoffice"] [class~="bg-slate-50/80"] {
+  background-color: var(--ds-canvas);
+}
+html[data-design-system="backoffice"] [class~="bg-white"] {
+  background-color: var(--ds-surface);
+}
+html[data-design-system="backoffice"] [class~="bg-slate-50"] {
+  background-color: var(--ds-surface-subtle);
+}
+html[data-design-system="backoffice"] [class~="bg-slate-200"] {
+  background-color: var(--ds-disabled);
+}
+html[data-design-system="backoffice"] [class~="bg-blue-50"],
+html[data-design-system="backoffice"] [class~="bg-blue-100"] {
+  background-color: var(--ds-accent-soft);
+}
+html[data-design-system="backoffice"] [class~="bg-blue-700"] {
+  background-color: var(--ds-accent);
+}
+html[data-design-system="backoffice"] [class~="bg-emerald-100"] {
+  background-color: var(--ds-success-soft);
+}
+html[data-design-system="backoffice"] [class~="bg-amber-50"],
+html[data-design-system="backoffice"] [class~="bg-amber-100"],
+html[data-design-system="backoffice"] [class~="bg-orange-50"] {
+  background-color: var(--ds-warning-soft);
+}
+html[data-design-system="backoffice"] [class~="bg-red-50"],
+html[data-design-system="backoffice"] [class~="bg-rose-50"] {
+  background-color: var(--ds-danger-soft);
+}
+html[data-design-system="backoffice"] [class~="bg-indigo-100"] {
+  background-color: var(--ds-info-soft);
+}
+html[data-design-system="backoffice"] [class~="text-slate-950"],
+html[data-design-system="backoffice"] [class~="text-slate-900"],
+html[data-design-system="backoffice"] [class~="text-slate-800"],
+html[data-design-system="backoffice"] [class~="text-slate-700"] {
+  color: var(--ds-text);
+}
+html[data-design-system="backoffice"] [class~="text-slate-600"],
+html[data-design-system="backoffice"] [class~="text-slate-500"],
+html[data-design-system="backoffice"] [class~="text-slate-400"] {
+  color: var(--ds-text-muted);
+}
+html[data-design-system="backoffice"] [class~="text-blue-950"],
+html[data-design-system="backoffice"] [class~="text-blue-800"],
+html[data-design-system="backoffice"] [class~="text-blue-700"] {
+  color: var(--ds-accent);
+}
+html[data-design-system="backoffice"] [class~="text-emerald-800"],
+html[data-design-system="backoffice"] [class~="text-emerald-700"] {
+  color: var(--ds-success);
+}
+html[data-design-system="backoffice"] [class~="text-amber-900"],
+html[data-design-system="backoffice"] [class~="text-orange-900"] {
+  color: var(--ds-warning);
+}
+html[data-design-system="backoffice"] [class~="text-rose-800"],
+html[data-design-system="backoffice"] [class~="text-red-950"],
+html[data-design-system="backoffice"] [class~="text-red-800"],
+html[data-design-system="backoffice"] [class~="text-red-700"] {
+  color: var(--ds-danger);
+}
+html[data-design-system="backoffice"] [class~="text-indigo-800"] {
+  color: var(--ds-info);
+}
+html[data-design-system="backoffice"] [class~="border-slate-200"],
+html[data-design-system="backoffice"] [class~="border-slate-300"],
+html[data-design-system="backoffice"] [class~="border-blue-200"],
+html[data-design-system="backoffice"] [class~="border-blue-300"],
+html[data-design-system="backoffice"] [class~="border-amber-300"],
+html[data-design-system="backoffice"] [class~="border-red-200"],
+html[data-design-system="backoffice"] [class~="border-red-300"],
+html[data-design-system="backoffice"] [class~="border-emerald-300"] {
+  border-color: var(--ds-border);
+}
+
+html[data-design-system="backoffice"] [class~="bg-blue-700"][class~="text-white"] {
+  color: var(--ds-accent-text);
+}
+html[data-design-system="backoffice"] [class~="hover:bg-blue-800"]:hover {
+  background-color: var(--ds-accent-hover);
+  color: var(--ds-accent-text);
+}
+html[data-design-system="backoffice"] [class~="hover:bg-slate-50"]:hover,
+html[data-design-system="backoffice"] [class~="hover:bg-slate-100"]:hover {
+  background-color: var(--ds-surface-subtle);
+}
+html[data-design-system="backoffice"] [class~="hover:bg-blue-50"]:hover {
+  background-color: var(--ds-accent-soft);
+}
+html[data-design-system="backoffice"] [class~="hover:bg-amber-50"]:hover {
+  background-color: var(--ds-warning-soft);
+}
+html[data-design-system="backoffice"] :is(input, select, textarea) {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  color: var(--ds-text);
+  min-height: var(--ds-control-height);
+  font-size: var(--ds-text-body);
+  border-radius: var(--ds-radius-control);
+}
+html[data-design-system="backoffice"] :is(input, textarea)::placeholder {
+  color: var(--ds-text-muted);
+}
+html[data-design-system="backoffice"] :is(input[type="checkbox"], input[type="radio"]) {
+  min-height: auto;
+  accent-color: var(--ds-accent);
+}
+html[data-design-system="backoffice"] :is(input, select, textarea):disabled {
+  background: var(--ds-disabled);
+  color: var(--ds-disabled-text);
+}
+html[data-design-system="backoffice"] :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+html[data-design-system="backoffice"] :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--ds-danger);
+}
+html[data-design-system="backoffice"] button[class~="bg-blue-700"]:disabled:not([aria-current]) {
+  background: var(--ds-disabled);
+  color: var(--ds-disabled-text);
+}
+html[data-design-system="backoffice"] [data-slot="backoffice-shell"] main > div > header {
+  padding-bottom: var(--ds-space-stack);
+}
+html[data-design-system="backoffice"] [data-slot="backoffice-shell"] main h1 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-title);
+  line-height: 1.25;
+}
+html[data-design-system="backoffice"] [data-slot="backoffice-shell"] main :is(section, form)[class*="rounded-"] {
+  border-radius: var(--ds-radius-panel);
+}
+html[data-design-system="backoffice"] [data-slot="data-table"] {
+  border-color: var(--ds-border);
+  border-radius: var(--ds-radius-panel);
+}
+html[data-design-system="backoffice"] [data-slot="data-table"]:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+html[data-design-system="backoffice"] [data-slot="data-table"] thead {
+  background: var(--ds-surface-subtle);
+  color: var(--ds-text-muted);
+}
+html[data-design-system="backoffice"] [data-slot="data-table"] th {
+  padding: .625rem .875rem;
+  font-size: .6875rem;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+html[data-design-system="backoffice"] [data-slot="data-table"] td {
+  padding: .5rem .875rem;
+  height: var(--ds-row-height);
+  font-variant-numeric: tabular-nums;
+}
+html[data-design-system="backoffice"] [data-slot="data-table"] tbody,
+html[data-design-system="backoffice"] [data-slot="data-table"] tr {
+  border-color: var(--ds-border);
+}
+html[data-design-system="backoffice"] [data-slot="confirmation-dialog"],
+html[data-design-system="backoffice"] [data-slot="filter-drawer"] [role="dialog"] {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+html[data-design-system="backoffice"] [data-slot="metric-card"] {
+  border-left: 3px solid var(--ds-accent);
+}
+html[data-design-system="backoffice"] [data-slot="admin-navigation-links"] a[aria-current="page"] {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+  box-shadow: inset 3px 0 var(--ds-accent);
+}
+@media (max-width: 639px) {
+  html[data-design-system="backoffice"] [data-slot="data-table"] td { height: 3rem; }
+  html[data-design-system="backoffice"] :is(input, select, textarea) { font-size: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-design-system="backoffice"] :is(button, a, input, select, textarea) {
+    transition: none;
+  }
+}

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo visual — tienda y administración</title>
+<link rel="stylesheet" href="../apps/storefront/src/styles/design-tokens.css">
+<link rel="stylesheet" href="../apps/backoffice/src/styles/design-tokens.css">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #f1f5f9; color: #172235; font-family: Arial, sans-serif; }
+main { max-width: 1400px; margin: auto; padding: 24px; }
+h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); margin: 0; }
+.intro { max-width: 70ch; line-height: 1.6; }
+.catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.preview { min-width: 0; background: var(--ds-canvas); color: var(--ds-text); padding: var(--ds-space-panel); border-radius: var(--ds-radius-panel); font-family: var(--ds-font-body); font-size: var(--ds-text-body); line-height: var(--ds-line-body); }
+.preview h2 { font-family: var(--ds-font-display); font-size: var(--ds-text-title); line-height: 1.15; margin: 0 0 12px; }
+.preview h3 { margin: 0; font-family: var(--ds-font-display); }
+.muted { color: var(--ds-text-muted); }
+.panel { margin-block: var(--ds-space-stack); padding: var(--ds-space-panel); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-panel); background: var(--ds-surface); box-shadow: var(--ds-elevation); }
+[data-design-system="storefront"] .panel { border-top: 4px solid var(--ds-accent); }
+[data-design-system="backoffice"] .panel { border-left: 3px solid var(--ds-accent); }
+.data { font-family: var(--ds-font-data); font-variant-numeric: tabular-nums; }
+.price { font-size: 1.75rem; font-weight: bold; }
+.actions { display: flex; flex-wrap: wrap; gap: calc(var(--ds-space-unit) * 3); margin-top: 12px; }
+button, input { font: inherit; border-radius: var(--ds-radius-control); min-height: var(--ds-control-height); padding: var(--ds-space-control); }
+button { border: 1px solid var(--ds-accent); background: var(--ds-accent); color: var(--ds-accent-text); cursor: pointer; }
+button:hover { background: var(--ds-accent-hover); }
+button.secondary { background: var(--ds-surface); color: var(--ds-accent); }
+button.secondary:hover { background: var(--ds-accent-soft); }
+button:disabled { background: var(--ds-disabled); color: var(--ds-disabled-text); border-color: var(--ds-border); cursor: not-allowed; }
+input { display: block; margin-top: 8px; width: 100%; border: 1px solid var(--ds-border); background: var(--ds-surface-subtle); color: var(--ds-text); }
+input[aria-invalid="true"] { border: 2px solid var(--ds-danger); }
+:where(button, input, a):focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 3px; }
+.status { padding: var(--ds-space-control); border-radius: var(--ds-radius-control); border-left: 3px solid currentColor; margin: 8px 0; }
+.success { color: var(--ds-success); background: var(--ds-success-soft); }
+.warning { color: var(--ds-warning); background: var(--ds-warning-soft); }
+.danger { color: var(--ds-danger); background: var(--ds-danger-soft); }
+.info { color: var(--ds-info); background: var(--ds-info-soft); }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 30px; height: 30px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-control); }
+.table-wrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: var(--ds-text-body); }
+caption { text-align: left; font-weight: bold; margin-bottom: 8px; }
+th, td { padding: var(--ds-space-control); min-height: var(--ds-row-height); height: var(--ds-row-height); text-align: left; border-bottom: 1px solid var(--ds-border); }
+th { background: var(--ds-surface-subtle); }
+@media (max-width: 850px) { .catalog { grid-template-columns: 1fr; } }
+@media (max-width: 400px) { main { padding: 12px; } .preview { padding: 16px; } .panel { padding: 12px; } }
+</style>
+</head>
+<body><main>
+<h1>Tecnología para comprar. Claridad para operar.</h1>
+<p class="intro">Catálogo de referencia de la tarea 19.1. Cuatro sistemas visuales independientes: la tienda prioriza producto y compra; la administración prioriza lectura y operación. Estos ejemplos no ejecutan compras ni guardan datos.</p>
+<div class="catalog">
+<section class="preview" data-design-system="storefront" data-theme="light" aria-labelledby="storefront-light-title">
+<h2 id="storefront-light-title">Tienda · claro</h2>
+<p class="muted">Descubre, compara y compra · espacios amplios</p>
+<div class="swatches" role="group" aria-label="Muestras de superficies y acento"><span role="img" class="swatch" style="background:var(--ds-canvas)" title="canvas" aria-label="canvas"></span><span role="img" class="swatch" style="background:var(--ds-surface)" title="surface" aria-label="surface"></span><span role="img" class="swatch" style="background:var(--ds-surface-subtle)" title="surface-subtle" aria-label="surface-subtle"></span><span role="img" class="swatch" style="background:var(--ds-accent)" title="accent" aria-label="accent"></span><span role="img" class="swatch" style="background:var(--ds-text)" title="text" aria-label="text"></span></div>
+<div class="panel">
+<p class="muted">Equipo para tu escritorio</p><h3>Teclado mecánico Atlas</h3><p>Formato compacto, conexión USB y teclas intercambiables.</p><p class="data price">USD 149.90</p><p class="status success">✓ Disponible · 12 unidades</p>
+<div class="actions"><button type="button">Agregar al carrito</button><button class="secondary" type="button">Ver detalle</button><button type="button" disabled>Sin stock</button></div>
+</div>
+<label for="storefront-light-search">Buscar producto</label><input id="storefront-light-search" value="Teclado" readonly>
+<label for="storefront-light-invalid">Ejemplo de campo con error</label><input id="storefront-light-invalid" aria-invalid="true" aria-describedby="storefront-light-error" readonly value="">
+<p class="status danger" id="storefront-light-error">× Error: completa el campo antes de guardar.</p>
+<p class="status warning">! Atención: revisa la disponibilidad.</p>
+<p class="status info">i Información: precios expresados en USD.</p>
+<p class="muted">Prueba Tab para comprobar el foco. Ejemplos estáticos sin conexión con el API.</p>
+</section>
+<section class="preview" data-design-system="storefront" data-theme="dark" aria-labelledby="storefront-dark-title">
+<h2 id="storefront-dark-title">Tienda · oscuro</h2>
+<p class="muted">Descubre, compara y compra · espacios amplios</p>
+<div class="swatches" role="group" aria-label="Muestras de superficies y acento"><span role="img" class="swatch" style="background:var(--ds-canvas)" title="canvas" aria-label="canvas"></span><span role="img" class="swatch" style="background:var(--ds-surface)" title="surface" aria-label="surface"></span><span role="img" class="swatch" style="background:var(--ds-surface-subtle)" title="surface-subtle" aria-label="surface-subtle"></span><span role="img" class="swatch" style="background:var(--ds-accent)" title="accent" aria-label="accent"></span><span role="img" class="swatch" style="background:var(--ds-text)" title="text" aria-label="text"></span></div>
+<div class="panel">
+<p class="muted">Equipo para tu escritorio</p><h3>Teclado mecánico Atlas</h3><p>Formato compacto, conexión USB y teclas intercambiables.</p><p class="data price">USD 149.90</p><p class="status success">✓ Disponible · 12 unidades</p>
+<div class="actions"><button type="button">Agregar al carrito</button><button class="secondary" type="button">Ver detalle</button><button type="button" disabled>Sin stock</button></div>
+</div>
+<label for="storefront-dark-search">Buscar producto</label><input id="storefront-dark-search" value="Teclado" readonly>
+<label for="storefront-dark-invalid">Ejemplo de campo con error</label><input id="storefront-dark-invalid" aria-invalid="true" aria-describedby="storefront-dark-error" readonly value="">
+<p class="status danger" id="storefront-dark-error">× Error: completa el campo antes de guardar.</p>
+<p class="status warning">! Atención: revisa la disponibilidad.</p>
+<p class="status info">i Información: precios expresados en USD.</p>
+<p class="muted">Prueba Tab para comprobar el foco. Ejemplos estáticos sin conexión con el API.</p>
+</section>
+<section class="preview" data-design-system="backoffice" data-theme="light" aria-labelledby="backoffice-light-title">
+<h2 id="backoffice-light-title">Administración · claro</h2>
+<p class="muted">Control operativo · lectura compacta</p>
+<div class="swatches" role="group" aria-label="Muestras de superficies y acento"><span role="img" class="swatch" style="background:var(--ds-canvas)" title="canvas" aria-label="canvas"></span><span role="img" class="swatch" style="background:var(--ds-surface)" title="surface" aria-label="surface"></span><span role="img" class="swatch" style="background:var(--ds-surface-subtle)" title="surface-subtle" aria-label="surface-subtle"></span><span role="img" class="swatch" style="background:var(--ds-accent)" title="accent" aria-label="accent"></span><span role="img" class="swatch" style="background:var(--ds-text)" title="text" aria-label="text"></span></div>
+<div class="panel">
+<div class="table-wrap"><table><caption>Órdenes por facturar</caption><thead><tr><th scope="col">Orden</th><th scope="col">Total USD</th></tr></thead><tbody><tr><td class="data">ORD-1042</td><td class="data">149.90</td></tr><tr><td class="data">ORD-1043</td><td class="data">499.90</td></tr></tbody></table></div>
+<div class="actions"><button type="button">Facturar orden</button><button class="secondary" type="button">Ver orden</button><button type="button" disabled>No disponible</button></div>
+</div>
+<label for="backoffice-light-search">Buscar orden</label><input id="backoffice-light-search" value="ORD-1042" readonly>
+<label for="backoffice-light-invalid">Ejemplo de campo con error</label><input id="backoffice-light-invalid" aria-invalid="true" aria-describedby="backoffice-light-error" readonly value="">
+<p class="status danger" id="backoffice-light-error">× Error: completa el campo antes de guardar.</p>
+<p class="status warning">! Atención: revisa la disponibilidad.</p>
+<p class="status info">i Información: precios expresados en USD.</p>
+<p class="muted">Prueba Tab para comprobar el foco. Ejemplos estáticos sin conexión con el API.</p>
+</section>
+<section class="preview" data-design-system="backoffice" data-theme="dark" aria-labelledby="backoffice-dark-title">
+<h2 id="backoffice-dark-title">Administración · oscuro</h2>
+<p class="muted">Control operativo · lectura compacta</p>
+<div class="swatches" role="group" aria-label="Muestras de superficies y acento"><span role="img" class="swatch" style="background:var(--ds-canvas)" title="canvas" aria-label="canvas"></span><span role="img" class="swatch" style="background:var(--ds-surface)" title="surface" aria-label="surface"></span><span role="img" class="swatch" style="background:var(--ds-surface-subtle)" title="surface-subtle" aria-label="surface-subtle"></span><span role="img" class="swatch" style="background:var(--ds-accent)" title="accent" aria-label="accent"></span><span role="img" class="swatch" style="background:var(--ds-text)" title="text" aria-label="text"></span></div>
+<div class="panel">
+<div class="table-wrap"><table><caption>Órdenes por facturar</caption><thead><tr><th scope="col">Orden</th><th scope="col">Total USD</th></tr></thead><tbody><tr><td class="data">ORD-1042</td><td class="data">149.90</td></tr><tr><td class="data">ORD-1043</td><td class="data">499.90</td></tr></tbody></table></div>
+<div class="actions"><button type="button">Facturar orden</button><button class="secondary" type="button">Ver orden</button><button type="button" disabled>No disponible</button></div>
+</div>
+<label for="backoffice-dark-search">Buscar orden</label><input id="backoffice-dark-search" value="ORD-1042" readonly>
+<label for="backoffice-dark-invalid">Ejemplo de campo con error</label><input id="backoffice-dark-invalid" aria-invalid="true" aria-describedby="backoffice-dark-error" readonly value="">
+<p class="status danger" id="backoffice-dark-error">× Error: completa el campo antes de guardar.</p>
+<p class="status warning">! Atención: revisa la disponibilidad.</p>
+<p class="status info">i Información: precios expresados en USD.</p>
+<p class="muted">Prueba Tab para comprobar el foco. Ejemplos estáticos sin conexión con el API.</p>
+</section>
+</div></main></body></html>

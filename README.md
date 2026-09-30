@@ -4,15 +4,17 @@ Aplicación e-commerce para comercializar un catálogo de productos tecnológico
 
 > Estado actual: la planificación está completa y la implementación avanza por tareas OpenSpec. Ya existen storefront, backoffice, API, persistencia, autenticación, catálogo, inventario, carrito, checkout, órdenes, facturación, PDF, observabilidad, contenedores y CI funcionales; las ampliaciones posteriores continúan pendientes según `tasks.md`.
 
-La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Los artefactos de planificación están completos, no toda la implementación. El plan contiene 145 tareas; la revisión de escenarios 18.5 está registrada en [su informe](e2e/VALIDATION-18.5.md) y siguen pendientes las fases 19–21, salvo 20.8.
+La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Los artefactos de planificación están completos, no toda la implementación. El plan contiene 145 tareas, con 128 completadas al cerrar la fase 19; siguen pendientes 17 tareas de las fases 20–21, salvo 20.8, que ya está implementada. La revisión de escenarios 18.5 está registrada en [su informe histórico](e2e/VALIDATION-18.5.md); la evidencia posterior de temas y dashboard se enlaza abajo.
 
 ### Implementación actual y alcance pendiente
 
-Actualizado en la tarea 18.4 (30 de septiembre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 19.9 (30 de septiembre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
 
 - Implementado: autenticación y roles, carrito de visitante o cliente, checkout, órdenes, inventario, facturas y PDF; administración de usuarios, productos, categorías y etiquetas; wishlist, perfil empresarial con logo y snapshots, autocompletes y catálogo completo separado (20.8).
-- Pendiente: selector y persistencia de temas por aplicación, dashboard con indicadores (19), ampliación del seed y gestión de múltiples imágenes/galería (20), destacados y composición editorial agregada de la landing (21). Los requisitos de estas capacidades se conservan en este documento como objetivos, no como funcionalidades disponibles.
+- Implementado en 19.1–19.8: identidades comerciales y administrativas separadas, cuatro temas, selector accesible y persistencia independiente; dashboard por rol y `GET /api/v1/dashboard/summary`, con pruebas de contraste, teclado y regresión visual.
+- Pendiente: ampliación del seed y gestión de múltiples imágenes/galería (20), destacados y composición editorial agregada de la landing (21). Los requisitos de estas capacidades se conservan en este documento como objetivos, no como funcionalidades disponibles.
 - Verificación del alcance completado: [accesibilidad 18.2](e2e/ACCESSIBILITY.md) y [validación 18.3](e2e/VALIDATION-18.3.md), con lint, tipos, 498 pruebas de las suites principales y pruebas de navegador. Esto no acredita las funcionalidades pendientes.
+- Verificación de fase 19: [contrato del dashboard](docs/dashboard-summary.md), [interfaz del dashboard](docs/backoffice-dashboard.md), [cobertura de componentes](docs/theme-component-coverage.md) y [regresión de temas](docs/theme-regression-testing.md). En 19.8 pasaron 57 pruebas de frontend y siete de tokens; las 16 referencias visuales se verificaron sin actualizarlas.
 
 ### Rutas de las aplicaciones
 
@@ -83,7 +85,7 @@ Change 'build-technology-ecommerce-platform' is valid
 
 ## Reglas fundamentales
 
-Estas decisiones son invariantes del proyecto; las relativas a temas, galería y composición editorial se implementarán en las fases pendientes indicadas arriba:
+Estas decisiones son invariantes del proyecto; la galería y composición editorial siguen siendo objetivos de las fases pendientes indicadas arriba. Los temas y el dashboard ya están implementados:
 
 1. El frontend consume exclusivamente la API REST.
 2. Next.js no usa Server Actions ni Route Handlers para lógica de negocio o acceso a datos.
@@ -719,13 +721,13 @@ Los mensajes flash usan una región `aria-live` y se originan desde handlers o c
 
 ### Identidades visuales y temas
 
-Estado actual: el storefront usa su identidad comercial clara y navbar azul oscuro fijo; el backoffice usa un tema oscuro para `ADMIN` y claro para `BILLING`. El switch, la preferencia del sistema y su persistencia independiente todavía pertenecen a la fase 19. Lo siguiente describe el objetivo aprobado, no el funcionamiento actual.
+Implementado en 19.1–19.8: ambas aplicaciones ofrecen temas claro y oscuro con identidades propias. El backoffice ya no fuerza un tema por rol: tanto `ADMIN` como `BILLING` pueden elegirlo. El navbar público conserva su franja azul oscura, fija y translúcida al desplazar, también en tema claro.
 
-El storefront tendrá una apariencia comercial típica de un e-commerce tecnológico: imágenes y tarjetas de producto protagonistas, espacios generosos, contenido destacado, precio, stock y llamadas a la compra claramente jerarquizadas.
+El storefront tiene una apariencia comercial típica de un e-commerce tecnológico: imágenes y tarjetas de producto protagonistas, espacios generosos, precio, stock y llamadas a la compra claramente jerarquizadas. Las secciones editoriales de destacados y categorías importantes siguen pendientes en 21.
 
-El backoffice tendrá una apariencia minimalista, elegante y empresarial: paleta neutral basada en slate, navy y azul, mayor densidad operativa, tablas compactas, tarjetas KPI, navegación sobria y colores semánticos para estados.
+El backoffice tiene una apariencia minimalista, elegante y empresarial: paleta basada en slate, navy y azul, mayor densidad operativa, tablas compactas, tarjetas KPI, navegación sobria y colores semánticos para estados.
 
-Se contemplan cuatro combinaciones visuales independientes:
+Se verifican cuatro combinaciones visuales independientes:
 
 ```text
 Storefront claro     Storefront oscuro
@@ -734,22 +736,30 @@ Backoffice claro     Backoffice oscuro
 
 Cada aplicación usa sus propios tokens semánticos y guarda su preferencia por separado. En la primera visita se respeta `prefers-color-scheme`; una selección explícita prevalece posteriormente. El tema se aplica antes de la primera presentación visible para evitar parpadeos durante la hidratación.
 
+El selector accesible aparece fijo en la esquina inferior derecha. Las claves de localStorage son `technology-ecommerce:storefront:theme` y `technology-ecommerce:backoffice:theme`, con valores `light` o `dark`; no guardan tokens de sesión ni datos de negocio. El bootstrap del head aplica el tema y un provider Zustand lo sincroniza con el sistema y los eventos de almacenamiento. Si el almacenamiento está bloqueado, la selección funciona en memoria, sin garantizar persistencia tras recargar. La preferencia es visual, no depende del rol ni se guarda en PostgreSQL.
+
 Todos los temas deben cubrir navbar, hero, tarjetas, dashboard, gráficos, tablas, formularios, sidebars, drawers, modales, mensajes y estados interactivos con contraste WCAG AA, foco visible y significado no dependiente únicamente del color.
+
+Los componentes existentes están cubiertos por tokens y una capa de compatibilidad semántica; las franjas oscuras usan regiones inversas y los formularios anidados restablecen su superficie. No hay gráficos de analítica implementados ni se presentan datos ficticios como indicadores. El [catálogo visual](docs/design-system.html), la [guía de tokens](docs/design-tokens.md) y la [infraestructura de temas](docs/theme-runtime.md) documentan sus límites y mantenimiento.
+
+Para verificar: `pnpm test:e2e:themes`, `pnpm test:e2e:design-tokens` y `pnpm test:e2e:frontends --workers=2`. Las referencias actuales son de Chromium/macOS; otras plataformas necesitan referencias revisadas propias. No se actualizan capturas automáticamente para aceptar una diferencia visual.
 
 ### Dashboard del backoffice
 
-Pendiente en 19.5–19.6: la ruta `/` del backoffice existe, pero todavía no es un dashboard de métricas ni consume `/dashboard/summary`.
+Implementado en 19.5–19.6: la ruta `/` del backoffice consume `GET /api/v1/dashboard/summary` mediante TanStack Query y valida la respuesta con Zod. Ofrece carga, error con reintento, valores cero, actualización manual y accesos rápidos autorizados, sin duplicar métricas en Zustand.
 
 El dashboard inicial adapta indicadores y accesos al rol:
 
-- `ADMIN`: clientes totales, productos activos, stock bajo o agotado, órdenes en proceso y facturas pendientes.
-- `BILLING`: órdenes elegibles o pendientes de facturar, facturas pendientes y facturas pagadas.
+- `ADMIN`: clientes `CUSTOMER` no eliminados (incluidos inactivos/bloqueados), productos activos no eliminados, productos activos con hasta cinco unidades (incluido balance ausente), órdenes `PROCESSING` y facturas `PENDING_PAYMENT`.
+- `BILLING`: órdenes `PROCESSING` sin factura distinta de `VOID`, subconjunto elegible con pago registrado, facturas `PENDING_PAYMENT` de cualquier antigüedad y facturas actualmente `PAID` con `paidAt` en los últimos 30 días.
 
 Los indicadores son informativos y enlazan a las listas filtradas autoritativas. Cada resumen muestra su período o fecha de actualización.
 
+El API devuelve variantes estrictas por `role`, `updatedAt` y `metrics`; ADMIN recibe `lowStockThreshold: 5` y BILLING `period: { from, to, basis: "paidAt" }`. El período tiene extremos inclusivos y no es configurable. La lectura usa una sola transacción PostgreSQL `REPEATABLE READ`, `READ ONLY`, coordinando operaciones públicas de los módulos; BILLING no consulta identidad, catálogo ni inventario. Las respuestas usan `Cache-Control: private, no-store`. Sin sesión responde 401; `CUSTOMER` recibe 403 sin métricas. Los indicadores no autorizan mutaciones y la conversión de órdenes revalida sus reglas transaccionales.
+
 ## API REST y contrato OpenAPI
 
-Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 44 paths para salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial y medios. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia. Los endpoints siguientes están implementados salvo las subsecciones explícitamente pendientes.
+Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 45 paths para salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial, medios y dashboard. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia. Los endpoints siguientes están implementados salvo las subsecciones explícitamente pendientes.
 
 ### Salud y autenticación
 
@@ -833,7 +843,7 @@ El formulario `/checkout` permite introducir dirección y seleccionar envío y p
 
 Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con `purpose=autocomplete`, búsqueda mínima de tres caracteres, `page=1` y `pageSize` máximo 20; no descargan colecciones completas. La proyección de clientes se limita a `CUSTOMER` activos y la de productos usa `view=public`. El backend vuelve a validar las referencias al crear la factura.
 
-### Dashboard (pendiente, fase 19)
+### Dashboard (implementado en 19.5)
 
 - `GET /dashboard/summary`: resumen administrativo agregado y autorizado por rol; rechaza a `CUSTOMER`.
 
@@ -851,7 +861,7 @@ Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con 
 
 ## Convenciones de frontend
 
-Las convenciones de temas, galería y composición de landing expresan requisitos futuros de 19–21; no deben confundirse con las capacidades actuales indicadas arriba.
+Las convenciones de temas ya están implementadas. La galería y composición editorial de landing expresan requisitos futuros de 20–21; no deben confundirse con las capacidades actuales indicadas arriba.
 
 - Código exclusivamente TypeScript en `.ts` y `.tsx`.
 - Componentes pequeños y con una sola responsabilidad.
@@ -952,6 +962,8 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 21. Productos destacados y categorías importantes.
 
 Cada una de las 145 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+
+Fase 19 completada: 19.1 tokens, 19.2 infraestructura de temas, 19.3 storefront, 19.4 backoffice, 19.5 endpoint de resumen, 19.6 dashboard, 19.7 cobertura de componentes, 19.8 contraste/regresión y 19.9 documentación. La siguiente tarea es 20.1 (modelo y restricciones de imágenes múltiples); 20.8 ya se completó. No se ha implementado por ello la galería ni la composición editorial de la fase 21.
 
 ## Fuera del alcance inicial
 

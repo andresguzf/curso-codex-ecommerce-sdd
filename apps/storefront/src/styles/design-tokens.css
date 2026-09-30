@@ -1,0 +1,79 @@
+/* 19.1: opt-in semantic tokens; no change to legacy application themes. */
+[data-design-system="storefront"] {
+  --ds-font-body: Verdana, Arial, sans-serif;
+  --ds-font-display: 'Trebuchet MS', Verdana, sans-serif;
+  --ds-font-data: 'Courier New', monospace;
+  --ds-radius-control: 0.75rem;
+  --ds-radius-panel: 1.5rem;
+  --ds-space-unit: 0.25rem;
+  --ds-space-control: 0.875rem;
+  --ds-space-panel: 1.75rem;
+  --ds-space-stack: 1.5rem;
+  --ds-control-height: 3rem;
+  --ds-row-height: 3.75rem;
+  --ds-text-body: 1rem;
+  --ds-text-title: 2rem;
+  --ds-line-body: 1.65;
+  --ds-density: comfortable;
+  --ds-inverse-surface: #041326;
+  --ds-inverse-subtle: #163956;
+  --ds-inverse-text: #eef7ff;
+  --ds-inverse-muted: #b2cbdf;
+  --ds-inverse-border: #7d9bb5;
+  --ds-inverse-accent: #93e0f4;
+  --ds-inverse-accent-hover: #c6effa;
+  --ds-inverse-accent-text: #041326;
+  --ds-overlay: #020914;
+}
+
+[data-design-system="storefront"][data-theme="light"] {
+  color-scheme: light;
+  --ds-canvas: #edf5ff;
+  --ds-surface: #ffffff;
+  --ds-surface-subtle: #e2effd;
+  --ds-text: #071c3c;
+  --ds-text-muted: #405a74;
+  --ds-border: #687f98;
+  --ds-accent: #134cc5;
+  --ds-accent-hover: #103da0;
+  --ds-accent-text: #ffffff;
+  --ds-accent-soft: #dceaff;
+  --ds-focus: #087c96;
+  --ds-success: #17663f;
+  --ds-success-soft: #e3f6ec;
+  --ds-warning: #805700;
+  --ds-warning-soft: #fff1c7;
+  --ds-danger: #ab263d;
+  --ds-danger-soft: #ffe8ee;
+  --ds-info: #165c86;
+  --ds-info-soft: #e0f3ff;
+  --ds-disabled: #d9e5ef;
+  --ds-disabled-text: #52657a;
+  --ds-elevation: 0 18px 46px #143b651a;
+}
+
+[data-design-system="storefront"][data-theme="dark"] {
+  color-scheme: dark;
+  --ds-canvas: #081b30;
+  --ds-surface: #122d46;
+  --ds-surface-subtle: #193953;
+  --ds-text: #eef7ff;
+  --ds-text-muted: #b2cbdf;
+  --ds-border: #7d9bb5;
+  --ds-accent: #93c5fd;
+  --ds-accent-hover: #b9dcff;
+  --ds-accent-text: #081b30;
+  --ds-accent-soft: #203e64;
+  --ds-focus: #75ddeb;
+  --ds-success: #8ce0b0;
+  --ds-success-soft: #143e35;
+  --ds-warning: #f6d27b;
+  --ds-warning-soft: #423821;
+  --ds-danger: #ffadbd;
+  --ds-danger-soft: #49263c;
+  --ds-info: #99d9f5;
+  --ds-info-soft: #163f57;
+  --ds-disabled: #284158;
+  --ds-disabled-text: #a7bfd0;
+  --ds-elevation: 0 20px 54px #00000066;
+}

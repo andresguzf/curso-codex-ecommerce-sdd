@@ -23,6 +23,7 @@ import { z } from "zod";
 import { BackofficeListLayout, BackofficeListSearch } from "../../components/backoffice-list-layout";
 import { BackofficePagination } from "../../components/backoffice-pagination";
 import { useSessionStore } from "../auth/session";
+import { AdminMetricCard } from "../layout/admin-metric-card";
 import { getAdministrativeProduct } from "../products/product-api";
 import { adjustInventory, listInventoryMovements } from "./inventory-api";
 import { inventoryMovementFiltersToParams, parseInventoryMovementFilters } from "./inventory-query";
@@ -189,11 +190,7 @@ export function InventoryManagement({ productId }: Readonly<{ productId: string 
               <p className="mb-0 mt-2 text-slate-600">Cada cambio queda asociado a un motivo y a su autor.</p>
             </div>
             {productQuery.data ? (
-              <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-right">
-                <p className="m-0 text-xs font-bold uppercase tracking-[.14em] text-blue-800">Stock disponible</p>
-                <p className="m-0 mt-1 text-3xl font-bold text-blue-950">{productQuery.data.stockAvailable}</p>
-                <p className="m-0 text-xs text-blue-800">{productQuery.data.sku}</p>
-              </div>
+              <AdminMetricCard description={productQuery.data.sku} label="Stock disponible" value={productQuery.data.stockAvailable} />
             ) : null}
           </div>
           {productQuery.data ? <p className="mb-0 mt-4 text-lg font-semibold">{productQuery.data.name}</p> : null}

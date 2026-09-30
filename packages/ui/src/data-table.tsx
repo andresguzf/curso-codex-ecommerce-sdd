@@ -24,7 +24,7 @@ export function DataTable<Row>({
   rows: readonly Row[];
 }>) {
   return (
-    <div className={classNames("overflow-x-auto rounded-xl border border-slate-200", className)} data-slot="data-table">
+    <div aria-label={caption} className={classNames("overflow-x-auto rounded-xl border border-slate-200", className)} data-slot="data-table" role="region" tabIndex={0}>
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead className="bg-slate-100 text-slate-700">

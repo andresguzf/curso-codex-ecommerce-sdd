@@ -7,6 +7,7 @@ import { validateEnvironment } from "./config/environment";
 import { DatabaseModule } from "./database/database.module";
 import { DocumentExportModule } from "./document-export/document-export.module";
 import { HealthModule } from "./health/health.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { AuthModule } from "./identity-access/auth.module";
 import { InventoryControlModule } from "./inventory-control/inventory-control.module";
 import { ProductCatalogModule } from "./product-catalog/product-catalog.module";
@@ -28,6 +29,7 @@ import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-ca
     ProductCatalogModule,
     ShoppingCartCheckoutModule,
     HealthModule,
+    DashboardModule,
   ],
   exports: [AuthModule],
 })

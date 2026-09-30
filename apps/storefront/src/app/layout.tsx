@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { themeBootstrapScript } from "@technology-ecommerce/ui";
 
 import { StorefrontShell } from "@/features/layout/storefront-shell";
 
@@ -16,7 +17,8 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="es">
+    <html data-design-system="storefront" lang="es" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript("storefront") }} /></head>
       <body>
         <StorefrontProviders>
           <StorefrontShell>{children}</StorefrontShell>

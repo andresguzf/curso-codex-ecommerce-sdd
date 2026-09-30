@@ -9,6 +9,7 @@ export function CartSummary({ cart }: Readonly<{ cart: ActiveCart }>) {
 
   return (
     <aside
+      data-tone-region="inverse"
       aria-labelledby="cart-summary-title"
       className="relative overflow-hidden rounded-3xl bg-[#081426] p-7 text-white shadow-[0_30px_70px_-36px_rgba(8,20,38,0.9)] lg:sticky lg:top-8"
     >

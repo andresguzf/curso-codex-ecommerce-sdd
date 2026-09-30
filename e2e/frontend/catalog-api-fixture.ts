@@ -137,9 +137,56 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
+    if (request.method() === "GET" && url.pathname === "/api/v1/dashboard/summary") {
+      const updatedAt = "2026-09-30T12:00:00.000Z";
+      const body = role === "ADMIN" ? {
+        role, updatedAt, lowStockThreshold: 5,
+        metrics: { totalCustomers: 21, activeProducts: 18, lowStockProducts: 4, processingOrders: 3, pendingInvoices: 2 },
+      } : {
+        role, updatedAt, period: { from: "2026-08-31T12:00:00.000Z", to: updatedAt, basis: "paidAt" },
+        metrics: { ordersEligibleForInvoicing: 2, ordersAwaitingInvoice: 3, pendingInvoices: 1, paidInvoices: 7 },
+      };
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify(body) });
+      return;
+    }
+
+    if (request.method() === "GET" && (url.pathname === "/api/v1/orders" || url.pathname === "/api/v1/invoices")) {
+      const timestamp = "2026-09-09T12:00:00Z";
+      const common = {
+        id: "421d45a3-104e-4413-b79f-25290d1cb0a3", currency: "USD",
+        subtotal: "100.00", shippingTotal: "0.00", taxTotal: "0.00", total: "100.00",
+        createdAt: timestamp, updatedAt: timestamp, customerId: users.CUSTOMER.id,
+        customerSnapshot: { displayName: "Cliente histórico", email: "historic@example.com" },
+      };
+      const item = url.pathname.endsWith("/orders")
+        ? { ...common, number: "ORD-001", status: "PROCESSING", cancelledAt: null }
+        : { ...common, issuerSnapshot: {}, number: null, status: "DRAFT", origin: "MANUAL", orderId: null,
+            createdByUserId: users.ADMIN.id, issuedAt: null, dueAt: null, paidAt: null, voidedAt: null };
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify({
+        items: [item], page: 1, pageSize: 20, totalItems: 1, totalPages: 1,
+      }) });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/inventory/10184fd0-3dcb-47cf-af70-a8be4c765421/movements" && request.method() === "GET") {
+      await route.fulfill({
+        headers, contentType: "application/json", body: JSON.stringify({ ...emptyClassificationPage, pageSize: 20 }),
+      });
+      return;
+    }
+
     if (url.pathname === "/api/v1/categories" || url.pathname === "/api/v1/tags") {
       await route.fulfill({
         body: JSON.stringify(emptyClassificationPage),
+        contentType: "application/json",
+        headers,
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421" && request.method() === "GET") {
+      await route.fulfill({
+        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK" }),
         contentType: "application/json",
         headers,
       });

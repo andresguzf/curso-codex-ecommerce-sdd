@@ -15,9 +15,9 @@ export function ProductGrid({
 
   if (visibleProducts.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-        <h2 className="m-0 text-xl font-black text-slate-950">No encontramos productos</h2>
-        <p className="mb-0 mt-2 text-sm text-slate-600">Prueba con una búsqueda más amplia.</p>
+      <div className="rounded-2xl border border-dashed border-[var(--ds-border)] bg-[var(--ds-surface)] px-6 py-14 text-center">
+        <h2 className="m-0 text-xl font-black text-[var(--ds-text)]">No encontramos productos</h2>
+        <p className="mb-0 mt-2 text-sm text-[var(--ds-text-muted)]">Prueba con una búsqueda más amplia.</p>
       </div>
     );
   }

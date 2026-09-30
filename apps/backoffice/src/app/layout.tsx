@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { themeBootstrapScript } from "@technology-ecommerce/ui";
 
 import { BackofficeShell } from "@/features/layout/backoffice-shell";
 
@@ -16,7 +17,8 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="es">
+    <html data-design-system="backoffice" lang="es" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript("backoffice") }} /></head>
       <body>
         <Providers>
           <BackofficeShell>{children}</BackofficeShell>

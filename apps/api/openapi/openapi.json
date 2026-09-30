@@ -3507,6 +3507,185 @@
           "health"
         ]
       }
+    },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "operationId": "dashboardSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "role",
+                        "updatedAt",
+                        "lowStockThreshold",
+                        "metrics"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "ADMIN"
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lowStockThreshold": {
+                          "type": "integer",
+                          "enum": [
+                            5
+                          ]
+                        },
+                        "metrics": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "totalCustomers",
+                            "activeProducts",
+                            "lowStockProducts",
+                            "processingOrders",
+                            "pendingInvoices"
+                          ],
+                          "properties": {
+                            "totalCustomers": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "Non-deleted CUSTOMER accounts, including inactive or blocked accounts"
+                            },
+                            "activeProducts": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "Active, non-deleted products"
+                            },
+                            "lowStockProducts": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "Active products with available stock <= lowStockThreshold, including zero or missing balances"
+                            },
+                            "processingOrders": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "All orders in PROCESSING"
+                            },
+                            "pendingInvoices": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "All invoices in PENDING_PAYMENT, independent of age or origin"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "role",
+                        "updatedAt",
+                        "period",
+                        "metrics"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "BILLING"
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "period": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "from",
+                            "to",
+                            "basis"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "to": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "paidAt"
+                              ]
+                            }
+                          }
+                        },
+                        "metrics": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "ordersEligibleForInvoicing",
+                            "ordersAwaitingInvoice",
+                            "pendingInvoices",
+                            "paidInvoices"
+                          ],
+                          "properties": {
+                            "ordersEligibleForInvoicing": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "PROCESSING orders without a non-VOID invoice and with a recorded payment; conversion revalidates transactionally"
+                            },
+                            "ordersAwaitingInvoice": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "PROCESSING orders without a non-VOID invoice, even if payment is missing"
+                            },
+                            "pendingInvoices": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "All invoices in PENDING_PAYMENT, independent of age or origin"
+                            },
+                            "paidInvoices": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "Invoices currently PAID whose paidAt falls in the inclusive rolling 30-day period"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired session"
+          },
+          "403": {
+            "description": "CUSTOMER has no access to administrative indicators"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Role-specific administrative counts from a single read-only database snapshot",
+        "tags": [
+          "dashboard"
+        ]
+      }
     }
   },
   "info": {
@@ -3547,6 +3726,10 @@
     {
       "name": "orders",
       "description": "Customer order history and historical detail"
+    },
+    {
+      "name": "dashboard",
+      "description": "Administrative summaries scoped by role"
     }
   ],
   "servers": [],

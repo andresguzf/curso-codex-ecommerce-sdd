@@ -6,7 +6,7 @@ import { CartShortcut } from "../cart/cart-shortcut";
 
 export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50 text-slate-950">
+    <div data-slot="storefront-shell" className="flex min-h-dvh flex-col bg-[var(--ds-canvas)] text-[var(--ds-text)]">
       <a
         className="sr-only z-50 rounded-lg bg-white px-4 py-3 font-bold text-slate-950 shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
         href="#main-content"
@@ -14,7 +14,7 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
         Saltar al contenido
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-blue-300/20 bg-[#041326]/98 text-white shadow-lg shadow-blue-950/45 backdrop-blur-xl supports-[backdrop-filter]:bg-[#041326]/95">
+      <header data-tone-region="inverse" className="sticky top-0 z-40 border-b border-blue-300/20 bg-[#041326]/98 text-white shadow-lg shadow-blue-950/45 backdrop-blur-xl supports-[backdrop-filter]:bg-[#041326]/95">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-10">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <Link
@@ -36,6 +36,7 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
               >
                 Inicio
               </Link>
+              <Link className="rounded-full px-4 py-2 text-sm font-bold text-slate-100 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200" href="/products">Productos</Link>
             </nav>
           </div>
 
@@ -50,9 +51,9 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
         {children}
       </div>
 
-      <footer className="border-t border-slate-200 bg-white text-slate-600">
+      <footer className="border-t border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--ds-text-muted)]">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
-          <p className="m-0 font-bold text-slate-800">Technology Store</p>
+          <p className="m-0 font-bold text-[var(--ds-text)]">Technology Store</p>
           <p className="m-0">Tecnología para trabajar, crear y jugar.</p>
         </div>
       </footer>
