@@ -33,6 +33,12 @@ export class ProductAdministrationService {
     query: ProductListQuery,
     actor?: AuthenticatedUser,
   ): Promise<ProductPage> {
+    if (query.purpose === "autocomplete") {
+      if (!actor) throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "Authentication required" });
+      if (actor.role !== "ADMIN" && actor.role !== "BILLING") {
+        throw new ForbiddenException({ code: "AUTH_FORBIDDEN", message: "Invoice lookup requires ADMIN or BILLING" });
+      }
+    }
     if (query.view === "administrative") {
       this.assertAdministrativeView(actor);
     } else if (query.status) {

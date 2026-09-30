@@ -61,6 +61,12 @@ export async function listClassifications(
   accessToken: string,
   query: ClassificationListQuery,
   signal?: AbortSignal,
+): Promise<z.infer<typeof categoryPageSchema> | z.infer<typeof tagPageSchema>>;
+export async function listClassifications(
+  kind: ClassificationKind,
+  accessToken: string,
+  query: ClassificationListQuery,
+  signal?: AbortSignal,
 ): Promise<z.infer<typeof categoryPageSchema> | z.infer<typeof tagPageSchema>> {
   const params = { query: { ...query, view: "administrative" as const } };
   if (kind === "categories") {
@@ -71,6 +77,40 @@ export async function listClassifications(
   const result = await client.GET("/api/v1/tags", { headers: authorization(accessToken), params, signal });
   if (!result.data) throw failure(result);
   return tagPageSchema.parse(result.data);
+}
+
+export function listAllAdministrativeClassifications(
+  kind: "categories",
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<Category[]>;
+export function listAllAdministrativeClassifications(
+  kind: "tags",
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<Tag[]>;
+export function listAllAdministrativeClassifications(
+  kind: ClassificationKind,
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<ClassificationRecord[]>;
+export async function listAllAdministrativeClassifications(
+  kind: ClassificationKind,
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<ClassificationRecord[]> {
+  const records: ClassificationRecord[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await listClassifications(kind, accessToken, {
+      page,
+      pageSize: 100,
+      sortBy: "name",
+      sortOrder: "asc",
+      view: "administrative",
+    }, signal);
+    records.push(...result.items);
+    if (page >= result.totalPages) return records;
+  }
 }
 
 export async function createClassification(kind: ClassificationKind, accessToken: string, input: ClassificationInput): Promise<ClassificationRecord> {

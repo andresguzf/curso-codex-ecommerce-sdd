@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
 import type { ActiveCart, ProductListItem, ProductPage } from "@technology-ecommerce/api-schemas";
 import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -172,6 +172,7 @@ describe("storefront catalog landing", () => {
     renderCatalog();
 
     expect(screen.getByRole("heading", { name: "El equipo correcto cambia tu ritmo." })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver todos los productos" })).toHaveAttribute("href", "/products");
     expect(await screen.findByRole("heading", { name: "Monitor Studio 27" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Monitor Studio 27" })).toHaveAttribute(
       "href",
@@ -182,7 +183,7 @@ describe("storefront catalog landing", () => {
       page: 1,
       sortBy: "createdAt",
       sortOrder: "desc",
-    });
+    }, 9);
   });
 
   it("shows category and tag links on a classified product card", async () => {
@@ -200,8 +201,8 @@ describe("storefront catalog landing", () => {
 
     renderCatalog();
 
-    expect(await screen.findByRole("link", { name: "Ver productos de la categoría Monitores" })).toHaveAttribute("href", "/?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2#catalog");
-    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta 4K" })).toHaveAttribute("href", "/?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519#catalog");
+    expect(await screen.findByRole("link", { name: "Ver productos de la categoría Monitores" })).toHaveAttribute("href", "/products?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2");
+    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta 4K" })).toHaveAttribute("href", "/products?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519");
   });
 
   it("disables the purchase action for an exhausted product", async () => {
@@ -347,17 +348,14 @@ describe("storefront catalog landing", () => {
     navigation.searchParams = new URLSearchParams("page=4&availability=OUT_OF_STOCK&minPrice=100");
     vi.mocked(getPublicProducts).mockResolvedValue(page([]));
     renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ page: 4 })));
+    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ page: 4 }), 9));
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Buscar en el catálogo" }), {
       target: { value: " monitor " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Buscar productos" }));
 
-    expect(navigation.push).toHaveBeenCalledWith(
-      "/?page=1&search=monitor#catalog",
-      { scroll: true },
-    );
+    expect(navigation.push).toHaveBeenCalledWith("/products?page=1&search=monitor", { scroll: true });
     expect(screen.getByRole("region", { name: "Equipos listos para elegir" })).toHaveAttribute("id", "catalog");
   });
 
@@ -377,11 +375,12 @@ describe("storefront catalog landing", () => {
       search: "teclado",
       sortBy: "price",
       sortOrder: "asc",
-    }));
+    }, 9));
     expect(screen.getByRole("searchbox", { name: "Buscar en el catálogo" })).toHaveValue("teclado");
     fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    expect(screen.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
-    expect(screen.getByRole("combobox", { name: "Ordenar por" })).toHaveValue("price:asc");
+    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
+    expect(drawer.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
+    expect(drawer.getByRole("combobox", { name: "Ordenar por" })).toHaveValue("price:asc");
   });
 
   it("writes filters and order to the URL and returns to page one", async () => {
@@ -391,20 +390,21 @@ describe("storefront catalog landing", () => {
     await waitFor(() => expect(getPublicProducts).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Disponibilidad" }), {
+    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
+    fireEvent.change(drawer.getByRole("combobox", { name: "Disponibilidad" }), {
       target: { value: "OUT_OF_STOCK" },
     });
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Mínimo" }), {
+    fireEvent.change(drawer.getByRole("spinbutton", { name: "Mínimo" }), {
       target: { value: "200" },
     });
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Máximo" }), {
+    fireEvent.change(drawer.getByRole("spinbutton", { name: "Máximo" }), {
       target: { value: "900" },
     });
-    fireEvent.change(screen.getByRole("combobox", { name: "Ordenar por" }), {
+    fireEvent.change(drawer.getByRole("combobox", { name: "Ordenar por" }), {
       target: { value: "price:desc" },
     });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Aplicar" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    await waitFor(() => expect(drawer.getByRole("button", { name: "Aplicar" })).toBeEnabled());
+    fireEvent.click(drawer.getByRole("button", { name: "Aplicar" }));
 
     expect(navigation.push).toHaveBeenCalledTimes(1);
     const [href, options] = navigation.push.mock.calls[0] as [string, { scroll: boolean }];
@@ -430,12 +430,13 @@ describe("storefront catalog landing", () => {
     vi.mocked(getActiveTags).mockResolvedValue([{ id: tagId, name: "RGB", slug: "rgb", status: "ACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
 
     renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ categoryId, tagIds: [tagId], page: 4 })));
+    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ categoryId, tagIds: [tagId], page: 4 }), 9));
     fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Categoría" })).toHaveValue(categoryId));
-    expect(screen.getByRole("checkbox", { name: "RGB" })).toBeChecked();
-    fireEvent.change(screen.getByRole("combobox", { name: "Categoría" }), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
+    await waitFor(() => expect(drawer.getByRole("combobox", { name: "Categoría" })).toHaveValue(categoryId));
+    expect(drawer.getByRole("checkbox", { name: "RGB" })).toBeChecked();
+    fireEvent.change(drawer.getByRole("combobox", { name: "Categoría" }), { target: { value: "" } });
+    fireEvent.click(drawer.getByRole("button", { name: "Aplicar" }));
 
     const [href] = navigation.push.mock.calls[0] as [string];
     const nextUrl = new URL(href, "http://localhost:3000");
@@ -451,7 +452,7 @@ describe("storefront catalog landing", () => {
     await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({
       page: 2,
       search: "monitor",
-    })));
+    }), 9));
 
     navigation.searchParams = new URLSearchParams("search=teclado&page=1&sortBy=name&sortOrder=asc");
     rerenderCatalog();
@@ -461,6 +462,49 @@ describe("storefront catalog landing", () => {
       search: "teclado",
       sortBy: "name",
       sortOrder: "asc",
-    })));
+    }), 9));
+  });
+
+  it("collapses and restores the desktop sidebar without changing the URL criteria", async () => {
+    navigation.searchParams = new URLSearchParams("search=monitor&availability=IN_STOCK&page=3");
+    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
+    const user = userEvent.setup();
+
+    renderCatalog();
+    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({
+      availability: "IN_STOCK",
+      page: 3,
+      search: "monitor",
+    }), 9));
+
+    await user.click(screen.getByRole("button", { name: "Ocultar filtros del catálogo" }));
+    expect(screen.getByRole("button", { name: "Mostrar filtros del catálogo" })).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelector("[data-filters-collapsed='true']")).toBeInTheDocument();
+    expect(navigation.push).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Equipos listos para elegir" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mostrar filtros del catálogo" }));
+    expect(screen.getByRole("button", { name: "Ocultar filtros del catálogo" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
+  it("opens the mobile filter drawer, traps focus, and restores focus on close", async () => {
+    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
+    const user = userEvent.setup();
+
+    renderCatalog();
+    const trigger = screen.getByRole("button", { name: /Filtros/ });
+    await user.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Filtros del catálogo" });
+    const close = within(dialog).getByRole("button", { name: "Cerrar" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(close).toHaveFocus();
+    within(dialog).getByRole("button", { name: "Limpiar" }).focus();
+    await user.tab();
+    expect(close).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(dialog.closest("[data-slot='filter-drawer']")).toHaveAttribute("aria-hidden", "true");
+    expect(trigger).toHaveFocus();
   });
 });

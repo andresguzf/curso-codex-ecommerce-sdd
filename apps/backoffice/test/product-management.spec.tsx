@@ -20,6 +20,7 @@ const api = vi.hoisted(() => ({
   updateProduct: vi.fn(),
   updateProductStatus: vi.fn(),
 }));
+const classifications = vi.hoisted(() => ({ listAllAdministrativeClassifications: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/products",
@@ -34,6 +35,10 @@ vi.mock("@technology-ecommerce/api-client", async (importOriginal) => ({
 vi.mock("../src/features/products/product-api", async (importOriginal) => ({
   ...await importOriginal<typeof import("../src/features/products/product-api")>(),
   ...api,
+}));
+vi.mock("../src/features/classifications/classification-api", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../src/features/classifications/classification-api")>(),
+  ...classifications,
 }));
 
 const activeProduct = {
@@ -60,15 +65,20 @@ const inactiveProduct = {
 function renderManagement() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-  render(<QueryClientProvider client={queryClient}><ProductManagement /><FlashRegion appearance="backoffice" /></QueryClientProvider>);
-  return { invalidate };
+  const rendered = render(<QueryClientProvider client={queryClient}><ProductManagement /><FlashRegion appearance="backoffice" /></QueryClientProvider>);
+  return {
+    invalidate,
+    rerenderManagement: () => rendered.rerender(<QueryClientProvider client={queryClient}><ProductManagement /><FlashRegion appearance="backoffice" /></QueryClientProvider>),
+  };
 }
 
 describe("product administration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigation.searchParams = new URLSearchParams("page=1");
     vi.mocked(getActiveCategories).mockResolvedValue([]);
     vi.mocked(getActiveTags).mockResolvedValue([]);
+    classifications.listAllAdministrativeClassifications.mockImplementation(async (kind: "categories" | "tags") => kind === "categories" ? [] : []);
     useFlashStore.getState().dismissFlash();
     api.listAdministrativeProducts.mockResolvedValue({
       items: [activeProduct, inactiveProduct],
@@ -92,6 +102,139 @@ describe("product administration", () => {
       },
       status: "authenticated",
     });
+  });
+
+  it("combines search, filters and sorting in the backend page and preserves them through pagination", async () => {
+    navigation.searchParams = new URLSearchParams("page=3&pageSize=10&search=teclado&status=ACTIVE&availability=IN_STOCK&sortBy=name&sortOrder=asc");
+    api.listAdministrativeProducts.mockImplementation(async (_token, filters) => ({
+      items: [activeProduct],
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalItems: 57,
+      totalPages: 6,
+    }));
+
+    const view = renderManagement();
+    expect(await screen.findByText("57 productos")).toBeInTheDocument();
+    expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", {
+      availability: "IN_STOCK",
+      page: 3,
+      pageSize: 10,
+      search: "teclado",
+      sortBy: "name",
+      sortOrder: "asc",
+      status: "ACTIVE",
+    }, expect.any(AbortSignal));
+    expect(screen.getByText("Página 3 de 6")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ir a la página 4" }));
+    expect(navigation.push).toHaveBeenLastCalledWith(
+      "/products?page=4&pageSize=10&search=teclado&status=ACTIVE&availability=IN_STOCK&sortBy=name&sortOrder=asc",
+      { scroll: false },
+    );
+    navigation.searchParams = new URL(navigation.push.mock.calls.at(-1)?.[0] as string, "http://localhost:3002").searchParams;
+    view.rerenderManagement();
+    await waitFor(() => expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", expect.objectContaining({ page: 4, search: "teclado", availability: "IN_STOCK", sortBy: "name", sortOrder: "asc" }), expect.any(AbortSignal)));
+    expect(await screen.findByText("Página 4 de 6")).toBeInTheDocument();
+  });
+
+  it("resets to page one when combined search, filters or ordering change", async () => {
+    navigation.searchParams = new URLSearchParams("page=5&pageSize=10&search=teclado&status=ACTIVE&availability=IN_STOCK&sortBy=name&sortOrder=asc");
+    api.listAdministrativeProducts.mockImplementation(async (_token, filters) => ({
+      items: [activeProduct],
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalItems: 57,
+      totalPages: 6,
+    }));
+    const view = renderManagement();
+    await screen.findByText("57 productos");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar productos" }), { target: { value: "monitor" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Buscar$/ }));
+    expect(navigation.push).toHaveBeenLastCalledWith(
+      "/products?page=1&search=monitor&status=ACTIVE&availability=IN_STOCK&sortBy=name&sortOrder=asc",
+      { scroll: false },
+    );
+
+    navigation.searchParams = new URL(navigation.push.mock.calls.at(-1)?.[0] as string, "http://localhost:3002").searchParams;
+    view.rerenderManagement();
+    await waitFor(() => expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", expect.objectContaining({ page: 1, search: "monitor", status: "ACTIVE", availability: "IN_STOCK" }), expect.any(AbortSignal)));
+
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Estado" }), { target: { value: "INACTIVE" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Disponibilidad" }), { target: { value: "OUT_OF_STOCK" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Ordenar por" }), { target: { value: "price" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Dirección" }), { target: { value: "desc" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+    expect(navigation.push).toHaveBeenLastCalledWith(
+      "/products?page=1&search=monitor&status=INACTIVE&availability=OUT_OF_STOCK&sortBy=price",
+      { scroll: false },
+    );
+
+    navigation.searchParams = new URL(navigation.push.mock.calls.at(-1)?.[0] as string, "http://localhost:3002").searchParams;
+    view.rerenderManagement();
+    await waitFor(() => expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", expect.objectContaining({ page: 1, search: "monitor", status: "INACTIVE", availability: "OUT_OF_STOCK", sortBy: "price", sortOrder: "desc" }), expect.any(AbortSignal)));
+    expect(screen.getByText("Página 1 de 6")).toBeInTheDocument();
+  });
+
+  it("applies price, category, multi-tag and inclusive creation-date filters, then preserves them while paginating", async () => {
+    const categoryId = "8f732799-c098-45c1-961e-332c6becd13a";
+    const firstTagId = "62ac275e-bbf6-43ab-8885-e5588bd24c87";
+    const secondTagId = "1ac275e0-bbf6-43ab-8885-e5588bd24c87";
+    classifications.listAllAdministrativeClassifications.mockImplementation(async (kind: "categories" | "tags") => kind === "categories"
+      ? [{ id: categoryId, name: "Teclados", slug: "teclados", status: "ACTIVE", description: "", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]
+      : [
+          { id: firstTagId, name: "RGB", slug: "rgb", status: "ACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null },
+          { id: secondTagId, name: "Mecánico", slug: "mecanico", status: "INACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null },
+        ]);
+    api.listAdministrativeProducts.mockImplementation(async (_token, filters) => ({
+      items: [activeProduct],
+      page: filters.page,
+      pageSize: filters.pageSize,
+      totalItems: 25,
+      totalPages: 3,
+    }));
+    const view = renderManagement();
+    await screen.findByText("25 productos");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
+    fireEvent.change(screen.getByLabelText("Mínimo"), { target: { value: "50.00" } });
+    fireEvent.change(screen.getByLabelText("Máximo"), { target: { value: "100.00" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Categoría" }), { target: { value: categoryId } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "RGB" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Mecánico (inactiva)" }));
+    fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-09-01" } });
+    fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+
+    const expectedFilters = {
+      categoryId,
+      createdFrom: "2026-09-01",
+      createdTo: "2026-09-30",
+      maxPrice: "100.00",
+      minPrice: "50.00",
+      page: 1,
+      pageSize: 10,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      tagIds: [firstTagId, secondTagId],
+    };
+    expect(navigation.push).toHaveBeenLastCalledWith(
+      `/products?page=1&minPrice=50.00&maxPrice=100.00&categoryId=${categoryId}&tagIds=${firstTagId}%2C${secondTagId}&createdFrom=2026-09-01&createdTo=2026-09-30`,
+      { scroll: false },
+    );
+    navigation.searchParams = new URL(navigation.push.mock.calls.at(-1)?.[0] as string, "http://localhost:3002").searchParams;
+    view.rerenderManagement();
+    await waitFor(() => expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", expectedFilters, expect.any(AbortSignal)));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ir a la página 2" }));
+    expect(navigation.push).toHaveBeenLastCalledWith(
+      `/products?page=2&minPrice=50.00&maxPrice=100.00&categoryId=${categoryId}&tagIds=${firstTagId}%2C${secondTagId}&createdFrom=2026-09-01&createdTo=2026-09-30`,
+      { scroll: false },
+    );
+    navigation.searchParams = new URL(navigation.push.mock.calls.at(-1)?.[0] as string, "http://localhost:3002").searchParams;
+    view.rerenderManagement();
+    await waitFor(() => expect(api.listAdministrativeProducts).toHaveBeenLastCalledWith("admin-token", { ...expectedFilters, page: 2 }, expect.any(AbortSignal)));
   });
 
   it("creates and edits products, then invalidates the administrative cache", async () => {
@@ -138,6 +281,9 @@ describe("product administration", () => {
     renderManagement();
     fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo producto" }));
     await waitFor(() => expect(screen.getByRole("option", { name: "Teclados" })).toBeInTheDocument());
+    const tagEditor = screen.getByRole("group", { name: "Etiquetas" });
+    expect(tagEditor).toHaveClass("bg-slate-50");
+    expect(tagEditor).not.toHaveClass("bg-slate-50/60");
     fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "KEY-RGB" } });
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Teclado RGB" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Teclado mecánico" } });

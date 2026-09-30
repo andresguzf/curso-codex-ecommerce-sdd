@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSessionStore } from "../src/features/auth/session";
 import { InventoryManagement } from "../src/features/inventory/inventory-management";
 
-const navigation = vi.hoisted(() => ({ replace: vi.fn(), searchParams: new URLSearchParams("page=1") }));
+const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), searchParams: new URLSearchParams("page=1") }));
 const api = vi.hoisted(() => ({
   adjustInventory: vi.fn(),
   getAdministrativeProduct: vi.fn(),
@@ -57,6 +57,7 @@ function renderInventory() {
 describe("inventory administration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigation.searchParams = new URLSearchParams("page=1");
     navigation.replace.mockReset();
     api.getAdministrativeProduct.mockResolvedValue(product);
     api.listInventoryMovements.mockResolvedValue({ items: [movement], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
@@ -87,6 +88,22 @@ describe("inventory administration", () => {
     expect(screen.getByText("Recepción de bodega")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
+    expect(api.listInventoryMovements).toHaveBeenCalledWith("admin-token", product.id, expect.objectContaining({ page: 1, pageSize: 10, sortBy: "createdAt" }), expect.any(AbortSignal));
+  });
+
+  it("keeps movement search, date and type filters in the URL", async () => {
+    renderInventory();
+    await screen.findByText("Recepción de bodega");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar movimientos" }), { target: { value: "recepción" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(navigation.push).toHaveBeenCalledWith(expect.stringContaining("search=recepci%C3%B3n"), { scroll: false });
+
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Tipo" }), { target: { value: "ADJUSTMENT" } });
+    fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-09-01" } });
+    fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-08" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+    expect(navigation.push).toHaveBeenLastCalledWith(expect.stringMatching(/page=1.*type=ADJUSTMENT.*createdFrom=2026-09-01.*createdTo=2026-09-08/), { scroll: false });
   });
 
   it("submits a signed adjustment, updates availability and invalidates related caches", async () => {

@@ -45,14 +45,18 @@ const moneySchema = z
   .string()
   .trim()
   .regex(/^\d{1,10}(?:\.\d{1,2})?$/);
+const calendarDateSchema = z.iso.date();
 const productListQuerySchema = z
   .object({
+    purpose: z.literal("autocomplete").optional(),
     availability: z.enum(PRODUCT_AVAILABILITIES).optional(),
     categoryId: uuidSchema.optional(),
     tagIds: tagIdsSchema.optional(),
+    createdFrom: calendarDateSchema.optional(),
+    createdTo: calendarDateSchema.optional(),
     maxPrice: moneySchema.optional(),
     minPrice: moneySchema.optional(),
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(200).optional(),
     sortBy: z.enum(PRODUCT_SORT_FIELDS).default("createdAt"),
@@ -61,11 +65,25 @@ const productListQuerySchema = z
     view: z.enum(PRODUCT_LIST_VIEWS).default("public"),
   })
   .strict()
+  .refine((query) => query.purpose !== "autocomplete" || (
+    (query.search?.length ?? 0) >= 3 && query.pageSize <= 20 && query.view === "public" && !query.status
+  ), { message: "Autocomplete requires search >= 3 characters, pageSize <= 20 and public active products" })
   .refine(
     ({ maxPrice, minPrice }) =>
       maxPrice === undefined ||
       minPrice === undefined ||
       Number(minPrice) <= Number(maxPrice),
+  )
+  .refine(
+    ({ createdFrom, createdTo }) =>
+      createdFrom === undefined ||
+      createdTo === undefined ||
+      createdFrom <= createdTo,
+  )
+  .refine(
+    ({ createdFrom, createdTo, view }) =>
+      (createdFrom === undefined && createdTo === undefined) ||
+      view === "administrative",
   );
 const productDetailQuerySchema = z
   .object({ view: z.enum(PRODUCT_LIST_VIEWS).default("public") })
@@ -128,12 +146,13 @@ export class ProductListingController {
     summary: "List public or administrative products",
   })
   @ApiOkResponse({ type: ProductPageResponseDto })
+  @ApiQuery({ name: "purpose", required: false, enum: ["autocomplete"], description: "Authenticated ADMIN/BILLING lookup of active products. Requires search >= 3 characters; pageSize 1–20 (default 20), view=public and no status override. Out-of-stock products remain eligible for invoicing." })
   @ApiBadRequestResponse({ description: "Invalid query parameters" })
-  @ApiUnauthorizedResponse({ description: "Administrative view requires authentication" })
-  @ApiForbiddenResponse({ description: "Administrative view requires ADMIN" })
+  @ApiUnauthorizedResponse({ description: "Administrative view and autocomplete require authentication" })
+  @ApiForbiddenResponse({ description: "Administrative view requires ADMIN; autocomplete requires ADMIN or BILLING" })
   @ApiQuery({ enum: PRODUCT_LIST_VIEWS, name: "view", required: false })
-  @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({ name: "pageSize", required: false, type: Number })
+  @ApiQuery({ name: "page", required: false, schema: { type: "integer", minimum: 1, maximum: 1_000_000, default: 1 } })
+  @ApiQuery({ name: "pageSize", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 20 }, description: "Maximum 20 for purpose=autocomplete; maximum 100 otherwise" })
   @ApiQuery({ name: "search", required: false, type: String })
   @ApiQuery({ name: "categoryId", required: false, type: String, format: "uuid" })
   @ApiQuery({ name: "tagIds", required: false, type: String, description: "Comma-separated tag UUIDs; matches any selected tag" })
@@ -145,6 +164,8 @@ export class ProductListingController {
   })
   @ApiQuery({ name: "minPrice", required: false, type: String })
   @ApiQuery({ name: "maxPrice", required: false, type: String })
+  @ApiQuery({ name: "createdFrom", required: false, type: String, format: "date", description: "Inclusive UTC creation date; administrative view only" })
+  @ApiQuery({ name: "createdTo", required: false, type: String, format: "date", description: "Inclusive UTC creation date; administrative view only" })
   @ApiQuery({ enum: PRODUCT_SORT_FIELDS, name: "sortBy", required: false })
   @ApiQuery({ enum: ["asc", "desc"], name: "sortOrder", required: false })
   list(

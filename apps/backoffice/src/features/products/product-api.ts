@@ -11,6 +11,8 @@ import {
 } from "@technology-ecommerce/api-schemas";
 import { z } from "zod";
 
+import type { ProductAdminFilters } from "./product-query";
+
 const client = createApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001",
   credentials: "include",
@@ -52,16 +54,17 @@ function authorization(accessToken: string) {
 
 export async function listAdministrativeProducts(
   accessToken: string,
-  page: number,
+  filters: ProductAdminFilters,
+  signal?: AbortSignal,
 ): Promise<ProductPage> {
+  const { tagIds, ...query } = filters;
   const result = await client.GET("/api/v1/products", {
     headers: authorization(accessToken),
+    signal,
     params: {
       query: {
-        page,
-        pageSize: 10,
-        sortBy: "createdAt",
-        sortOrder: "desc",
+        ...query,
+        ...(tagIds?.length ? { tagIds: tagIds.join(",") } : {}),
         view: "administrative",
       },
     },

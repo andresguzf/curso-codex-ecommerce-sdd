@@ -1942,7 +1942,10 @@ export interface operations {
                 sortBy?: "createdAt" | "displayName" | "email" | "role" | "status";
                 status?: "ACTIVE" | "INACTIVE" | "BLOCKED";
                 role?: "CUSTOMER" | "ADMIN" | "BILLING";
+                /** @description ADMIN/BILLING lookup of active customers only. Requires search >= 3 characters; pageSize 1–20 (default 20). Other user operations remain ADMIN-only. */
+                purpose?: "autocomplete";
                 search?: string;
+                /** @description Maximum 20 for purpose=autocomplete; maximum 100 otherwise */
                 pageSize?: number;
                 page?: number;
             };
@@ -1974,7 +1977,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description ADMIN role required */
+            /** @description ADMIN required for user administration; ADMIN or BILLING for purpose=autocomplete */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2792,6 +2795,10 @@ export interface operations {
             query?: {
                 sortOrder?: "asc" | "desc";
                 sortBy?: "createdAt" | "name" | "price" | "sku" | "stockAvailable" | "updatedAt";
+                /** @description Inclusive UTC creation date; administrative view only */
+                createdTo?: string;
+                /** @description Inclusive UTC creation date; administrative view only */
+                createdFrom?: string;
                 maxPrice?: string;
                 minPrice?: string;
                 availability?: "IN_STOCK" | "OUT_OF_STOCK";
@@ -2800,9 +2807,12 @@ export interface operations {
                 tagIds?: string;
                 categoryId?: string;
                 search?: string;
+                /** @description Maximum 20 for purpose=autocomplete; maximum 100 otherwise */
                 pageSize?: number;
                 page?: number;
                 view?: "public" | "administrative";
+                /** @description Authenticated ADMIN/BILLING lookup of active products. Requires search >= 3 characters; pageSize 1–20 (default 20), view=public and no status override. Out-of-stock products remain eligible for invoicing. */
+                purpose?: "autocomplete";
             };
             header?: never;
             path?: never;
@@ -2825,14 +2835,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Administrative view requires authentication */
+            /** @description Administrative view and autocomplete require authentication */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Administrative view requires ADMIN */
+            /** @description Administrative view requires ADMIN; autocomplete requires ADMIN or BILLING */
             403: {
                 headers: {
                     [name: string]: unknown;

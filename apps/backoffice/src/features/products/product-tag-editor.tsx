@@ -33,7 +33,7 @@ export function ProductTagEditor({
   const unselectedTags = availableTags.filter((tag) => !selectedIds.includes(tag.id));
 
   return (
-    <fieldset className="grid min-w-0 content-start gap-3 rounded-lg border border-slate-300 bg-slate-50/60 p-3">
+    <fieldset className="grid min-w-0 content-start gap-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
       <legend className="px-1 text-sm font-semibold text-slate-800">Etiquetas</legend>
       <div aria-live="polite" className="flex min-h-8 flex-wrap gap-2">
         {selectedIds.map((id) => {

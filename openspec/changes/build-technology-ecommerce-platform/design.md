@@ -234,6 +234,8 @@ Alternativa considerada: guardar categorías y etiquetas como texto o arrays den
 
 Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada, datos de contacto opcionales y referencia a un logo administrado e inmutable. Solo `ADMIN` podrá modificarlo o cargar un logo; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados.
 
+El seed explícito podrá crear un perfil inicial con valores visiblemente ficticios marcados `DEMO` en desarrollo y pruebas. Lo insertará solo si el perfil único está ausente; las reejecuciones conservarán cualquier perfil existente, incluidos los cambios administrativos. El perfil DEMO no incluirá un logo ni identificadores fiscales reales, y el seed deberá detenerse antes de escribir en producción para que estos datos no lleguen a órdenes o facturas productivas.
+
 Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente, incluida la clave y huella del logo administrado cuando exista. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento y la versión inmutable del asset referenciado. De este modo, editar la empresa no reescribe órdenes, facturas ni PDFs históricos.
 
 Alternativa considerada: consultar siempre el perfil vigente al renderizar. Se descarta porque produciría documentos históricos distintos después de una modificación empresarial.
@@ -246,7 +248,7 @@ Toda colección potencialmente no acotada se resolverá en el backend y devolver
 items, page, pageSize, totalItems, totalPages
 ```
 
-Esto incluye usuarios, productos, categorías, etiquetas, wishlist, balances y movimientos, órdenes y facturas. El API aplicará búsqueda, filtros autorizados y orden antes de contar y paginar. Las interfaces colocarán la búsqueda sobre la lista; el storefront usará filtros a la izquierda y el backoffice filtros a la derecha. Cualquier cambio de criterios reiniciará `page=1`.
+Esto incluye usuarios, productos, categorías, etiquetas, wishlist, balances y movimientos, órdenes y facturas. El API aplicará búsqueda, filtros autorizados y orden antes de contar y paginar. Las interfaces colocarán la búsqueda sobre la lista; la página de catálogo completo del storefront usará filtros a la izquierda y el backoffice filtros a la derecha. La landing editorial no tendrá filtros ni paginación. Cualquier cambio de criterios en listas paginadas reiniciará `page=1`. El listado administrativo de productos combinará `minPrice`, `maxPrice`, `categoryId`, `tagIds`, `createdFrom` y `createdTo`; las fechas serán `YYYY-MM-DD`, inclusivas en UTC, y el API convertirá el límite superior al inicio del día siguiente para incluir el día completo.
 
 Los selectores de cliente y producto para factura manual reutilizarán consultas REST paginadas con un tamaño reducido. Un custom hook controlará término, espera breve, cancelación de solicitudes obsoletas, caché y estados de carga; el formulario guardará el identificador seleccionado, no el texto visible. Los resultados serán navegables por teclado y el API revalidará toda selección al guardar.
 
@@ -278,7 +280,7 @@ PATCH  /store-profile
 POST   /store-profile/logo
 ```
 
-Los endpoints existentes `GET /products` y `GET /users` admitirán consultas limitadas para autocomplete mediante `search`, `page`, `pageSize` y filtros autorizados; no se crearán endpoints que devuelvan catálogos o clientes completos. `GET /products` añadirá filtros por categoría, etiquetas, disponibilidad y rango de precio, y el detalle público podrá resolverse por slug sin eliminar el acceso administrativo por identificador. Todas las rutas conservarán validación Zod en la frontera frontend, validación autoritativa en NestJS, autorización, errores uniformes y cliente generado.
+Los endpoints existentes `GET /products` y `GET /users` admitirán consultas limitadas para autocomplete mediante `search`, `page`, `pageSize` y filtros autorizados; no se crearán endpoints que devuelvan catálogos o clientes completos. `GET /products` añadirá filtros por categoría, etiquetas, disponibilidad y rango de precio. Para `view=admin`, también aceptará `createdFrom` y `createdTo` con formato `YYYY-MM-DD`, inclusivos en UTC; validará que sean fechas reales y que el inicio no sea posterior al fin, y aplicará el intervalo antes del conteo y la paginación. Estos parámetros de creación no se admitirán en consultas públicas. El detalle público podrá resolverse por slug sin eliminar el acceso administrativo por identificador. Todas las rutas conservarán validación Zod en la frontera frontend, validación autoritativa en NestJS, autorización, errores uniformes y cliente generado.
 
 Alternativa considerada: exponer el autocomplete mediante rutas especiales sin paginación. Se descarta porque duplicaría reglas de consulta y contratos.
 
@@ -368,16 +370,11 @@ El seed será una operación explícita, determinista, idempotente y bloqueada p
 - Un mínimo de tres imágenes por producto: una portada y al menos dos imágenes de galería, representadas temporalmente en desarrollo y pruebas por URLs de Lorem Picsum con IDs fijos seleccionados tras revisión visual para aproximarse al tipo de producto.
 - Balances iniciales y movimientos auditables de apertura, sin escribir stock directamente fuera de inventario.
 - Un usuario de ejemplo `ADMIN` y uno `CUSTOMER`, con credenciales solo de desarrollo o pruebas almacenadas como hashes y nunca impresas en logs.
+- Un `StoreProfile` inicial con valores claramente ficticios marcados `DEMO`, solo cuando no exista un perfil, sin sobrescribir datos administrativos y sin incluir logos ni identificadores fiscales reales.
 
 Durante desarrollo y pruebas, las imágenes podrán ser hotlinks temporales de Lorem Picsum elegidos por ID fijo y no mediante respuestas aleatorias. Como Picsum no ofrece búsqueda semántica por producto, cada ID deberá revisarse visualmente y asociarse de forma explícita en un manifiesto estable con producto, texto alternativo, orden, condición de portada y futura clave de Cloudinary. Antes de producción, esas referencias deberán reemplazarse por assets propios o aprobados cargados mediante el adaptador de Cloudinary; producción no dependerá de hotlinks de Picsum. El adaptador comprobará la clave antes de cargar para que una reejecución no duplique archivos. La documentación indicará cómo configurar las credenciales no productivas sin convertirlas en secretos reales.
 
-La landing reutilizará el listado existente con una consulta equivalente a:
-
-```text
-GET /api/v1/products?page=1&pageSize=9&sort=createdAt:desc&status=ACTIVE
-```
-
-Renderizará solo `items`, sin control paginado, y mostrará un enlace a la ruta de catálogo completo. La página de catálogo utilizará el mismo endpoint con búsqueda, filtros, orden y página reflejados en la URL y con los controles numéricos existentes. No se introducirá un endpoint `/latest` ni se descargarán todos los productos para recortarlos en el frontend.
+La landing consumirá una sola vez `GET /api/v1/catalog/landing`, que devuelve la composición editorial completa definida en la sección siguiente: destacados, hasta nueve productos recientes y categorías importantes. La página no presentará filtros ni paginación; el buscador del hero navegará al catálogo completo con el término aplicado. El catálogo completo utilizará `GET /api/v1/products` con búsqueda, filtros, orden y página reflejados en la URL y controles numéricos backend. No se introducirá un endpoint `/latest` ni se descargarán todos los productos para recortarlos en el frontend.
 
 Alternativa considerada: mantener landing y catálogo como una misma vista paginada. Se descarta porque la landing necesita una selección breve y comercial, mientras que el catálogo necesita exploración exhaustiva y estado navegable. También se descartan URLs aleatorias o búsquedas remotas durante cada ejecución del seed: el seed persistirá un manifiesto de URLs de Picsum con IDs fijos para conservar resultados deterministas, aceptando la dependencia externa únicamente en entornos no productivos hasta migrar los assets a Cloudinary.
 
@@ -441,8 +438,9 @@ Alternativa considerada: ejecutar una consulta REST independiente para destacado
 - [Los hotlinks temporales de Picsum pueden fallar, cambiar de disponibilidad o no representar fielmente el producto] → Usar IDs fijos revisados visualmente solo en desarrollo y pruebas, conservar fallbacks accesibles y reemplazarlos por assets gestionados en Cloudinary antes de producción.
 - [Reordenar imágenes concurrentemente puede duplicar posiciones o portadas] → Aplicar restricciones, transacción y normalización de orden en el backend.
 - [Un seed con credenciales conocidas sería peligroso en producción] → Bloquearlo por entorno, separar configuración no productiva, almacenar hashes y probar explícitamente el rechazo.
+- [Un perfil empresarial ficticio podría terminar en documentos emitidos] → Marcar cada valor como `DEMO`, crear el perfil solo en desarrollo/pruebas y solo si está ausente, preservar ediciones administrativas y fallar antes de escrituras de seed en producción.
 - [El carrusel puede degradar accesibilidad o rendimiento] → Evitar autoplay, soportar teclado y gestos, reservar dimensiones y cargar diferidamente imágenes no visibles.
-- [Landing y catálogo podrían divergir en reglas de visibilidad] → Reutilizar el mismo endpoint, filtros de producto activo y cliente generado, cambiando solo tamaño, orden y presentación.
+- [Landing y catálogo podrían divergir en reglas de visibilidad] → Mantener endpoints de lectura distintos —composición agregada para landing y listado paginado para catálogo— que compartan las mismas reglas backend de producto activo, proyecciones públicas y cliente generado.
 - [La sección de recientes puede quedarse corta al excluir destacados] → Consultar suficientes candidatos y aplicar el límite de nueve después de la exclusión.
 - [Una configuración parcial puede dejar menos de dos categorías visibles] → Tolerar estados transitorios, omitir secciones vacías y advertir al administrador antes de guardar una configuración incompleta.
 - [Productos repetidos en categorías pueden parecer redundantes] → Permitir repetición solo en secciones contextuales de categoría y evitarla estrictamente entre destacados y recientes.

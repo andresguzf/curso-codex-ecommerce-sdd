@@ -5,7 +5,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 ## What Changes
 
 - Crear un monorepo con frontend Next.js y TypeScript, backend independiente mediante API REST y PostgreSQL como base de datos transaccional.
-- Incorporar un storefront público con hero, catálogo paginado, búsqueda, filtros, ordenamiento, detalle de producto y un carrito utilizable sin registro ni login; exigir autenticación únicamente al iniciar el checkout con pagos y envíos simulados.
+- Incorporar un storefront público con landing comercial y catálogo completo paginado, búsqueda, filtros, ordenamiento, detalle de producto y un carrito utilizable sin registro ni login; exigir autenticación únicamente al iniciar el checkout con pagos y envíos simulados.
 - Incorporar un back office donde `ADMIN` administre usuarios, productos, inventario, órdenes y facturas, y `BILLING` administre exclusivamente órdenes y facturas.
 - Implementar registro, login, logout, recuperación de sesión y autorización por roles, aplicando los permisos en el backend.
 - Gestionar productos simples con SKU, nombre, descripción, precio expresado siempre en dólares estadounidenses (`USD`), imagen, stock disponible, fechas y estado activo/inactivo, sin configuración de moneda por producto, con eliminación lógica y trazabilidad.
@@ -18,7 +18,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Añadir auditoría para operaciones sensibles sobre usuarios, roles, productos, inventario, órdenes y facturas.
 - Incorporar shells y plantillas reutilizables para storefront y back office, con header, navegación, footer, logo SVG y layouts responsive.
 - Incorporar en el storefront una navegación superior con enlaces de sesión y badge de cantidad del carrito, además de un hero tecnológico con imagen de fondo semitransparente y buscador.
-- Incorporar filtros colapsables en un sidebar izquierdo del catálogo público y, en el back office, navegación colapsable a la izquierda, búsqueda sobre cada listado y filtros colapsables a la derecha.
+- Incorporar filtros colapsables en un sidebar izquierdo del catálogo público completo —no en la landing— y, en el back office, navegación colapsable a la izquierda, búsqueda sobre cada listado y filtros colapsables a la derecha; la gestión de productos permitirá filtrar por rango de precio, categoría principal, etiquetas y rango inclusivo de fecha de creación.
 - Estandarizar todas las colecciones potencialmente grandes con búsqueda, filtros, ordenamiento y paginación ejecutados por el backend usando la navegación numérica ya definida.
 - Incorporar mensajes flash reutilizables para autenticación, operaciones de catálogo y mutaciones del carrito, además de confirmación modal para toda acción destructiva.
 - Incorporar una lista de deseos persistente para cada cliente, con acciones para agregar o retirar productos y mover productos disponibles al carrito.
@@ -29,10 +29,10 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
 - Incorporar un dashboard inicial del back office con indicadores y accesos operativos adaptados a los permisos de `ADMIN` y `BILLING`.
 - Permitir seleccionar entre temas claro y oscuro en storefront y back office, con preferencias independientes, persistentes y accesibles.
-- Incorporar un seed idempotente y exclusivo de desarrollo y pruebas con veinte productos tecnológicos completos, sus categorías, etiquetas, precios, inventario e imágenes temporales de Lorem Picsum seleccionadas mediante IDs fijos revisados visualmente, además de usuarios de ejemplo `ADMIN` y `CUSTOMER`; las referencias se reemplazarán por assets gestionados en Cloudinary antes de producción.
+- Incorporar un seed idempotente y exclusivo de desarrollo y pruebas con veinte productos tecnológicos completos, sus categorías, etiquetas, precios, inventario e imágenes temporales de Lorem Picsum seleccionadas mediante IDs fijos revisados visualmente, usuarios de ejemplo `ADMIN` y `CUSTOMER`, y un perfil empresarial ficticio claramente marcado como `DEMO`; el perfil se crea solo cuando está ausente, nunca sobrescribe cambios administrativos y el seed se bloquea en producción. Las referencias de imágenes se reemplazarán por assets gestionados en Cloudinary antes de producción.
 - Permitir múltiples imágenes ordenadas por producto, con una portada principal para tarjetas y una galería tipo carrusel en la página de detalle.
-- Separar la landing del catálogo completo: la landing mostrará los nueve productos activos más recientes sin paginación y enlazará a una página de catálogo con todos los productos, buscador, filtros, ordenamiento y paginación backend.
-- Ampliar la landing con una primera sección de hasta tres productos destacados recientemente, seguida de nueve productos recientes no repetidos y de dos o tres secciones de categorías importantes con tres productos recientes por categoría.
+- Separar la landing del catálogo completo: la landing mostrará una composición editorial de productos destacados, productos recientes y categorías importantes, sin filtros ni paginación; el buscador del hero dirigirá al catálogo completo, que ofrecerá búsqueda, filtros, ordenamiento y paginación backend.
+- Ampliar la landing con una primera sección de hasta tres productos destacados recientemente, seguida de hasta nueve productos recientes no repetidos y de dos o tres secciones de categorías importantes con hasta tres productos recientes por categoría.
 - Permitir que `ADMIN` destaque productos y seleccione, ordene o retire hasta tres categorías importantes para la landing.
 
 ## Capabilities
@@ -51,14 +51,14 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 
 - `identity-access`: búsqueda y paginación administrativa de usuarios, feedback de autenticación y confirmación de operaciones destructivas.
 - `identity-access`: usuarios seed `ADMIN` y `CUSTOMER` restringidos a entornos no productivos.
-- `product-catalog`: layouts del storefront y back office, filtros colapsables, categorías, etiquetas, slugs y lista de deseos.
+- `product-catalog`: layouts del storefront y back office, filtros colapsables, categorías, etiquetas, slugs, lista de deseos y filtros administrativos de productos por precio, categoría, etiquetas y fecha de creación.
 - `product-catalog`: identidades visuales diferenciadas, dashboard administrativo por rol y selección persistente de tema claro u oscuro.
 - `product-catalog`: seed de veinte productos, múltiples imágenes con portada, galería accesible y separación entre productos recientes de la landing y catálogo completo paginado.
 - `product-catalog`: productos destacados, categorías importantes configurables y composición agregada y ordenada de las secciones comerciales de la landing.
 - `shopping-cart-checkout`: identificación segura y expiración del carrito anónimo, fusión con el carrito del cliente, indicador de cantidad para visitantes y clientes, mensajes flash y confirmación al retirar líneas.
 - `order-management`: búsqueda y paginación administrativa, gestión de estados por `ADMIN` y `BILLING` y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
-- `billing-invoicing`: perfil de empresa, autocompletado remoto y experiencia administrativa paginada.
+- `billing-invoicing`: perfil de empresa, perfil empresarial `DEMO` precargado únicamente en entornos no productivos, autocompletado remoto y experiencia administrativa paginada.
 - `document-export`: datos de empresa y logo visual preservados en PDFs históricos sin consultar el perfil vigente ni descargar imágenes remotas al regenerar.
 
 ### Modified Capabilities
@@ -77,7 +77,8 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Ampliación de las mutaciones REST de productos para resolver o crear etiquetas por nombre junto con sus asociaciones en una sola operación, sin creación de categorías en línea.
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.
-- Nuevas fixtures de desarrollo para productos, imágenes temporales deterministas de Lorem Picsum y usuarios, ampliación del modelo y contrato de imágenes de producto, una ruta explícita de migración posterior a Cloudinary y nuevas pruebas de galería y navegación entre landing y catálogo.
+- Nuevas fixtures de desarrollo para productos, imágenes temporales deterministas de Lorem Picsum, usuarios y un perfil empresarial ficticio `DEMO` que no reemplaza configuraciones existentes, ampliación del modelo y contrato de imágenes de producto, una ruta explícita de migración posterior a Cloudinary y nuevas pruebas de galería y navegación entre landing y catálogo.
 - Nuevos campos y filtros de destaque para productos y categorías, un endpoint REST agregado de landing y pruebas de orden, límites, deduplicación y autorización administrativa.
+- Ampliación de los filtros administrativos de productos con rango de precio, categoría principal, selección de etiquetas y rango inclusivo de fecha de creación, aplicados por backend y persistidos en la URL.
 - Persistencia PostgreSQL de carritos anónimos mediante identificadores opacos almacenados en cookie segura, sin exigir una cuenta hasta el checkout, además de reglas de expiración, aislamiento y fusión al autenticarse.
 - Moneda global única `USD` para catálogo, carrito, checkout, órdenes, pagos, facturas y documentos; los contratos y snapshots conservarán el código técnico de moneda fijo para hacer explícitos los importes, pero ninguna interfaz permitirá elegirlo por producto u operación.

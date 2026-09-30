@@ -67,6 +67,36 @@ describe("perfil empresarial en backoffice", () => {
     expect(await screen.findByText("Perfil empresarial guardado.")).toBeInTheDocument();
   });
 
+  it("precarga en el formulario el perfil empresarial DEMO recibido por REST", async () => {
+    const demoProfile: StoreProfile = {
+      ...profile,
+      tradeName: "DEMO - Nexo Tech",
+      legalName: "DEMO - Nexo Tecnología Sociedad Ficticia",
+      taxIdentifier: "DEMO-NO-VALIDO",
+      address: {
+        line1: "DEMO - Calle Ejemplo 123",
+        line2: null,
+        city: "DEMO - Ciudad Ejemplo",
+        region: "DEMO - Región Ejemplo",
+        postalCode: "0000000",
+        countryCode: "CL",
+      },
+      contact: { email: "demo@example.invalid", phone: null },
+      logo: null,
+    };
+    api.getStoreProfile.mockResolvedValue(demoProfile);
+
+    renderPage();
+
+    expect(await screen.findByDisplayValue("DEMO - Nexo Tech")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("DEMO - Nexo Tecnología Sociedad Ficticia")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("DEMO-NO-VALIDO")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("DEMO - Calle Ejemplo 123")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("DEMO - Ciudad Ejemplo")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("demo@example.invalid")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Sin logo" })).toBeChecked();
+  });
+
   it("valida campos requeridos y logo antes de llamar al API", async () => {
     api.getStoreProfile.mockResolvedValue(null);
     renderPage();

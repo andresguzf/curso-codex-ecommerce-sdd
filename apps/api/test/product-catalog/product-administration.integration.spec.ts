@@ -1139,9 +1139,33 @@ describe("administrative product lifecycle", () => {
     expect(slugDetail.statusCode).toBe(200);
     expect(slugDetail.json()).toMatchObject({ id: product.id, category: { id: category.id }, tags: [{ id: tag.id }, { id: otherTag.id }] });
 
+    const creationDate = new Date().toISOString().slice(0, 10);
+    await database.update(products).set({ createdAt: new Date(`${creationDate}T23:59:59.999Z`) }).where(eq(products.id, product.id));
+
     const filtered = await server.inject({ method: "GET", url: `/api/v1/products?categoryId=${category.id}&tagIds=${tag.id},${otherTag.id}&search=Altavoz&minPrice=1000&maxPrice=2000` });
     expect(filtered.statusCode).toBe(200);
     expect(filtered.json()).toMatchObject({ totalItems: 1, items: [{ id: product.id }] });
+    const administrativeFilters = await server.inject({
+      method: "GET",
+      url: `/api/v1/products?view=administrative&categoryId=${category.id}&tagIds=${tag.id},${otherTag.id}&minPrice=1000&maxPrice=2000&createdFrom=${creationDate}&createdTo=${creationDate}`,
+      headers: authorization(tokens.admin),
+    });
+    expect(administrativeFilters.statusCode).toBe(200);
+    expect(administrativeFilters.json()).toMatchObject({ totalItems: 1, items: [{ id: product.id }] });
+    const outsideCreationDate = await server.inject({
+      method: "GET",
+      url: `/api/v1/products?view=administrative&createdFrom=2020-01-01&createdTo=2020-01-01`,
+      headers: authorization(tokens.admin),
+    });
+    expect(outsideCreationDate.json()).toMatchObject({ totalItems: 0, items: [] });
+    for (const invalidUrl of [
+      "/api/v1/products?view=administrative&createdFrom=2026-02-30",
+      "/api/v1/products?view=administrative&createdFrom=2026-09-30&createdTo=2026-09-01",
+      "/api/v1/products?createdFrom=2026-09-01",
+    ]) {
+      const invalid = await server.inject({ method: "GET", url: invalidUrl, headers: authorization(tokens.admin) });
+      expect(invalid.statusCode).toBe(400);
+    }
     const wrongCategory = await server.inject({ method: "GET", url: `/api/v1/products?categoryId=${otherCategory.id}&tagIds=${tag.id}` });
     expect(wrongCategory.json()).toMatchObject({ totalItems: 0 });
 

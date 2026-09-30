@@ -108,8 +108,8 @@ describe("storefront product detail", () => {
 
     renderDetail();
 
-    expect(await screen.findByRole("link", { name: "Periféricos" })).toHaveAttribute("href", "/?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2#catalog");
-    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta Gaming" })).toHaveAttribute("href", "/?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519#catalog");
+    expect(await screen.findByRole("link", { name: "Periféricos" })).toHaveAttribute("href", "/products?page=1&categoryId=553c237f-d1a5-4e98-b7c5-e67415724cf2");
+    expect(screen.getByRole("link", { name: "Ver productos con la etiqueta Gaming" })).toHaveAttribute("href", "/products?page=1&tagIds=16875593-f79f-45fd-b642-fc4e13154519");
     expect(screen.getByRole("link", { name: "Ver productos con la etiqueta RGB" })).toBeInTheDocument();
   });
 

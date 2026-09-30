@@ -5,7 +5,7 @@ type ProductClassification = NonNullable<ProductListItem["category"]>;
 
 function classificationLink(kind: "categoryId" | "tagIds", id: string): string {
   const params = new URLSearchParams({ page: "1", [kind]: id });
-  return `/?${params.toString()}#catalog`;
+  return `/products?${params.toString()}`;
 }
 
 export function ProductClassifications({

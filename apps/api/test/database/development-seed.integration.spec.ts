@@ -14,6 +14,7 @@ import {
   productImages,
   products,
   roleAssignments,
+  storeProfiles,
   users,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
@@ -70,7 +71,7 @@ let database: NodePgDatabase<typeof schema>;
 let isolatedDatabaseCreated = false;
 
 async function readSeedCounts() {
-  const [userCount, roleCount, productCount, imageCount, balanceCount, movementCount] =
+  const [userCount, roleCount, productCount, imageCount, balanceCount, movementCount, storeProfileCount] =
     await Promise.all([
       database.select({ count: sql<number>`count(*)::int` }).from(users),
       database
@@ -86,6 +87,9 @@ async function readSeedCounts() {
       database
         .select({ count: sql<number>`count(*)::int` })
         .from(inventoryMovements),
+      database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(storeProfiles),
     ]);
 
   return {
@@ -95,6 +99,7 @@ async function readSeedCounts() {
     productImages: imageCount[0]?.count,
     inventoryBalances: balanceCount[0]?.count,
     inventoryMovements: movementCount[0]?.count,
+    storeProfiles: storeProfileCount[0]?.count,
   };
 }
 
@@ -177,8 +182,23 @@ describe("development database seed", () => {
       productImages: 3,
       inventoryBalances: 3,
       inventoryMovements: 3,
+      storeProfiles: 1,
     });
     expect(await readSeedCounts()).toEqual(firstResult);
+    const [seededStoreProfile] = await database.select().from(storeProfiles);
+    expect(seededStoreProfile).toMatchObject({
+      id: 1,
+      tradeName: "DEMO - Nexo Tech",
+      legalName: "DEMO - Nexo Tecnología Sociedad Ficticia",
+      taxIdentifier: "DEMO-NO-VALIDO",
+      addressLine1: "DEMO - Calle Ejemplo 123",
+      addressCity: "DEMO - Ciudad Ejemplo",
+      addressCountryCode: "CL",
+      contactEmail: "demo@example.invalid",
+      logoStorageKey: null,
+      logoUrl: null,
+      logoSha256: null,
+    });
     expect(firstProductImages).toEqual([
       {
         sku: "DEV-KEYBOARD-001",
@@ -220,6 +240,14 @@ describe("development database seed", () => {
       ).toBe(true);
     }
 
+    await database
+      .update(storeProfiles)
+      .set({
+        tradeName: "Empresa configurada por Admin",
+        legalName: "Empresa configurada por Admin SpA",
+        taxIdentifier: "ADMIN-TAX-ID",
+      });
+
     const secondResult = await runDevelopmentSeed(options);
     const secondUsers = await database
       .select({
@@ -238,6 +266,12 @@ describe("development database seed", () => {
     expect(await readSeedCounts()).toEqual(firstResult);
     expect(secondUsers).toEqual(firstUsers);
     expect(secondProducts).toEqual(firstProducts);
+    const [profileAfterRerun] = await database.select().from(storeProfiles);
+    expect(profileAfterRerun).toMatchObject({
+      tradeName: "Empresa configurada por Admin",
+      legalName: "Empresa configurada por Admin SpA",
+      taxIdentifier: "ADMIN-TAX-ID",
+    });
   }, 30_000);
 
   it("rejects production before changing persisted data", async () => {

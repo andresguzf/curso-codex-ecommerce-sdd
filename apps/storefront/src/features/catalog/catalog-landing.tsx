@@ -2,23 +2,26 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProducts } from "./catalog-api";
 import { CatalogFilters, type CatalogFilterValues } from "./catalog-filters";
 import { CatalogHero } from "./catalog-hero";
-import { parseCatalogQuery } from "./catalog-query";
+import { CATALOG_LANDING_PAGE_SIZE, parseCatalogQuery } from "./catalog-query";
 import { ProductGrid } from "./product-grid";
 
 export function CatalogLanding() {
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = parseCatalogQuery(searchParams);
   const productsQuery = useQuery({
-    queryFn: () => getPublicProducts(query),
-    queryKey: ["catalog", "public", query],
+    queryFn: () => getPublicProducts(query, CATALOG_LANDING_PAGE_SIZE),
+    queryKey: ["catalog", "public", "landing", query],
   });
   const { addProduct, isAdding } = useAddToCart();
 
@@ -52,7 +55,7 @@ export function CatalogLanding() {
   function handleHeroSearch(search: string) {
     const params = new URLSearchParams({ page: "1" });
     if (search) params.set("search", search);
-    router.push(`${pathname}?${params.toString()}#catalog`, { scroll: true });
+    router.push(`/products?${params.toString()}`, { scroll: true });
   }
 
   return (
@@ -75,41 +78,58 @@ export function CatalogLanding() {
               {productsQuery.data.totalItems} productos encontrados
             </p>
           ) : null}
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#15345b] px-5 py-2 text-sm font-black text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+            href="/products"
+          >
+            Ver todos los productos
+          </Link>
         </div>
 
-        <CatalogFilters
-          key={`filters:${query.categoryId ?? "all"}:${query.tagIds?.join(",") ?? ""}:${query.availability ?? "all"}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.sortBy}:${query.sortOrder}`}
-          onApply={handleApplyFilters}
-          onClear={() => navigateWith({
-            availability: undefined,
-            categoryId: undefined,
-            tagIds: undefined,
-            maxPrice: undefined,
-            minPrice: undefined,
-            sortBy: undefined,
-            sortOrder: undefined,
-          })}
-          query={query}
-        />
+        <div
+          className={filtersCollapsed
+            ? "grid gap-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-8"
+            : "grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[18rem_minmax(0,1fr)]"}
+          data-filters-collapsed={filtersCollapsed}
+        >
+          <CatalogFilters
+            collapsed={filtersCollapsed}
+            key={`filters:${query.categoryId ?? "all"}:${query.tagIds?.join(",") ?? ""}:${query.availability ?? "all"}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.sortBy}:${query.sortOrder}`}
+            onApply={handleApplyFilters}
+            onClear={() => navigateWith({
+              availability: undefined,
+              categoryId: undefined,
+              tagIds: undefined,
+              maxPrice: undefined,
+              minPrice: undefined,
+              sortBy: undefined,
+              sortOrder: undefined,
+            })}
+            onCollapsedChange={setFiltersCollapsed}
+            query={query}
+          />
 
-        {productsQuery.isPending ? <LoadingState message="Cargando productos disponibles…" /> : null}
-        {productsQuery.isError ? (
-          <ErrorState
-            action={(
-              <button className="min-h-11 rounded-lg bg-red-800 px-4 py-2 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
-                Intentar nuevamente
-              </button>
-            )}
-            message="Comprueba que la API esté disponible y vuelve a intentarlo."
-          />
-        ) : null}
-        {productsQuery.data ? (
-          <ProductGrid
-            isAdding={isAdding}
-            onAddToCart={(product) => void addProduct(product)}
-            products={productsQuery.data.items}
-          />
-        ) : null}
+          <div className="min-w-0" id="catalog-results">
+            {productsQuery.isPending ? <LoadingState message="Cargando productos disponibles…" /> : null}
+            {productsQuery.isError ? (
+              <ErrorState
+                action={(
+                  <button className="min-h-11 rounded-lg bg-red-800 px-4 py-2 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
+                    Intentar nuevamente
+                  </button>
+                )}
+                message="Comprueba que la API esté disponible y vuelve a intentarlo."
+              />
+            ) : null}
+            {productsQuery.data ? (
+              <ProductGrid
+                isAdding={isAdding}
+                onAddToCart={(product) => void addProduct(product)}
+                products={productsQuery.data.items}
+              />
+            ) : null}
+          </div>
+        </div>
       </section>
     </main>
   );

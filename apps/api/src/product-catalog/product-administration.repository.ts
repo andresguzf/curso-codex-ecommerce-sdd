@@ -8,6 +8,7 @@ import {
   gte,
   inArray,
   isNull,
+  lt,
   lte,
   or,
   sql,
@@ -119,6 +120,13 @@ export class ProductAdministrationRepository {
     }
     if (query.minPrice) conditions.push(gte(products.price, query.minPrice));
     if (query.maxPrice) conditions.push(lte(products.price, query.maxPrice));
+    if (query.createdFrom) {
+      conditions.push(gte(products.createdAt, new Date(`${query.createdFrom}T00:00:00.000Z`)));
+    }
+    if (query.createdTo) {
+      const endExclusive = new Date(Date.parse(`${query.createdTo}T00:00:00.000Z`) + 86_400_000);
+      conditions.push(lt(products.createdAt, endExclusive));
+    }
     if (query.availability === "IN_STOCK") {
       conditions.push(sql`${stockAvailableExpression} > 0`);
     }

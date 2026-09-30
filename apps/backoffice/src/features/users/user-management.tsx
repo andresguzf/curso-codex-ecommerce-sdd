@@ -10,7 +10,6 @@ import {
   type UserStatus,
 } from "@technology-ecommerce/api-schemas";
 import {
-  CollapsibleSidePanel,
   ConfirmationDialog,
   DataTable,
   ErrorState,
@@ -23,6 +22,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BackofficeListLayout, BackofficeListSearch } from "../../components/backoffice-list-layout";
 import { BackofficePagination } from "../../components/backoffice-pagination";
 import { useSessionStore } from "../auth/session";
 import { createUser, deleteUser, listUsers, updateUser, UserApiError } from "./user-api";
@@ -56,6 +56,7 @@ export function UserManagement() {
   const [confirmation, setConfirmation] = useState<ConfirmationTarget>();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const isAdmin = sessionStatus === "authenticated" && session?.user.role === "ADMIN";
+  const isCustomerView = filters.role === "CUSTOMER";
   const accessToken = isAdmin ? session.accessToken : "";
 
   useEffect(() => {
@@ -169,32 +170,30 @@ export function UserManagement() {
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 sm:px-8">
       <div className="mx-auto max-w-[90rem]">
         <header className="flex flex-wrap items-end justify-between gap-5 border-b border-slate-300 pb-6">
-          <div><Link className="text-sm font-bold text-blue-800 hover:underline" href="/">← Panel principal</Link><p className="mb-0 mt-5 text-xs font-bold uppercase tracking-[.18em] text-blue-800">Identidad · Administración</p><h1 className="mb-0 mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Usuarios</h1><p className="mb-0 mt-2 text-slate-600">Gestiona cuentas y permisos sin alterar su historial comercial.</p></div>
+          <div><Link className="text-sm font-bold text-blue-800 hover:underline" href="/">← Panel principal</Link><p className="mb-0 mt-5 text-xs font-bold uppercase tracking-[.18em] text-blue-800">Identidad · Administración</p><h1 className="mb-0 mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{isCustomerView ? "Clientes" : "Usuarios"}</h1><p className="mb-0 mt-2 text-slate-600">{isCustomerView ? "Consulta las cuentas de clientes de la tienda." : "Gestiona cuentas y permisos sin alterar su historial comercial."}</p></div>
           <IconButton className="size-11 border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800" icon="plus" label="Nuevo usuario" onClick={() => { saveMutation.reset(); setFormTarget({ mode: "create" }); }} />
         </header>
 
         {formTarget ? <section aria-labelledby="user-form-title" className="my-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><h2 className="mt-0 text-2xl font-bold" id="user-form-title">{formTarget.mode === "edit" ? `Editar ${formTarget.user.displayName}` : "Crear usuario"}</h2><UserForm isPending={saveMutation.isPending} key={formTarget.mode === "edit" ? formTarget.user.id : "create"} onCancel={() => setFormTarget(undefined)} onSubmit={(input) => saveMutation.mutate({ target: formTarget, input })} user={formTarget.mode === "edit" ? formTarget.user : undefined} /></section> : null}
 
-        <form className="my-6 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-4" key={`search-${filters.search ?? ""}`} onSubmit={(event) => { event.preventDefault(); navigate({ page: 1, search: String(new FormData(event.currentTarget).get("search") ?? "").trim() || undefined }); }}>
-          <label className="sr-only" htmlFor="user-search">Buscar usuarios</label><input className="min-h-11 min-w-56 flex-1 rounded-lg border border-slate-300 px-4" defaultValue={filters.search} id="user-search" maxLength={200} name="search" placeholder="Nombre o correo electrónico" type="search" /><button className="rounded-lg bg-[#15345b] px-5 py-2 font-bold text-white" type="submit">Buscar</button>{filters.search ? <button className="font-bold text-blue-700 underline" onClick={() => navigate({ page: 1, search: undefined })} type="button">Limpiar búsqueda</button> : null}
-        </form>
-
-        <div className="flex items-stretch gap-2">
-          <section aria-labelledby="user-list-title" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="m-0 text-lg font-bold" id="user-list-title">Cuentas registradas</h2><p className="m-0 text-sm text-slate-600">{usersQuery.data ? `${usersQuery.data.totalItems} usuarios` : "Consultando usuarios"}</p></div>
-            {usersQuery.isPending ? <LoadingState message="Cargando usuarios…" /> : usersQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => { void usersQuery.refetch(); }} type="button">Reintentar</button>} message={mutationError(usersQuery.error)} /> : <><DataTable caption="Usuarios administrativos" columns={columns} emptyMessage="No hay usuarios que coincidan con los criterios." rowKey={(user) => user.id} rows={usersQuery.data.items} />{usersQuery.data.totalPages > 0 && filters.page <= usersQuery.data.totalPages ? <div className="mt-5"><BackofficePagination page={usersQuery.data.page} totalPages={usersQuery.data.totalPages} /></div> : filters.page > 1 ? <button className="mt-5 font-bold text-blue-700 underline" onClick={() => navigate({ page: 1 })} type="button">Volver a la primera página</button> : null}</>}
+        <BackofficeListLayout
+          filters={<form className="grid gap-4" key={`filters-${searchParams.toString()}`} onSubmit={(event) => { event.preventDefault(); applyFilters(new FormData(event.currentTarget)); }}>
+            <label className="grid gap-1 text-sm font-semibold">Rol<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.role ?? ""} name="role"><option value="">Todos</option><option value="CUSTOMER">Cliente</option><option value="ADMIN">Administrador</option><option value="BILLING">Facturación</option></select></label>
+            <label className="grid gap-1 text-sm font-semibold">Estado<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.status ?? ""} name="status"><option value="">Todos</option><option value="ACTIVE">Activo</option><option value="INACTIVE">Inactivo</option><option value="BLOCKED">Bloqueado</option></select></label>
+            <label className="grid gap-1 text-sm font-semibold">Usuarios por página<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.pageSize} name="pageSize"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
+            <label className="grid gap-1 text-sm font-semibold">Ordenar por<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortBy} name="sortBy"><option value="createdAt">Fecha de alta</option><option value="displayName">Nombre</option><option value="email">Correo</option><option value="role">Rol</option><option value="status">Estado</option></select></label>
+            <label className="grid gap-1 text-sm font-semibold">Dirección<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortOrder} name="sortOrder"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select></label>
+            <button className="min-h-11 rounded-lg bg-[#15345b] px-4 font-bold text-white" type="submit">Aplicar filtros</button><button className="text-center font-bold text-blue-700 underline" onClick={() => { navigate({ page: 1, role: undefined, status: undefined, pageSize: 20, sortBy: "createdAt", sortOrder: "desc" }); setFiltersOpen(false); }} type="button">Restablecer</button>
+          </form>}
+          filtersOpen={filtersOpen}
+          filtersTitle={isCustomerView ? "Filtros de clientes" : "Filtros de usuarios"}
+          onFiltersOpenChange={setFiltersOpen}
+          search={<BackofficeListSearch label={isCustomerView ? "Buscar clientes" : "Buscar usuarios"} onClear={() => navigate({ page: 1, search: undefined })} onSearch={(search) => navigate({ page: 1, search: search || undefined })} placeholder="Nombre o correo electrónico" value={filters.search} />}
+        >
+          <section aria-labelledby="user-list-title" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="m-0 text-lg font-bold" id="user-list-title">{isCustomerView ? "Clientes registrados" : "Cuentas registradas"}</h2><p className="m-0 text-sm text-slate-600">{usersQuery.data ? `${usersQuery.data.totalItems} ${isCustomerView ? "clientes" : "usuarios"}` : `Consultando ${isCustomerView ? "clientes" : "usuarios"}`}</p></div>
+            {usersQuery.isPending ? <LoadingState message={`Cargando ${isCustomerView ? "clientes" : "usuarios"}…`} /> : usersQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => { void usersQuery.refetch(); }} type="button">Reintentar</button>} message={mutationError(usersQuery.error)} /> : <><DataTable caption={isCustomerView ? "Clientes" : "Usuarios administrativos"} columns={columns} emptyMessage={`No hay ${isCustomerView ? "clientes" : "usuarios"} que coincidan con los criterios.`} rowKey={(user) => user.id} rows={usersQuery.data.items} />{usersQuery.data.totalPages > 0 && filters.page <= usersQuery.data.totalPages ? <div className="mt-5"><BackofficePagination page={usersQuery.data.page} totalPages={usersQuery.data.totalPages} /></div> : filters.page > 1 ? <button className="mt-5 font-bold text-blue-700 underline" onClick={() => navigate({ page: 1 })} type="button">Volver a la primera página</button> : null}</>}
           </section>
-          <div className="flex shrink-0 items-center"><IconButton ariaExpanded={filtersOpen} className="border-slate-300 text-slate-700 hover:bg-slate-100" icon={filtersOpen ? "chevron-left" : "chevron-right"} label={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"} onClick={() => setFiltersOpen((open) => !open)} /></div>
-          <CollapsibleSidePanel onClose={() => setFiltersOpen(false)} open={filtersOpen} title="Filtros de usuarios">
-            <form className="grid gap-4" key={`filters-${searchParams.toString()}`} onSubmit={(event) => { event.preventDefault(); applyFilters(new FormData(event.currentTarget)); }}>
-              <label className="grid gap-1 text-sm font-semibold">Rol<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.role ?? ""} name="role"><option value="">Todos</option><option value="CUSTOMER">Cliente</option><option value="ADMIN">Administrador</option><option value="BILLING">Facturación</option></select></label>
-              <label className="grid gap-1 text-sm font-semibold">Estado<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.status ?? ""} name="status"><option value="">Todos</option><option value="ACTIVE">Activo</option><option value="INACTIVE">Inactivo</option><option value="BLOCKED">Bloqueado</option></select></label>
-              <label className="grid gap-1 text-sm font-semibold">Usuarios por página<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.pageSize} name="pageSize"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
-              <label className="grid gap-1 text-sm font-semibold">Ordenar por<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortBy} name="sortBy"><option value="createdAt">Fecha de alta</option><option value="displayName">Nombre</option><option value="email">Correo</option><option value="role">Rol</option><option value="status">Estado</option></select></label>
-              <label className="grid gap-1 text-sm font-semibold">Dirección<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortOrder} name="sortOrder"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select></label>
-              <button className="min-h-11 rounded-lg bg-[#15345b] px-4 font-bold text-white" type="submit">Aplicar filtros</button><Link className="text-center font-bold text-blue-700 underline" href="/users" onClick={() => setFiltersOpen(false)}>Restablecer</Link>
-            </form>
-          </CollapsibleSidePanel>
-        </div>
+        </BackofficeListLayout>
       </div>
       <ConfirmationDialog
         confirmLabel={confirmation?.action === "delete" ? "Eliminar usuario" : confirmation?.action === "block" ? "Bloquear usuario" : "Desactivar usuario"}

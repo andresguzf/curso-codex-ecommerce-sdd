@@ -8,11 +8,13 @@ import { useEffect, useId, useRef } from "react";
  */
 export function CollapsibleSidePanel({
   children,
+  id,
   onClose,
   open,
   title,
 }: Readonly<{
   children: React.ReactNode;
+  id?: string;
   onClose: () => void;
   open: boolean;
   title: string;
@@ -45,6 +47,7 @@ export function CollapsibleSidePanel({
       data-open={open}
       data-slot="collapsible-side-panel"
       inert={!open}
+      id={id}
       ref={panelRef}
       tabIndex={-1}
     >

@@ -15,10 +15,12 @@ type NavigationItem = Readonly<{
 
 const ADMIN_NAVIGATION: readonly NavigationItem[] = [
   { href: "/", icon: "home", label: "Inicio" },
-  { href: "/products", icon: "products", label: "Productos e inventario" },
+  { href: "/products", icon: "products", label: "Productos" },
+  { href: "/inventory", icon: "products", label: "Inventario" },
   { href: "/categories", icon: "categories", label: "Categorías" },
   { href: "/tags", icon: "tags", label: "Etiquetas" },
   { href: "/users", icon: "users", label: "Usuarios" },
+  { href: "/users?role=CUSTOMER", icon: "users", label: "Clientes" },
   { href: "/orders", icon: "orders", label: "Órdenes" },
   { href: "/invoices", icon: "invoices", label: "Facturas" },
   { href: "/store-profile", icon: "company", label: "Empresa" },

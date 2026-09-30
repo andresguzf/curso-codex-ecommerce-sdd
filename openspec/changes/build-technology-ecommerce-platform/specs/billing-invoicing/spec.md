@@ -69,6 +69,21 @@ El sistema SHALL mantener un único perfil vigente de la tienda con al menos nom
 - **WHEN** un usuario `BILLING` intenta editar el perfil de la tienda
 - **THEN** el sistema deniega la modificación sin impedir su consulta autorizada
 
+### Requirement: Perfil empresarial DEMO en el seed no productivo
+El seed explícito de desarrollo y pruebas SHALL crear un perfil empresarial con datos claramente ficticios y marcados `DEMO` solo cuando todavía no exista un perfil. SHALL ser idempotente y MUST NOT sobrescribir datos creados o modificados por `ADMIN`. El seed MUST rechazar entornos de producción antes de realizar cualquier escritura; los datos DEMO MUST NOT presentarse como información legal real.
+
+#### Scenario: Primera ejecución en desarrollo o pruebas
+- **WHEN** se ejecuta el seed en desarrollo o pruebas sobre una base de datos sin perfil empresarial
+- **THEN** se crea un único perfil reconocible como `DEMO` y el formulario administrativo carga esos valores como datos iniciales
+
+#### Scenario: Reejecución tras edición administrativa
+- **WHEN** se vuelve a ejecutar el seed después de que un administrador haya editado el perfil empresarial
+- **THEN** el perfil existente conserva exactamente los datos guardados por `ADMIN` y no se crea otro registro
+
+#### Scenario: Ejecución en producción
+- **WHEN** se intenta ejecutar el seed en producción
+- **THEN** el proceso falla antes de escribir el perfil empresarial DEMO o cualquier otro dato de ejemplo
+
 ### Requirement: Logo empresarial administrado e inmutable
 El sistema SHALL permitir exclusivamente a `ADMIN` cargar un logo PNG, JPEG o WebP con límites de tamaño y validación de firma, SHALL guardar cada versión bajo una clave nueva que no se sobrescriba y SHALL asociar al perfil únicamente una referencia emitida por el API. La referencia SHALL incluir MIME y huella SHA-256 verificable. El sistema MUST conservar los assets referenciados por órdenes o facturas históricas y MUST NOT confiar en URLs o claves arbitrarias proporcionadas en `PATCH /store-profile`.
 

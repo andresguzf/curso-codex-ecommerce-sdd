@@ -16,6 +16,9 @@ export type CatalogQuery = {
   sortOrder: "asc" | "desc";
 };
 
+export const CATALOG_LANDING_PAGE_SIZE = 9;
+export const CATALOG_PAGE_SIZE = 12;
+
 export const defaultCatalogQuery: CatalogQuery = {
   page: 1,
   sortBy: "createdAt",
@@ -24,7 +27,10 @@ export const defaultCatalogQuery: CatalogQuery = {
 
 type SearchParamsReader = Pick<URLSearchParams, "get">;
 
-export function parseCatalogQuery(searchParams: SearchParamsReader): CatalogQuery {
+export function parseCatalogQuery(
+  searchParams: SearchParamsReader,
+  pageSize = CATALOG_LANDING_PAGE_SIZE,
+): CatalogQuery {
   const parsed = productListQuerySchema.safeParse({
     availability: searchParams.get("availability") || undefined,
     categoryId: searchParams.get("categoryId") || undefined,
@@ -32,7 +38,7 @@ export function parseCatalogQuery(searchParams: SearchParamsReader): CatalogQuer
     maxPrice: searchParams.get("maxPrice") || undefined,
     minPrice: searchParams.get("minPrice") || undefined,
     page: searchParams.get("page") || 1,
-    pageSize: 9,
+    pageSize,
     search: searchParams.get("search") || undefined,
     sortBy: searchParams.get("sortBy") || defaultCatalogQuery.sortBy,
     sortOrder: searchParams.get("sortOrder") || defaultCatalogQuery.sortOrder,

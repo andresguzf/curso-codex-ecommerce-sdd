@@ -11,17 +11,22 @@ import { useEffect, useId, useRef } from "react";
  */
 export function FilterDrawer({
   children,
+  id,
   onClose,
   open,
+  side = "left",
   title,
 }: Readonly<{
   children: React.ReactNode;
+  id?: string;
   onClose: () => void;
   open: boolean;
+  side?: "left" | "right";
   title: string;
 }>) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +37,36 @@ export function FilterDrawer({
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) {
+        event.preventDefault();
+        closeButtonRef.current?.focus();
+        return;
+      }
+
+      const first = focusable.item(0);
+      const last = focusable.item(focusable.length - 1);
+      if (!first || !last) return;
+
+      if (!panelRef.current?.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
     document.addEventListener("keydown", handleKeyDown);
@@ -48,6 +82,7 @@ export function FilterDrawer({
       aria-hidden={!open}
       className={open ? "fixed inset-0 z-40" : "hidden"}
       data-slot="filter-drawer"
+      inert={!open}
     >
       <button
         aria-label="Cerrar panel de filtros"
@@ -58,8 +93,10 @@ export function FilterDrawer({
       <aside
         aria-labelledby={titleId}
         aria-modal="true"
-        className="absolute inset-y-0 left-0 flex w-[min(100%,24rem)] translate-x-0 flex-col border-r border-slate-200 bg-white text-slate-950 shadow-2xl transition-transform duration-200 ease-out motion-reduce:transition-none"
+        className={`absolute inset-y-0 ${side === "right" ? "right-0 border-l" : "left-0 border-r"} flex w-[min(100%,24rem)] translate-x-0 flex-col border-slate-200 bg-white text-slate-950 shadow-2xl transition-transform duration-200 ease-out motion-reduce:transition-none`}
         data-state={open ? "open" : "closed"}
+        id={id}
+        ref={panelRef}
         role="dialog"
       >
         <header className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">

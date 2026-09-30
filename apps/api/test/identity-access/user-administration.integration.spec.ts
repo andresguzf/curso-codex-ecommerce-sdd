@@ -7,7 +7,7 @@ import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
@@ -19,6 +19,8 @@ import {
   auditEntries,
   roleAssignments,
   users,
+  products,
+  productImages,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
@@ -218,6 +220,82 @@ describe("administrative user lifecycle", () => {
     expect(anonymous.statusCode).toBe(401);
     expect(customer.statusCode).toBe(403);
     expect(billing.statusCode).toBe(403);
+  });
+
+  it("provides bounded invoice lookups without granting BILLING user administration", async () => {
+    const passwordHash = await hashPassword(password);
+    for (let index = 0; index < 28; index++) {
+      const [customer] = await database.insert(users).values({
+        email: `lookup-${index}@example.com`, displayName: `Lookup customer ${index}`,
+        passwordHash, status: index < 25 ? "ACTIVE" : index === 25 ? "BLOCKED" : "INACTIVE",
+        deletedAt: index === 27 ? new Date() : null,
+      }).returning({ id: users.id });
+      await database.insert(roleAssignments).values({ userId: customer!.id, role: "CUSTOMER" });
+      const [product] = await database.insert(products).values({
+        sku: `LOOKUP-${index}`, name: `Lookup keyboard ${index}`, description: "Demo keyboard",
+        price: "10.00", status: index < 25 ? "ACTIVE" : "INACTIVE",
+        deletedAt: index === 27 ? new Date() : null,
+      }).returning({ id: products.id });
+      await database.insert(productImages).values({
+        productId: product!.id, storageKey: `lookup/${index}`, url: "https://picsum.photos/seed/keyboard/640/480",
+      });
+    }
+    for (const resource of ["users", "products"]) {
+      const url = `/api/v1/${resource}?purpose=autocomplete&search=lookup`;
+      expect((await server.inject({ method: "GET", url })).statusCode).toBe(401);
+      expect((await server.inject({ method: "GET", url, headers: authorization(accessTokens.customer) })).statusCode).toBe(403);
+      for (const role of ["admin", "billing"] as const) {
+        const response = await server.inject({ method: "GET", url, headers: authorization(accessTokens[role]) });
+        expect(response.statusCode).toBe(200);
+        const page = response.json<{ items: Record<string, unknown>[]; totalItems: number; pageSize: number; totalPages: number }>();
+        expect(page).toMatchObject({ totalItems: 25, pageSize: 20, totalPages: 2 });
+        expect(page.items).toHaveLength(20);
+        expect(page.items.every((item) => item.status === "ACTIVE")).toBe(true);
+        if (resource === "users") expect(page.items.every((item) => item.role === "CUSTOMER" && !("passwordHash" in item))).toBe(true);
+        const second = await server.inject({ method: "GET", url: `${url}&page=2`, headers: authorization(accessTokens[role]) });
+        const secondItems = second.json<{ items: { id: string }[] }>().items;
+        expect(secondItems).toHaveLength(5);
+        expect(secondItems.every((item) => !page.items.some((first) => first.id === item.id))).toBe(true);
+      }
+      for (const query of ["", "&search=ab", "&search=%20%20%20", "&search=lookup&pageSize=21", "&search=lookup&page=1000001", "&search=lookup&status=INACTIVE"]) {
+        const response = await server.inject({ method: "GET", url: `/api/v1/${resource}?purpose=autocomplete${query}`, headers: authorization(accessTokens.billing) });
+        expect(response.statusCode).toBe(400);
+      }
+      const literal = await server.inject({ method: "GET", url: `/api/v1/${resource}?purpose=autocomplete&search=%25%25%25`, headers: authorization(accessTokens.billing) });
+      expect(literal.statusCode).toBe(200);
+      expect(literal.json()).toMatchObject({ items: [], totalItems: 0 });
+    }
+    for (const query of ["role=ADMIN", "role=BILLING", "status=BLOCKED"]) {
+      expect((await server.inject({ method: "GET", url: `/api/v1/users?purpose=autocomplete&search=lookup&${query}`, headers: authorization(accessTokens.billing) })).statusCode).toBe(400);
+    }
+    expect((await server.inject({ method: "GET", url: "/api/v1/products?purpose=autocomplete&search=lookup&view=administrative", headers: authorization(accessTokens.billing) })).statusCode).toBe(400);
+    expect((await server.inject({ method: "GET", url: "/api/v1/users?purpose=autocomplete&search=users", headers: authorization(accessTokens.billing) })).json()).toMatchObject({ items: [{ id: fixtures.customer.id }], totalItems: 1 });
+    expect((await server.inject({ method: "GET", url: `/api/v1/users/${fixtures.customer.id}`, headers: authorization(accessTokens.billing) })).statusCode).toBe(403);
+    expect((await server.inject({ method: "POST", url: "/api/v1/users", headers: authorization(accessTokens.billing), payload: {} })).statusCode).toBe(403);
+  });
+
+  it("uses trigram indexes for selective substring searches on representative data", async () => {
+    await database.transaction(async (transaction) => {
+      await transaction.execute(sql`insert into users (email, display_name, password_hash)
+        select 'perf-' || n || '@example.com', 'Customer ' || n, 'fixture-hash' from generate_series(1, 20000) n`);
+      await transaction.execute(sql`insert into products (sku, name, description, price)
+        select 'PERF-' || n, 'Keyboard ' || n, 'Technical description ' || n, 10 from generate_series(1, 20000) n`);
+      // Flush bulk-load pending entries before measuring steady-state index plans.
+      await transaction.execute(sql`select gin_clean_pending_list(indexname::regclass) from pg_indexes
+        where schemaname = 'public' and indexname like '%_search_idx'`);
+      await transaction.execute(sql`analyze users`);
+      await transaction.execute(sql`analyze products`);
+      for (const query of [
+        sql`explain (analyze, format json) select id from users where deleted_at is null and (email ilike '%19999%' or display_name ilike '%19999%') limit 20`,
+        sql`explain (analyze, format json) select id from products where deleted_at is null and (name ilike '%19999%' or description ilike '%19999%' or sku ilike '%19999%') limit 20`,
+      ]) {
+        const result = await transaction.execute(query);
+        const plan = result.rows[0]!['QUERY PLAN'] as { 'Execution Time': number; Plan: unknown }[];
+        expect(JSON.stringify(plan)).toContain('search_idx');
+        expect(plan[0]!['Execution Time']).toBeLessThan(500);
+      }
+      // Isolated test database only; fixture records are removed by the suite teardown.
+    });
   });
 
   it("creates, lists, reads and updates users with backend pagination", async () => {

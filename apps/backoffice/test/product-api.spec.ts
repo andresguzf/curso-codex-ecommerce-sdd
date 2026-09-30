@@ -44,7 +44,18 @@ describe("product administration API client", () => {
       status: product.status,
     };
 
-    await api.listAdministrativeProducts("admin-token", 1);
+    await api.listAdministrativeProducts("admin-token", {
+      categoryId: "8f732799-c098-45c1-961e-332c6becd13a",
+      createdFrom: "2026-09-01",
+      createdTo: "2026-09-30",
+      maxPrice: "100.00",
+      minPrice: "50.00",
+      page: 1,
+      pageSize: 10,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      tagIds: ["62ac275e-bbf6-43ab-8885-e5588bd24c87", "1ac275e0-bbf6-43ab-8885-e5588bd24c87"],
+    });
     await api.createProduct("admin-token", input);
     await api.updateProduct("admin-token", product.id, { name: "Teclado Nova 75 Pro" });
     await api.updateProductStatus("admin-token", product.id, { status: "INACTIVE" });
@@ -52,7 +63,20 @@ describe("product administration API client", () => {
 
     const requests = fetchMock.mock.calls.map(([request]) => request as Request);
     expect(requests.map((request) => request.method)).toEqual(["GET", "POST", "PATCH", "PATCH", "DELETE"]);
-    expect(requests[0].url).toContain("/api/v1/products?page=1&pageSize=10&sortBy=createdAt&sortOrder=desc&view=administrative");
+    const listQuery = new URL(requests[0].url).searchParams;
+    expect(Object.fromEntries(listQuery.entries())).toEqual({
+      categoryId: "8f732799-c098-45c1-961e-332c6becd13a",
+      createdFrom: "2026-09-01",
+      createdTo: "2026-09-30",
+      maxPrice: "100.00",
+      minPrice: "50.00",
+      page: "1",
+      pageSize: "10",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      tagIds: "62ac275e-bbf6-43ab-8885-e5588bd24c87,1ac275e0-bbf6-43ab-8885-e5588bd24c87",
+      view: "administrative",
+    });
     expect(requests[1].url.endsWith("/api/v1/products")).toBe(true);
     expect(await requests[1].clone().json()).toMatchObject({ slug: "teclado-nova-custom", tagNames: ["Mecánico"] });
     expect(requests[2].url.endsWith(`/api/v1/products/${product.id}`)).toBe(true);

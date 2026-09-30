@@ -55,7 +55,7 @@ export class UserAdministrationRepository {
     const conditions = [isNull(users.deletedAt)];
 
     if (query.search) {
-      const pattern = `%${query.search}%`;
+      const pattern = `%${query.search.replace(/[\\%_]/g, "\\$&")}%`;
       conditions.push(
         or(ilike(users.email, pattern), ilike(users.displayName, pattern))!,
       );

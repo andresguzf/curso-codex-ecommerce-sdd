@@ -61,6 +61,7 @@ async function main(): Promise<void> {
       level: "info",
       products: result.products,
       roleAssignments: result.roleAssignments,
+      storeProfiles: result.storeProfiles,
       users: result.users,
     }),
   );

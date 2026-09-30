@@ -320,6 +320,18 @@
             }
           },
           {
+            "name": "purpose",
+            "required": false,
+            "in": "query",
+            "description": "ADMIN/BILLING lookup of active customers only. Requires search >= 3 characters; pageSize 1–20 (default 20). Other user operations remain ADMIN-only.",
+            "schema": {
+              "enum": [
+                "autocomplete"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -332,15 +344,22 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "number"
-            }
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Maximum 20 for purpose=autocomplete; maximum 100 otherwise"
           },
           {
             "name": "page",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
             }
           }
         ],
@@ -362,7 +381,7 @@
             "description": "Invalid or expired session"
           },
           "403": {
-            "description": "ADMIN role required"
+            "description": "ADMIN required for user administration; ADMIN or BILLING for purpose=autocomplete"
           }
         },
         "security": [
@@ -1507,6 +1526,26 @@
             }
           },
           {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive UTC creation date; administrative view only",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive UTC creation date; administrative view only",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
             "name": "maxPrice",
             "required": false,
             "in": "query",
@@ -1577,15 +1616,22 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "number"
-            }
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Maximum 20 for purpose=autocomplete; maximum 100 otherwise"
           },
           {
             "name": "page",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
             }
           },
           {
@@ -1596,6 +1642,18 @@
               "enum": [
                 "public",
                 "administrative"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "purpose",
+            "required": false,
+            "in": "query",
+            "description": "Authenticated ADMIN/BILLING lookup of active products. Requires search >= 3 characters; pageSize 1–20 (default 20), view=public and no status override. Out-of-stock products remain eligible for invoicing.",
+            "schema": {
+              "enum": [
+                "autocomplete"
               ],
               "type": "string"
             }
@@ -1616,10 +1674,10 @@
             "description": "Invalid query parameters"
           },
           "401": {
-            "description": "Administrative view requires authentication"
+            "description": "Administrative view and autocomplete require authentication"
           },
           "403": {
-            "description": "Administrative view requires ADMIN"
+            "description": "Administrative view requires ADMIN; autocomplete requires ADMIN or BILLING"
           }
         },
         "summary": "List public or administrative products",

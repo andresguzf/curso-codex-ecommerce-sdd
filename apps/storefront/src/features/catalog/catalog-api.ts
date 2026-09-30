@@ -6,7 +6,7 @@ import {
   type ProductPage,
 } from "@technology-ecommerce/api-schemas";
 
-import type { CatalogQuery } from "./catalog-query";
+import { CATALOG_LANDING_PAGE_SIZE, type CatalogQuery } from "./catalog-query";
 
 const apiClient = createApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001",
@@ -19,7 +19,10 @@ export class PublicProductNotFoundError extends Error {
   }
 }
 
-export async function getPublicProducts(query: CatalogQuery): Promise<ProductPage> {
+export async function getPublicProducts(
+  query: CatalogQuery,
+  pageSize = CATALOG_LANDING_PAGE_SIZE,
+): Promise<ProductPage> {
   const { data, error } = await apiClient.GET("/api/v1/products", {
     params: {
       query: {
@@ -29,7 +32,7 @@ export async function getPublicProducts(query: CatalogQuery): Promise<ProductPag
         maxPrice: query.maxPrice,
         minPrice: query.minPrice,
         page: query.page,
-        pageSize: 9,
+        pageSize,
         search: query.search,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,

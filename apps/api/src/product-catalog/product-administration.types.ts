@@ -56,6 +56,7 @@ export type ProductDetail = Readonly<
 >;
 
 export type ProductListQuery = Readonly<{
+  purpose?: "autocomplete";
   page: number;
   pageSize: number;
   search?: string;
@@ -65,6 +66,8 @@ export type ProductListQuery = Readonly<{
   availability?: ProductAvailability;
   minPrice?: string;
   maxPrice?: string;
+  createdFrom?: string;
+  createdTo?: string;
   sortBy: ProductSortField;
   sortOrder: "asc" | "desc";
   view: ProductListView;

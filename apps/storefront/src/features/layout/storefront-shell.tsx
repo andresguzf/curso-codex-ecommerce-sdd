@@ -14,24 +14,24 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
         Saltar al contenido
       </a>
 
-      <header className="border-b border-slate-200 bg-white text-slate-950 shadow-sm">
+      <header className="sticky top-0 z-40 border-b border-blue-300/20 bg-[#041326]/98 text-white shadow-lg shadow-blue-950/45 backdrop-blur-xl supports-[backdrop-filter]:bg-[#041326]/95">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-10">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <Link
               aria-label="Technology Store, inicio"
-              className="group inline-flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-4"
+              className="group inline-flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#041326]"
               href="/"
             >
               <StorefrontMark />
               <span className="min-w-0">
                 <span className="block truncate text-base font-black tracking-tight sm:text-lg">Technology Store</span>
-                <span className="hidden text-xs font-medium text-slate-500 sm:block">Catálogo de tecnología</span>
+                <span className="hidden text-xs font-medium text-slate-300 sm:block">Catálogo de tecnología</span>
               </span>
             </Link>
 
             <nav aria-label="Navegación principal" className="flex items-center">
               <Link
-                className="rounded-full px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"
+                className="rounded-full px-4 py-2 text-sm font-bold text-slate-100 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
                 href="/"
               >
                 Inicio

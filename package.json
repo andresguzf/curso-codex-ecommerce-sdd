@@ -12,12 +12,15 @@
     "lint": "turbo lint",
     "openapi:check": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate:check",
     "openapi:generate": "pnpm --filter @technology-ecommerce/api openapi:generate && pnpm --filter @technology-ecommerce/api-client generate",
-    "test:e2e": "pnpm --filter @technology-ecommerce/api test:e2e",
+    "test:e2e": "pnpm --filter @technology-ecommerce/api test:e2e && pnpm test:e2e:frontends && pnpm test:e2e:invoices",
+    "test:e2e:invoices": "playwright test --config=e2e/invoice-autocomplete.config.ts",
+    "test:e2e:frontends": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
   },
   "devDependencies": {
-    "typescript": "6.0.3",
-    "turbo": "2.10.12"
+    "@playwright/test": "^1.63.0",
+    "turbo": "2.10.12",
+    "typescript": "6.0.3"
   }
 }

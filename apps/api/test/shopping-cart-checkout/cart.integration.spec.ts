@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 import "dotenv/config";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
@@ -1540,6 +1540,8 @@ describe("persistent public cart", () => {
   });
 
   it("validates manual invoice permissions, customers, products and lines", async () => {
+    const beforeBalances = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
     const validPayload = {
       customerId: userIds.customerA,
       lines: [
@@ -1570,6 +1572,17 @@ describe("persistent public cart", () => {
       { ...validPayload, lines: [{ ...validPayload.lines[0], description: undefined }] },
       { ...validPayload, lines: [{ ...validPayload.lines[0], unitPrice: "10" }] },
       { ...validPayload, lines: [{ ...validPayload.lines[0], taxRate: "101.0000" }] },
+      { ...validPayload, customerId: "not-a-uuid" },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], productId: "not-a-uuid" }] },
+      ...[0, -1, 1.5, 1_000_001, "2"].map((quantity) => ({ ...validPayload, lines: [{ ...validPayload.lines[0], quantity }] })),
+      ...["-1.00", "0.001", "1e3", 10].map((unitPrice) => ({ ...validPayload, lines: [{ ...validPayload.lines[0], unitPrice }] })),
+      ...["-1.0000", "19.00", 19].map((taxRate) => ({ ...validPayload, lines: [{ ...validPayload.lines[0], taxRate }] })),
+      { ...validPayload, total: "0.00" },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], taxAmount: "0.00" }] },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], unitPrice: "999999999999.99", quantity: 2 }] },
+      { ...validPayload, lines: [{ ...validPayload.lines[0], unitPrice: "999999999999.99", taxRate: "100.0000" }] },
+      { ...validPayload, shippingTotal: "999999999999.99" },
+      { ...validPayload, lines: Array.from({ length: 2 }, () => ({ ...validPayload.lines[0], unitPrice: "600000000000.00" })) },
     ];
     for (const payload of invalidRequests) {
       const response = await server.inject({
@@ -1598,6 +1611,95 @@ describe("persistent public cart", () => {
       expect(response.statusCode).toBe(404);
     }
     expect(await database.select().from(invoices)).toHaveLength(0);
+    expect(await database.select().from(invoiceLines)).toHaveLength(0);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeBalances);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+  });
+
+  it("revalidates autocomplete selections at submission without invoices or inventory side effects", async () => {
+    const [customerBefore] = await database.select().from(users).where(eq(users.id, userIds.customerA));
+    const [productBefore] = await database.select().from(products).where(eq(products.id, productIds.available));
+    if (!customerBefore || !productBefore) throw new Error("Missing invoice lookup fixtures");
+    const beforeBalances = await database.select().from(inventoryBalances);
+    const beforeMovements = await database.select().from(inventoryMovements);
+    const beforeOrders = await database.select().from(orders);
+    const beforePayments = await database.select().from(payments);
+    const beforeAudits = await database.select().from(auditEntries).where(eq(auditEntries.action, "MANUAL_INVOICE_CREATED"));
+    const payload = { customerId: userIds.customerA, lines: [{ productId: productIds.available, quantity: 1, unitPrice: "100.00", taxRate: "0.0000" }] };
+    for (const role of ["admin", "billing"] as const) {
+      for (const [resource, search, id] of [["users", customerBefore.email, customerBefore.id], ["products", productBefore.name, productBefore.id]]) {
+        const query = new URLSearchParams({ purpose: "autocomplete", search: search!, pageSize: "20" });
+        const lookup = await server.inject({ method: "GET", url: `/api/v1/${resource}?${query}`, headers: authorization(accessTokens[role]) });
+        expect(lookup.statusCode).toBe(200);
+        expect(lookup.json<{ items: { id: string }[] }>().items.some((item) => item.id === id)).toBe(true);
+      }
+      try {
+        for (const state of ["INACTIVE", "BLOCKED", "DELETED", "WRONG_ROLE"] as const) {
+          await database.update(users).set({ status: state === "BLOCKED" ? "BLOCKED" : state === "WRONG_ROLE" ? "ACTIVE" : "INACTIVE", deletedAt: state === "DELETED" ? new Date() : null }).where(eq(users.id, userIds.customerA));
+          await database.update(roleAssignments).set({ role: state === "WRONG_ROLE" ? "BILLING" : "CUSTOMER" }).where(eq(roleAssignments.userId, userIds.customerA));
+          const response = await server.inject({ method: "POST", url: "/api/v1/invoices", headers: authorization(accessTokens[role]), payload });
+          expect(response.statusCode).toBe(404);
+          expect(response.json()).toMatchObject({ code: "INVOICE_CUSTOMER_NOT_FOUND" });
+        }
+      } finally {
+        await database.update(users).set({ status: customerBefore.status, deletedAt: customerBefore.deletedAt }).where(eq(users.id, userIds.customerA));
+        await database.update(roleAssignments).set({ role: "CUSTOMER" }).where(eq(roleAssignments.userId, userIds.customerA));
+      }
+      try {
+        for (const deleted of [false, true]) {
+          await database.update(products).set({ status: "INACTIVE", deletedAt: deleted ? new Date() : null }).where(eq(products.id, productIds.available));
+          const response = await server.inject({ method: "POST", url: "/api/v1/invoices", headers: authorization(accessTokens[role]), payload });
+          expect(response.statusCode).toBe(404);
+          expect(response.json()).toMatchObject({ code: "INVOICE_PRODUCT_NOT_FOUND" });
+        }
+      } finally {
+        await database.update(products).set({ status: productBefore.status, deletedAt: productBefore.deletedAt }).where(eq(products.id, productIds.available));
+      }
+    }
+    expect(await database.select().from(invoices)).toEqual([]);
+    expect(await database.select().from(invoiceLines)).toEqual([]);
+    expect(await database.select().from(inventoryBalances)).toEqual(beforeBalances);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
+    expect(await database.select().from(orders)).toEqual(beforeOrders);
+    expect(await database.select().from(payments)).toEqual(beforePayments);
+    expect(await database.select().from(auditEntries).where(eq(auditEntries.action, "MANUAL_INVOICE_CREATED"))).toEqual(beforeAudits);
+  });
+
+  it.each(["customer", "product"] as const)("rechecks %s eligibility after a concurrent deactivation commits", async (resource) => {
+    let release!: () => void;
+    let locked!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const ready = new Promise<void>((resolve) => { locked = resolve; });
+    const beforeMovements = await database.select().from(inventoryMovements);
+    const update = database.transaction(async (transaction) => {
+      if (resource === "customer") await transaction.update(users).set({ status: "INACTIVE" }).where(eq(users.id, userIds.customerA));
+      else await transaction.update(products).set({ status: "INACTIVE" }).where(eq(products.id, productIds.available));
+      locked();
+      await gate;
+    });
+    await ready;
+    const creation = server.inject({ method: "POST", url: "/api/v1/invoices", headers: authorization(accessTokens.billing), payload: {
+      customerId: userIds.customerA, lines: [{ productId: productIds.available, quantity: 1, unitPrice: "100.00", taxRate: "0.0000" }],
+    } }).then((response) => response);
+    try {
+      await vi.waitFor(async () => {
+        const result = await database.execute(sql`select count(*)::int as blocked from pg_stat_activity
+          where datname = current_database() and cardinality(pg_blocking_pids(pid)) > 0`);
+        expect(result.rows[0]?.blocked).toBeGreaterThan(0);
+      }, { timeout: 3000, interval: 20 });
+    } finally {
+      release();
+      await update;
+      // Restore fixture even when an assertion fails; only this isolated DB is touched.
+      const response = await creation;
+      if (resource === "customer") await database.update(users).set({ status: "ACTIVE" }).where(eq(users.id, userIds.customerA));
+      else await database.update(products).set({ status: "ACTIVE" }).where(eq(products.id, productIds.available));
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toMatchObject({ code: resource === "customer" ? "INVOICE_CUSTOMER_NOT_FOUND" : "INVOICE_PRODUCT_NOT_FOUND" });
+    }
+    expect(await database.select().from(invoices)).toEqual([]);
+    expect(await database.select().from(invoiceLines)).toEqual([]);
+    expect(await database.select().from(inventoryMovements)).toEqual(beforeMovements);
   });
 
   it("lists invoices with backend pagination and filters, protects ownership and transitions status", async () => {

@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -67,7 +68,8 @@ const updateUserSchema = z
   .strict()
   .refine((value) => Object.keys(value).length > 0);
 const userListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  purpose: z.literal("autocomplete").optional(),
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   role: z.enum(AUTH_ROLES).optional(),
   search: z.string().trim().min(1).max(200).optional(),
@@ -76,7 +78,11 @@ const userListQuerySchema = z.object({
     .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   status: z.enum(USER_STATUSES).optional(),
-});
+}).strict().refine((query) => query.purpose !== "autocomplete" || (
+  (query.search?.length ?? 0) >= 3 && query.pageSize <= 20 &&
+  (!query.role || query.role === "CUSTOMER") &&
+  (!query.status || query.status === "ACTIVE")
+), { message: "Autocomplete requires search of at least 3 characters, pageSize <= 20 and active customers only" });
 
 class CreateUserRequestDto {
   @ApiProperty({ example: "Billing operator", maxLength: 120, minLength: 2 })
@@ -169,12 +175,15 @@ export class UserAdministrationController {
   ) {}
 
   @Get()
+  @Roles("ADMIN", "BILLING")
   @ApiOperation({ operationId: "listUsers", summary: "List users" })
   @ApiOkResponse({ type: UserPageResponseDto })
+  @ApiForbiddenResponse({ description: "ADMIN required for user administration; ADMIN or BILLING for purpose=autocomplete" })
   @ApiBadRequestResponse({ description: "Invalid query parameters" })
-  @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({ name: "pageSize", required: false, type: Number })
+  @ApiQuery({ name: "page", required: false, schema: { type: "integer", minimum: 1, maximum: 1_000_000, default: 1 } })
+  @ApiQuery({ name: "pageSize", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 20 }, description: "Maximum 20 for purpose=autocomplete; maximum 100 otherwise" })
   @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({ name: "purpose", required: false, enum: ["autocomplete"], description: "ADMIN/BILLING lookup of active customers only. Requires search >= 3 characters; pageSize 1–20 (default 20). Other user operations remain ADMIN-only." })
   @ApiQuery({ enum: AUTH_ROLES, name: "role", required: false })
   @ApiQuery({ enum: USER_STATUSES, name: "status", required: false })
   @ApiQuery({
@@ -183,8 +192,12 @@ export class UserAdministrationController {
     required: false,
   })
   @ApiQuery({ enum: ["asc", "desc"], name: "sortOrder", required: false })
-  list(@Query() query: Record<string, unknown>): Promise<UserPage> {
-    return this.users.list(this.parse(userListQuerySchema, query));
+  list(@Query() query: Record<string, unknown>, @CurrentUser() actor: AuthenticatedUser): Promise<UserPage> {
+    if (actor.role !== "ADMIN" && query.purpose !== "autocomplete") {
+      throw new ForbiddenException({ code: "AUTH_FORBIDDEN", message: "User administration requires ADMIN" });
+    }
+    const parsed = this.parse(userListQuerySchema, query);
+    return this.users.list({ ...parsed, ...(parsed.purpose === "autocomplete" ? { role: "CUSTOMER" as const, status: "ACTIVE" as const } : {}) });
   }
 
   @Post()

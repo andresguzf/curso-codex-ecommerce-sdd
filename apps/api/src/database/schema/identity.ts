@@ -41,6 +41,8 @@ export const users = pgTable(
   (table) => [
     uniqueIndex("users_email_unique").on(sql`lower(${table.email})`),
     index("users_status_idx").on(table.status),
+    index("users_email_search_idx").using("gin", table.email.op("gin_trgm_ops")),
+    index("users_display_name_search_idx").using("gin", table.displayName.op("gin_trgm_ops")),
     check("users_email_not_blank", sql`btrim(${table.email}) <> ''`),
     check(
       "users_password_hash_not_blank",

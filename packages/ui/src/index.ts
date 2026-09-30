@@ -8,3 +8,4 @@ export { Icon, IconButton, type IconName } from "./icon-button";
 export { TextField, type TextFieldProps } from "./form-field";
 export { Navigation, type NavigationItem } from "./navigation";
 export { getPaginationItems, Pagination } from "./pagination";
+export { RemoteAutocomplete, type RemoteAutocompleteProps } from "./remote-autocomplete";

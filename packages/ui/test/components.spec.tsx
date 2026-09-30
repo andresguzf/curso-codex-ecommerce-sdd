@@ -140,7 +140,10 @@ describe("shared UI primitives", () => {
     const drawer = screen.getByRole("dialog", { name: "Filtros del catálogo" });
     expect(drawer).toHaveClass("left-0");
     expect(drawer).toHaveAttribute("aria-modal", "true");
-    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+    const closeButton = screen.getByRole("button", { name: "Cerrar" });
+    expect(closeButton).toHaveFocus();
+    await user.tab();
+    expect(closeButton).toHaveFocus();
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -212,5 +215,22 @@ describe("shared UI primitives", () => {
     expect(screen.queryByText("…")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ir a la primera página" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ir a la última página" })).toBeDisabled();
+  });
+
+  it("keeps page numbers unique and includes both endpoints for every valid page", () => {
+    for (let totalPages = 1; totalPages <= 60; totalPages += 1) {
+      for (let page = 1; page <= totalPages; page += 1) {
+        const items = getPaginationItems(page, totalPages);
+        const visiblePages = items.filter(
+          (item): item is number => typeof item === "number",
+        );
+
+        expect(new Set(visiblePages).size).toBe(visiblePages.length);
+        expect(visiblePages[0]).toBe(1);
+        expect(visiblePages.at(-1)).toBe(totalPages);
+        expect(visiblePages).toContain(page);
+        expect(items.filter((item) => typeof item !== "number").length).toBeLessThanOrEqual(2);
+      }
+    }
   });
 });

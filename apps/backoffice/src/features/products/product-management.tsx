@@ -20,9 +20,9 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { z } from "zod";
 
 import { BackofficePagination } from "../../components/backoffice-pagination";
+import { BackofficeListLayout, BackofficeListSearch } from "../../components/backoffice-list-layout";
 import { useSessionStore } from "../auth/session";
 import {
   createProduct,
@@ -33,8 +33,9 @@ import {
   ProductApiError,
 } from "./product-api";
 import { ProductForm } from "./product-form";
+import { parseProductAdminFilters, productAdminFiltersToParams, type ProductAdminFilters } from "./product-query";
+import { listAllAdministrativeClassifications } from "../classifications/classification-api";
 
-const pageSchema = z.coerce.number().int().min(1).catch(1);
 const productQueryKey = ["backoffice", "products"] as const;
 
 type FormState = Readonly<{ mode: "create" }> | Readonly<{ mode: "edit"; product: ProductListItem }>;
@@ -50,12 +51,13 @@ function formatMoney(price: string) {
 export function ProductManagement() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const filters = parseProductAdminFilters(new URLSearchParams(searchParams.toString()));
   const queryClient = useQueryClient();
   const { session, status } = useSessionStore();
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
   const [form, setForm] = useState<FormState>();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const showFlash = useFlashStore((state) => state.showFlash);
-  const page = pageSchema.parse(searchParams.get("page") ?? "1");
   const accessToken = session?.accessToken ?? "";
   const isAdmin = session?.user.role === "ADMIN";
 
@@ -65,9 +67,64 @@ export function ProductManagement() {
 
   const productsQuery = useQuery({
     enabled: isAdmin,
-    queryFn: () => listAdministrativeProducts(accessToken, page),
-    queryKey: [...productQueryKey, { page }],
+    queryFn: ({ signal }) => listAdministrativeProducts(accessToken, filters, signal),
+    queryKey: [...productQueryKey, filters],
   });
+  const categoriesQuery = useQuery({
+    enabled: isAdmin,
+    queryFn: ({ signal }) => listAllAdministrativeClassifications("categories", accessToken, signal),
+    queryKey: ["classifications", "administrative", "categories", session?.user.id],
+  });
+  const tagsQuery = useQuery({
+    enabled: isAdmin,
+    queryFn: ({ signal }) => listAllAdministrativeClassifications("tags", accessToken, signal),
+    queryKey: ["classifications", "administrative", "tags", session?.user.id],
+  });
+
+  function navigate(updates: Partial<ProductAdminFilters>) {
+    const params = productAdminFiltersToParams({ ...filters, ...updates });
+    router.push(`/products?${params.toString()}`, { scroll: false });
+  }
+
+  function applyFilters(formData: FormData) {
+    const minPrice = String(formData.get("minPrice") ?? "").trim();
+    const maxPrice = String(formData.get("maxPrice") ?? "").trim();
+    const createdFrom = String(formData.get("createdFrom") ?? "").trim();
+    const createdTo = String(formData.get("createdTo") ?? "").trim();
+    const tagIds = formData.getAll("tagIds").map(String).filter(Boolean);
+    if (minPrice && maxPrice && compareMoney(minPrice, maxPrice) > 0) {
+      showFlash("error", "El precio mínimo no puede ser mayor que el máximo.");
+      return;
+    }
+    if (createdFrom && createdTo && createdFrom > createdTo) {
+      showFlash("error", "La fecha inicial no puede ser posterior a la fecha final.");
+      return;
+    }
+    navigate({
+      page: 1,
+      pageSize: Number(formData.get("pageSize") ?? 10),
+      status: (String(formData.get("status") ?? "") || undefined) as ProductAdminFilters["status"],
+      availability: (String(formData.get("availability") ?? "") || undefined) as ProductAdminFilters["availability"],
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+      categoryId: (String(formData.get("categoryId") ?? "") || undefined),
+      tagIds: tagIds.length ? tagIds : undefined,
+      createdFrom: createdFrom || undefined,
+      createdTo: createdTo || undefined,
+      sortBy: String(formData.get("sortBy") ?? "createdAt") as ProductAdminFilters["sortBy"],
+      sortOrder: String(formData.get("sortOrder") ?? "desc") as ProductAdminFilters["sortOrder"],
+    });
+    setFiltersOpen(false);
+  }
+
+  function compareMoney(left: string, right: string): number {
+    const toCents = (value: string) => {
+      const [whole, fraction = ""] = value.split(".");
+      return BigInt(whole || "0") * BigInt(100) + BigInt(fraction.padEnd(2, "0"));
+    };
+    if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(left) || !/^\d{1,10}(?:\.\d{1,2})?$/.test(right)) return 0;
+    return toCents(left) < toCents(right) ? -1 : toCents(left) > toCents(right) ? 1 : 0;
+  }
 
   const saveMutation = useMutation({
     mutationFn: async (input: CreateProductRequest & { image: ProductImageReference }) => {
@@ -205,18 +262,49 @@ export function ProductManagement() {
           </section>
         ) : null}
 
-        {productsQuery.isPending ? <LoadingState message="Cargando productos…" /> : null}
-        {productsQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => productsQuery.refetch()} type="button">Reintentar</button>} message="Revisa la conexión con el API e inténtalo nuevamente." /> : null}
-        {productsQuery.data ? (
+        <BackofficeListLayout
+          filters={(
+            <form className="grid gap-4" key={`filters:${searchParams.toString()}`} onSubmit={(event) => { event.preventDefault(); applyFilters(new FormData(event.currentTarget)); }}>
+              <label className="grid gap-1 text-sm font-semibold">Estado<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.status ?? ""} name="status"><option value="">Todos</option><option value="ACTIVE">Activo</option><option value="INACTIVE">Inactivo</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Disponibilidad<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.availability ?? ""} name="availability"><option value="">Todos</option><option value="IN_STOCK">Con stock</option><option value="OUT_OF_STOCK">Agotados</option></select></label>
+              <fieldset className="grid grid-cols-2 gap-3 border-0 p-0">
+                <legend className="mb-1 text-sm font-semibold">Rango de precio (USD)</legend>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">Mínimo<input className="min-h-11 min-w-0 rounded-lg border border-slate-300 px-3 text-sm text-slate-950" defaultValue={filters.minPrice ?? ""} inputMode="decimal" min="0" name="minPrice" placeholder="0.00" step="0.01" type="number" /></label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">Máximo<input className="min-h-11 min-w-0 rounded-lg border border-slate-300 px-3 text-sm text-slate-950" defaultValue={filters.maxPrice ?? ""} inputMode="decimal" min="0" name="maxPrice" placeholder="Sin límite" step="0.01" type="number" /></label>
+              </fieldset>
+              <label className="grid gap-1 text-sm font-semibold">Categoría<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.categoryId ?? ""} name="categoryId"><option value="">Todas las categorías</option>{(categoriesQuery.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.name}{category.status === "INACTIVE" ? " (inactiva)" : ""}</option>)}</select></label>
+              <fieldset className="grid gap-2 border-0 p-0">
+                <legend className="mb-1 text-sm font-semibold">Etiquetas</legend>
+                <div aria-label="Etiquetas disponibles" className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
+                  {(tagsQuery.data ?? []).length ? (tagsQuery.data ?? []).map((tag) => <label className="flex items-center gap-2 text-sm" key={tag.id}><input className="size-4 accent-blue-800" defaultChecked={filters.tagIds?.includes(tag.id) ?? false} name="tagIds" type="checkbox" value={tag.id} /><span>{tag.name}{tag.status === "INACTIVE" ? " (inactiva)" : ""}</span></label>) : <p className="m-0 text-sm text-slate-500">No hay etiquetas disponibles.</p>}
+                </div>
+                <p className="m-0 text-xs text-slate-500">Puedes combinar varias etiquetas.</p>
+              </fieldset>
+              <fieldset className="grid grid-cols-2 gap-3 border-0 p-0">
+                <legend className="mb-1 text-sm font-semibold">Fecha de creación</legend>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">Desde<input className="min-h-11 min-w-0 rounded-lg border border-slate-300 px-2 text-sm text-slate-950" defaultValue={filters.createdFrom ?? ""} max={filters.createdTo} name="createdFrom" type="date" /></label>
+                <label className="grid gap-1 text-xs font-semibold text-slate-600">Hasta<input className="min-h-11 min-w-0 rounded-lg border border-slate-300 px-2 text-sm text-slate-950" defaultValue={filters.createdTo ?? ""} min={filters.createdFrom} name="createdTo" type="date" /></label>
+              </fieldset>
+              <label className="grid gap-1 text-sm font-semibold">Productos por página<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.pageSize} name="pageSize"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Ordenar por<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortBy} name="sortBy"><option value="createdAt">Fecha de alta</option><option value="updatedAt">Actualización</option><option value="name">Nombre</option><option value="sku">SKU</option><option value="price">Precio</option><option value="stockAvailable">Disponibilidad</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Dirección<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortOrder} name="sortOrder"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select></label>
+              <button className="min-h-11 rounded-lg bg-[#15345b] px-4 font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" type="submit">Aplicar filtros</button>
+              <button className="min-h-10 font-bold text-blue-800 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700" onClick={() => { navigate({ page: 1, pageSize: 10, status: undefined, availability: undefined, minPrice: undefined, maxPrice: undefined, categoryId: undefined, tagIds: undefined, createdFrom: undefined, createdTo: undefined, sortBy: "createdAt", sortOrder: "desc" }); setFiltersOpen(false); }} type="button">Restablecer filtros</button>
+            </form>
+          )}
+          filtersOpen={filtersOpen}
+          filtersTitle="Filtros de productos"
+          onFiltersOpenChange={setFiltersOpen}
+          search={<BackofficeListSearch label="Buscar productos" onClear={() => navigate({ page: 1, search: undefined })} onSearch={(search) => navigate({ page: 1, search: search || undefined })} placeholder="Nombre o SKU" value={filters.search} />}
+        >
           <section aria-labelledby="product-list-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <h2 className="m-0 text-lg font-bold" id="product-list-title">Listado administrativo</h2>
-              <p className="m-0 text-sm text-slate-600">{productsQuery.data.totalItems} productos</p>
+              <p className="m-0 text-sm text-slate-600">{productsQuery.data ? `${productsQuery.data.totalItems} productos` : "Consultando productos"}</p>
             </div>
-            <DataTable caption="Productos del catálogo" columns={columns} emptyMessage="Todavía no hay productos en el catálogo." rowKey={(product) => product.id} rows={productsQuery.data.items} />
-            {productsQuery.data.totalPages > 0 ? <div className="mt-5"><BackofficePagination page={productsQuery.data.page} totalPages={productsQuery.data.totalPages} /></div> : null}
+            {productsQuery.isPending ? <LoadingState message="Cargando productos…" /> : productsQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => { void productsQuery.refetch(); }} type="button">Reintentar</button>} message="Revisa la conexión con el API e inténtalo nuevamente." /> : productsQuery.data ? <><DataTable caption="Productos del catálogo" columns={columns} emptyMessage="No hay productos que coincidan con los criterios." rowKey={(product) => product.id} rows={productsQuery.data.items} />{productsQuery.data.totalPages > 0 && filters.page <= productsQuery.data.totalPages ? <div className="mt-5"><BackofficePagination page={productsQuery.data.page} totalPages={productsQuery.data.totalPages} /></div> : filters.page > 1 ? <button className="mt-5 font-bold text-blue-700 underline" onClick={() => navigate({ page: 1 })} type="button">Volver a la primera página</button> : null}</> : null}
           </section>
-        ) : null}
+        </BackofficeListLayout>
       </div>
 
       <ConfirmationDialog

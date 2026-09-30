@@ -108,6 +108,17 @@ describe("user administration", () => {
     expect(navigation.push).toHaveBeenCalledWith(expect.stringContaining("role=BILLING"), { scroll: false });
   });
 
+  it("uses the same paginated workspace for the dedicated customer list", async () => {
+    navigation.searchParams = new URLSearchParams("role=CUSTOMER&page=1");
+    api.listUsers.mockResolvedValue({ items: [customer], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 });
+    renderManagement();
+
+    expect(await screen.findByText("Luis Cliente")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clientes" })).toBeInTheDocument();
+    expect(screen.getByRole("search", { name: "Buscar clientes" })).toBeInTheDocument();
+    expect(api.listUsers).toHaveBeenCalledWith("ADMIN-token", expect.objectContaining({ role: "CUSTOMER", page: 1 }), expect.any(AbortSignal));
+  });
+
   it("creates a user with a role and shows a safe error when a duplicate email is rejected", async () => {
     const { invalidate } = renderManagement();
     fireEvent.click(screen.getByRole("button", { name: "Nuevo usuario" }));

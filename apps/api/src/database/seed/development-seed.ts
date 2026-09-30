@@ -8,6 +8,7 @@ import {
   productImages,
   products,
   roleAssignments,
+  storeProfiles,
   users,
   type NewUser,
 } from "../schema";
@@ -36,8 +37,26 @@ export type DevelopmentSeedResult = Readonly<{
   productImages: number;
   products: number;
   roleAssignments: number;
+  storeProfiles: number;
   users: number;
 }>;
+
+const DEMO_STORE_PROFILE = {
+  tradeName: "DEMO - Nexo Tech",
+  legalName: "DEMO - Nexo Tecnología Sociedad Ficticia",
+  taxIdentifier: "DEMO-NO-VALIDO",
+  addressLine1: "DEMO - Calle Ejemplo 123",
+  addressLine2: null,
+  addressCity: "DEMO - Ciudad Ejemplo",
+  addressRegion: "DEMO - Región Ejemplo",
+  addressPostalCode: "0000000",
+  addressCountryCode: "CL",
+  contactEmail: "demo@example.invalid",
+  contactPhone: null,
+  logoStorageKey: null,
+  logoUrl: null,
+  logoSha256: null,
+} as const;
 
 const DEVELOPMENT_PRODUCTS = [
   {
@@ -189,6 +208,11 @@ export async function runDevelopmentSeed(
           });
       }
 
+      await transaction
+        .insert(storeProfiles)
+        .values(DEMO_STORE_PROFILE)
+        .onConflictDoNothing({ target: storeProfiles.id });
+
       for (const productSeed of DEVELOPMENT_PRODUCTS) {
         const [existingProduct] = await transaction
           .select({ id: products.id })
@@ -298,6 +322,7 @@ export async function runDevelopmentSeed(
         productImages: DEVELOPMENT_PRODUCTS.length,
         inventoryBalances: DEVELOPMENT_PRODUCTS.length,
         inventoryMovements: DEVELOPMENT_PRODUCTS.length,
+        storeProfiles: 1,
       };
     });
   } finally {

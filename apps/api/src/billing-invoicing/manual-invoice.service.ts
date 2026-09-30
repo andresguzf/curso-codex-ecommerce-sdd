@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { createAuditEntry } from "../audit-observability/audit-entry";
@@ -76,6 +76,13 @@ function cents(value: string): bigint {
 }
 
 function money(value: bigint): string {
+  // Invoice amounts use numeric(14, 2); reject overflow before any writes.
+  if (value < 0n || value > 99_999_999_999_999n) {
+    throw new BadRequestException({
+      code: "REQUEST_VALIDATION_FAILED",
+      message: "Manual invoice amounts exceed the supported range",
+    });
+  }
   return `${value / 100n}.${(value % 100n).toString().padStart(2, "0")}`;
 }
 
@@ -99,6 +106,17 @@ export class ManualInvoiceService {
       });
     }
 
+    // Internal callers must obey the same boundary as HTTP callers.
+    const parsed = manualInvoiceRequestSchema.safeParse(request);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "REQUEST_VALIDATION_FAILED",
+        message: "Invalid manual invoice request",
+        details: parsed.error.flatten(),
+      });
+    }
+    const input = parsed.data;
+
     return this.database.client.transaction(async (transaction) => {
       const [customer] = await transaction
         .select({
@@ -110,13 +128,14 @@ export class ManualInvoiceService {
         .innerJoin(roleAssignments, eq(roleAssignments.userId, users.id))
         .where(
           and(
-            eq(users.id, request.customerId),
+            eq(users.id, input.customerId),
             eq(users.status, "ACTIVE"),
             isNull(users.deletedAt),
             eq(roleAssignments.role, "CUSTOMER"),
           ),
         )
-        .limit(1);
+        .limit(1)
+        .for("share");
       if (!customer) {
         throw new NotFoundException({
           code: "INVOICE_CUSTOMER_NOT_FOUND",
@@ -126,7 +145,7 @@ export class ManualInvoiceService {
 
       const productIds = [
         ...new Set(
-          request.lines.flatMap((line) =>
+          input.lines.flatMap((line) =>
             line.productId === null ? [] : [line.productId],
           ),
         ),
@@ -148,7 +167,9 @@ export class ManualInvoiceService {
                   eq(products.status, "ACTIVE"),
                   isNull(products.deletedAt),
                 ),
-              );
+              )
+              .orderBy(asc(products.id))
+              .for("share");
       const productsById = new Map(
         referencedProducts.map((product) => [product.id, product]),
       );
@@ -165,7 +186,7 @@ export class ManualInvoiceService {
 
       let subtotalCents = 0n;
       let taxTotalCents = 0n;
-      const lines: InvoiceLineSnapshot[] = request.lines.map((line, index) => {
+      const lines: InvoiceLineSnapshot[] = input.lines.map((line, index) => {
         const product = line.productId ? productsById.get(line.productId) : undefined;
         const lineSubtotalCents = cents(line.unitPrice) * BigInt(line.quantity);
         const taxAmountCents = taxFor(lineSubtotalCents, line.taxRate);
@@ -186,7 +207,7 @@ export class ManualInvoiceService {
           currency: SYSTEM_CURRENCY,
         };
       });
-      const shippingCents = cents(request.shippingTotal);
+      const shippingCents = cents(input.shippingTotal);
       const issuerSnapshot = await currentIssuerSnapshot(transaction);
       const now = new Date();
       let snapshot: InvoiceSnapshot;

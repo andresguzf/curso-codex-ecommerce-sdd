@@ -16,6 +16,8 @@ const api = vi.hoisted(() => ({
   getInvoice: vi.fn(),
   downloadInvoicePdf: vi.fn(),
 }));
+const lookup = vi.hoisted(() => ({ searchInvoiceCustomers: vi.fn(), searchInvoiceProducts: vi.fn() }));
+vi.mock("../src/features/invoices/invoice-autocomplete-api", () => lookup);
 vi.mock("next/navigation", () => ({
   usePathname: () => "/invoices",
   useRouter: () => navigation,
@@ -66,6 +68,8 @@ beforeEach(() => {
   api.invoiceOrder.mockResolvedValue({ ...detail, origin: "ORDER", number: "INV-ORDER" });
   api.changeInvoiceStatus.mockResolvedValue({ ...detail, status: "PENDING_PAYMENT", number: "INV-001", issuedAt: "2026-09-10T12:00:00Z" });
   api.getInvoice.mockResolvedValue(detail);
+  lookup.searchInvoiceCustomers.mockResolvedValue([{ id: base.customerId, displayName: "Cliente demo", email: "client@example.com" }]);
+  lookup.searchInvoiceProducts.mockResolvedValue([]);
   api.downloadInvoicePdf.mockResolvedValue({ blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }), filename: "invoice-001.pdf" });
 });
 
@@ -79,14 +83,15 @@ describe("backoffice invoice management", () => {
     expect(navigation.push).toHaveBeenLastCalledWith(expect.stringContaining("page=1&search=INV-123"), { scroll: false });
     fireEvent.click(screen.getByRole("button", { name: "Nueva factura manual" }));
     fireEvent.click(screen.getByRole("button", { name: "Crear factura manual" }));
-    expect(await screen.findByText("Debe ser un UUID de cliente válido.")).toBeInTheDocument();
+    expect(await screen.findByText("Selecciona un cliente de los resultados.")).toBeInTheDocument();
   });
 
   it("submits a validated manual invoice and keeps Billing actions available", async () => {
     session("BILLING");
     mount();
     fireEvent.click(await screen.findByRole("button", { name: "Nueva factura manual" }));
-    fireEvent.change(screen.getByLabelText("ID del cliente"), { target: { value: base.customerId } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Cliente" }), { target: { value: "Cliente" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Cliente demo/ }));
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Servicio" } });
     fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Servicio técnico" } });
     fireEvent.change(screen.getByLabelText("Precio unitario (USD)"), { target: { value: "100.00" } });

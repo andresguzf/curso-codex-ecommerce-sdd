@@ -31,11 +31,19 @@ El sistema SHALL mostrar un hero, una lista de productos activos y el detalle de
 - **THEN** el catálogo muestra el producto como agotado y no permite agregarlo al carrito
 
 ### Requirement: Búsqueda, filtros y ordenamiento
-El sistema SHALL permitir buscar productos por nombre, descripción o SKU, filtrar al menos por estado y disponibilidad cuando el contexto lo autorice, y ordenar por campos admitidos.
+El sistema SHALL permitir buscar productos por nombre, descripción o SKU, filtrar al menos por estado y disponibilidad cuando el contexto lo autorice, y ordenar por campos admitidos. En el listado administrativo, `ADMIN` SHALL poder combinar búsqueda y filtros por rango de precio, categoría principal, etiquetas y fecha de creación; el backend SHALL aplicar todos los criterios antes de contar y paginar.
 
 #### Scenario: Búsqueda combinada con filtros
 - **WHEN** un usuario aplica búsqueda, filtros y ordenamiento
 - **THEN** el sistema devuelve únicamente los productos coincidentes en el orden solicitado y conserva esos criterios al navegar páginas
+
+#### Scenario: Filtros administrativos combinados
+- **WHEN** un administrador combina precio mínimo o máximo en `USD`, una categoría principal, una o más etiquetas y un rango de fechas de creación
+- **THEN** el backend devuelve solo los productos coincidentes antes de calcular los metadatos de paginación, y el back office conserva los criterios en la URL y reinicia la página a 1 al aplicarlos
+
+#### Scenario: Límites inclusivos de creación
+- **WHEN** un administrador filtra por fechas `Desde` y `Hasta` expresadas como `YYYY-MM-DD`
+- **THEN** el backend incluye las fechas límite completas interpretadas en UTC, rechaza fechas inválidas o un inicio posterior al fin y aplica el rango solo al listado administrativo
 
 ### Requirement: Paginación administrativa numerada
 El back office SHALL paginar productos con total de elementos y páginas, controles de primera, última, anterior y siguiente, la página actual, hasta cuatro páginas anteriores y hasta cuatro posteriores, y elipsis cuando existan páginas omitidas.
@@ -75,10 +83,10 @@ La página principal SHALL mostrar un hero con una imagen tecnológica de fondo 
 
 #### Scenario: Búsqueda desde el hero
 - **WHEN** una persona introduce un término válido en el buscador del hero
-- **THEN** la interfaz muestra la primera página del catálogo filtrada por ese término y refleja la búsqueda en la URL
+- **THEN** la interfaz navega a la página del catálogo completo, muestra su primera página filtrada por ese término y refleja la búsqueda en la URL
 
 ### Requirement: Filtros colapsables del catálogo público
-El catálogo público SHALL presentar sus filtros en un sidebar izquierdo colapsable y SHALL ofrecer un control equivalente adaptado a pantallas pequeñas, conservando búsqueda, filtros, orden y página en la URL.
+La página del catálogo completo SHALL presentar sus filtros en un sidebar izquierdo colapsable y SHALL ofrecer un control equivalente adaptado a pantallas pequeñas, conservando búsqueda, filtros, orden y página en la URL. Esta regla no aplica a la landing editorial, que no tendrá filtros ni paginación.
 
 #### Scenario: Aplicar filtro desde el sidebar
 - **WHEN** una persona selecciona una categoría, etiqueta, disponibilidad o rango permitido desde el sidebar
@@ -278,15 +286,15 @@ La página de detalle SHALL presentar la portada y las imágenes adicionales med
 - **THEN** el detalle muestra la imagen sin controles de carrusel inactivos o engañosos
 
 ### Requirement: Productos recientes en la landing
-La landing SHALL mostrar como máximo los nueve productos activos más recientes ordenados por fecha de creación descendente, SHALL omitir controles de paginación y SHALL ofrecer un enlace visible hacia el catálogo completo.
+La sección de recientes SHALL mostrar como máximo los nueve productos activos más recientes ordenados por fecha de creación descendente y que no aparezcan en destacados. La landing SHALL omitir controles de filtros y paginación y SHALL ofrecer un enlace visible hacia el catálogo completo; el buscador del hero SHALL navegar a dicho catálogo.
 
 #### Scenario: Existen más de nueve productos activos
 - **WHEN** una persona visita la landing y existen más de nueve productos activos
-- **THEN** la página muestra exactamente los nueve más recientes, no muestra paginador y permite ir a “Ver todos los productos”
+- **THEN** la sección de recientes muestra exactamente los nueve más recientes elegibles, no muestra filtros ni paginador y permite ir a “Ver todos los productos”
 
 #### Scenario: Existen menos de nueve productos activos
 - **WHEN** existen menos de nueve productos activos
-- **THEN** la landing muestra todos los disponibles sin completar con productos inactivos ni presentar paginación
+- **THEN** la sección de recientes muestra todos los disponibles sin completar con productos inactivos ni presentar filtros o paginación
 
 ### Requirement: Página de catálogo completo
 El storefront SHALL ofrecer una página de catálogo separada que permita explorar todos los productos activos mediante búsqueda, filtros, ordenamiento y paginación calculados por el backend con los controles numéricos ya definidos.
@@ -349,11 +357,11 @@ El sistema SHALL permitir exclusivamente a `ADMIN` seleccionar entre dos y tres 
 - **THEN** la landing omite su sección sin mostrar productos inactivos ni alterar las asociaciones históricas
 
 ### Requirement: Composición ordenada de la landing
-La landing SHALL presentar primero hasta tres productos activos destacados ordenados por fecha de destaque descendente, después hasta nueve productos activos recientes que no aparezcan en destacados y finalmente entre dos y tres secciones de categorías importantes ordenadas, cada una con hasta tres productos activos recientes.
+La landing SHALL presentar primero hasta tres productos activos destacados ordenados por fecha de destaque descendente, después hasta nueve productos activos recientes que no aparezcan en destacados y finalmente entre dos y tres secciones de categorías importantes ordenadas, cada una con hasta tres productos activos recientes. Esta composición editorial SHALL carecer de controles de filtrado y paginación; esos controles pertenecen únicamente al catálogo completo.
 
 #### Scenario: Landing con contenido completo
 - **WHEN** existen al menos tres destacados activos, nueve productos recientes adicionales y tres categorías importantes con productos
-- **THEN** la landing muestra en orden tres destacados, nueve recientes sin repetir los destacados y tres secciones de categoría con tres productos cada una
+- **THEN** la landing muestra en orden tres destacados, nueve recientes sin repetir los destacados y tres secciones de categoría con tres productos cada una, sin filtros ni paginador
 
 #### Scenario: Productos repetidos en categorías
 - **WHEN** un producto de una categoría importante ya apareció en destacados o recientes
@@ -368,7 +376,7 @@ La landing SHALL presentar primero hasta tres productos activos destacados orden
 - **THEN** la landing omite esa sección y conserva el orden relativo de las demás categorías configuradas
 
 ### Requirement: Respuesta REST agregada de landing
-El API SHALL devolver mediante una única consulta pública la composición vigente de la landing con `featuredProducts`, `latestProducts` y `highlightedCategories`, aplicando límites, orden, visibilidad y deduplicación antes de responder.
+El API SHALL devolver mediante una única consulta pública la composición vigente de la landing con `featuredProducts`, `latestProducts` y `highlightedCategories`, aplicando límites, orden, visibilidad y deduplicación antes de responder. El endpoint de landing SHALL ser fijo y no aceptar criterios de búsqueda, filtros ni paginación; esas consultas se harán en el endpoint de catálogo completo.
 
 #### Scenario: Consulta pública de landing
 - **WHEN** el storefront solicita la composición de la landing

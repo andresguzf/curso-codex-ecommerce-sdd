@@ -15,17 +15,18 @@ import {
   type DataTableColumn,
 } from "@technology-ecommerce/ui";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { BackofficeListLayout, BackofficeListSearch } from "../../components/backoffice-list-layout";
 import { BackofficePagination } from "../../components/backoffice-pagination";
 import { useSessionStore } from "../auth/session";
 import { getAdministrativeProduct } from "../products/product-api";
 import { adjustInventory, listInventoryMovements } from "./inventory-api";
+import { inventoryMovementFiltersToParams, parseInventoryMovementFilters } from "./inventory-query";
 
-const pageSchema = z.coerce.number().int().min(1).catch(1);
 const adjustmentFormSchema = z.object({
   direction: z.enum(["ADD", "REMOVE"]),
   quantity: z.number().int().min(1).max(2_147_483_647),
@@ -54,11 +55,13 @@ function formatDate(value: string): string {
 
 export function InventoryManagement({ productId }: Readonly<{ productId: string }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { session, status } = useSessionStore();
   const [notice, setNotice] = useState<string>();
-  const page = pageSchema.parse(searchParams.get("page") ?? "1");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filters = parseInventoryMovementFilters(new URLSearchParams(searchParams.toString()));
   const accessToken = session?.accessToken ?? "";
   const isAdmin = session?.user.role === "ADMIN";
   const form = useForm<AdjustmentFormValues>({
@@ -79,9 +82,34 @@ export function InventoryManagement({ productId }: Readonly<{ productId: string 
   });
   const movementsQuery = useQuery({
     enabled: isAdmin,
-    queryFn: () => listInventoryMovements(accessToken, productId, page),
-    queryKey: [...movementKey(productId), { page }],
+    queryFn: ({ signal }) => listInventoryMovements(accessToken, productId, filters, signal),
+    queryKey: [...movementKey(productId), filters],
   });
+
+  function navigate(updates: Partial<typeof filters>) {
+    const params = inventoryMovementFiltersToParams({ ...filters, ...updates });
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function applyMovementFilters(formData: FormData) {
+    const createdFrom = String(formData.get("createdFrom") ?? "") || undefined;
+    const createdTo = String(formData.get("createdTo") ?? "") || undefined;
+    if (createdFrom && createdTo && createdFrom > createdTo) {
+      setNotice("La fecha inicial no puede ser posterior a la fecha final.");
+      return;
+    }
+    const type = String(formData.get("type") ?? "");
+    navigate({
+      page: 1,
+      pageSize: Number(formData.get("pageSize") ?? 10),
+      type: type ? type as typeof filters.type : undefined,
+      createdFrom,
+      createdTo,
+      sortBy: String(formData.get("sortBy") ?? "createdAt") as typeof filters.sortBy,
+      sortOrder: String(formData.get("sortOrder") ?? "desc") as typeof filters.sortOrder,
+    });
+    setFiltersOpen(false);
+  }
 
   const adjustmentMutation = useMutation({
     mutationFn: (input: InventoryAdjustmentRequest) => adjustInventory(accessToken, productId, input),
@@ -214,18 +242,30 @@ export function InventoryManagement({ productId }: Readonly<{ productId: string 
           </section>
         ) : null}
 
-        {movementsQuery.isPending ? <LoadingState message="Cargando historial…" /> : null}
-        {movementsQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => movementsQuery.refetch()} type="button">Reintentar</button>} message="No pudimos cargar los movimientos de inventario." /> : null}
-        {movementsQuery.data ? (
+        <BackofficeListLayout
+            filters={<form className="grid gap-4" key={`movement-filters-${searchParams.toString()}`} onSubmit={(event) => { event.preventDefault(); applyMovementFilters(new FormData(event.currentTarget)); }}>
+              <label className="grid gap-1 text-sm font-semibold">Tipo<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.type ?? ""} name="type"><option value="">Todos</option><option value="OPENING">Inventario inicial</option><option value="ADJUSTMENT">Ajuste manual</option><option value="SALE">Venta</option><option value="CANCELLATION">Cancelación</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Desde<input className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.createdFrom} name="createdFrom" type="date" /></label>
+              <label className="grid gap-1 text-sm font-semibold">Hasta<input className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.createdTo} name="createdTo" type="date" /></label>
+              <label className="grid gap-1 text-sm font-semibold">Movimientos por página<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.pageSize} name="pageSize"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Ordenar por<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortBy} name="sortBy"><option value="createdAt">Fecha</option><option value="type">Tipo</option><option value="quantityDelta">Variación</option><option value="balanceAfter">Saldo posterior</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">Dirección<select className="min-h-11 rounded-lg border border-slate-300 px-3" defaultValue={filters.sortOrder} name="sortOrder"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select></label>
+              <button className="min-h-11 rounded-lg bg-[#15345b] px-4 font-bold text-white" type="submit">Aplicar filtros</button>
+              <button className="font-bold text-blue-800 underline" onClick={() => { navigate({ page: 1, search: undefined, type: undefined, createdFrom: undefined, createdTo: undefined, pageSize: 10, sortBy: "createdAt", sortOrder: "desc" }); setFiltersOpen(false); }} type="button">Restablecer filtros</button>
+            </form>}
+            filtersOpen={filtersOpen}
+            filtersTitle="Filtros de movimientos"
+            onFiltersOpenChange={setFiltersOpen}
+            search={<BackofficeListSearch label="Buscar movimientos" onClear={() => navigate({ page: 1, search: undefined })} onSearch={(search) => navigate({ page: 1, search: search || undefined })} placeholder="Motivo, referencia o autor" value={filters.search} />}
+          >
           <section aria-labelledby="movement-list-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div><h2 className="m-0 text-lg font-bold" id="movement-list-title">Historial auditable</h2><p className="m-0 mt-1 text-sm text-slate-600">{movementsQuery.data.totalItems} movimientos registrados</p></div>
-              <p className="m-0 text-xs font-semibold uppercase tracking-[.12em] text-slate-500">Más reciente primero</p>
+              <div><h2 className="m-0 text-lg font-bold" id="movement-list-title">Historial auditable</h2><p className="m-0 mt-1 text-sm text-slate-600">{movementsQuery.data ? `${movementsQuery.data.totalItems} movimientos registrados` : "Consulta movimientos del producto"}</p></div>
+              <p className="m-0 text-xs font-semibold uppercase tracking-[.12em] text-slate-500">Orden y paginación del API</p>
             </div>
-            <DataTable caption="Movimientos de inventario" columns={movementColumns} emptyMessage="Este producto todavía no tiene movimientos." rowKey={(movement) => movement.id} rows={movementsQuery.data.items} />
-            {movementsQuery.data.totalPages > 0 ? <div className="mt-5"><BackofficePagination page={movementsQuery.data.page} totalPages={movementsQuery.data.totalPages} /></div> : null}
+            {movementsQuery.isPending ? <LoadingState message="Cargando historial…" /> : movementsQuery.isError ? <ErrorState action={<button className="font-bold underline" onClick={() => movementsQuery.refetch()} type="button">Reintentar</button>} message="No pudimos cargar los movimientos de inventario." /> : movementsQuery.data ? <><DataTable caption="Movimientos de inventario" columns={movementColumns} emptyMessage="Este producto todavía no tiene movimientos." rowKey={(movement) => movement.id} rows={movementsQuery.data.items} />{movementsQuery.data.totalPages > 0 && filters.page <= movementsQuery.data.totalPages ? <div className="mt-5"><BackofficePagination page={movementsQuery.data.page} totalPages={movementsQuery.data.totalPages} /></div> : filters.page > 1 ? <button className="mt-5 font-bold text-blue-700 underline" onClick={() => navigate({ page: 1 })} type="button">Volver a la primera página</button> : null}</> : null}
           </section>
-        ) : null}
+        </BackofficeListLayout>
       </div>
     </main>
   );

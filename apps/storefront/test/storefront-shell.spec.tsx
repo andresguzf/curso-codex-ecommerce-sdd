@@ -29,6 +29,7 @@ describe("StorefrontShell", () => {
     const header = screen.getByRole("banner");
     const main = screen.getByRole("main");
 
+    expect(header).toHaveClass("sticky", "top-0", "bg-[#041326]/98", "backdrop-blur-xl");
     expect(within(header).getByRole("link", { name: "Technology Store, inicio" })).toHaveAttribute("href", "/");
     expect(within(header).getByRole("navigation", { name: "Navegación principal" })).toHaveTextContent("Inicio");
     expect(within(header).getByRole("navigation", { name: "Acceso rápido al carrito" })).toBeInTheDocument();
@@ -54,6 +55,7 @@ describe("StorefrontShell", () => {
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(container.querySelector("#main-content")).toHaveAttribute("tabIndex", "-1");
     expect(container.querySelector("header > div")?.className).toContain("md:flex-row");
+    expect(container.querySelector("header")?.className).toContain("supports-[backdrop-filter]:bg-[#041326]/95");
     expect(container.querySelector("footer > div")?.className).toContain("sm:flex-row");
     expect(container.querySelector("svg[aria-hidden='true']")).toBeInTheDocument();
   });
