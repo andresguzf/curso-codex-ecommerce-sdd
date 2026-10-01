@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { installCatalogApiFixture, waitForProductQuery } from "./catalog-api-fixture";
-import { expectAccessible, expectNoPageOverflow } from "./accessibility-helpers";
+import { expectAccessible, expectNoPageOverflow, expectVisibleKeyboardFocus } from "./accessibility-helpers";
 
 for (const theme of ["light", "dark"] as const) {
   for (const width of [375, 1440]) {
@@ -47,6 +47,82 @@ for (const count of [0, 2]) {
     expect(landingRequests[0]!.search).toBe("");
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [375, 1440]) {
+    test(`editorial landing: complete ordered composition, ${theme}, ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      const { completedLandingRequests, productRequests } = await installCatalogApiFixture(page, "ANONYMOUS", { landingEditorial: "full" });
+      await page.goto("/?search=ignored&page=8");
+      const featured = page.locator('[data-slot="landing-featured"]');
+      const latest = page.locator('[data-slot="landing-latest"]');
+      const categories = page.locator('[data-slot="landing-category"]');
+      await expect(featured.locator('[data-slot="product-card"]')).toHaveCount(3);
+      await expect(latest.locator('[data-slot="product-card"]')).toHaveCount(9);
+      await expect(categories).toHaveCount(3);
+      expect(await page.locator('section[data-slot^="landing-"]').evaluateAll((sections) => sections.map((section) => section.getAttribute("data-slot"))))
+        .toEqual(["landing-featured", "landing-latest", "landing-category", "landing-category", "landing-category"]);
+      for (let index = 0; index < 3; index++) await expect(categories.nth(index).locator('[data-slot="product-card"]')).toHaveCount(3);
+      await expect(categories.locator('h2[id]')).toHaveText(["Notebooks", "Monitores", "Smartphones"]);
+      await expect(featured.locator('[data-slot="product-card"] h2')).toHaveText(["Destacado 1", "Destacado 2", "Destacado 3"]);
+      await expect(latest.getByRole("heading", { name: /^Destacado/ })).toHaveCount(0);
+      await expect(categories.first().getByRole("heading", { name: "Destacado 1", exact: true })).toBeVisible();
+      await expect(page.getByRole("complementary")).toHaveCount(0);
+      await expect(page.getByRole("navigation", { name: /paginación/i })).toHaveCount(0);
+      await expect.poll(() => completedLandingRequests.length).toBe(1);
+      expect(productRequests).toHaveLength(0);
+      const explore = categories.first().getByRole("link", { name: "Explorar Notebooks" });
+      await page.keyboard.press("Tab");
+      await explore.focus();
+      await expectVisibleKeyboardFocus(page);
+      await expectAccessible(page);
+      await expectNoPageOverflow(page);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: testInfo.outputPath(`editorial-${theme}-${width}.png`), fullPage: true });
+      await featured.screenshot({ path: testInfo.outputPath(`featured-${theme}-${width}.png`) });
+      await categories.first().screenshot({ path: testInfo.outputPath(`category-${theme}-${width}.png`) });
+      await explore.press("Enter");
+      await expect(page).toHaveURL(/\/products\?page=1&categoryId=20000000-0000-4000-8000-000000000000$/);
+      await waitForProductQuery(productRequests, { categoryId: "20000000-0000-4000-8000-000000000000", page: "1", view: "public" });
+    });
+  }
+}
+
+for (const composition of ["partial", "empty"] as const) {
+  test(`editorial landing: ${composition} configuration without artificial products`, async ({ page }) => {
+    await installCatalogApiFixture(page, "ANONYMOUS", { landingEditorial: composition });
+    await page.goto("/");
+    if (composition === "empty") {
+      await expect(page.getByRole("heading", { name: "Todavía no hay novedades" })).toBeVisible();
+      await expect(page.locator('[data-slot="landing-featured"], [data-slot="landing-category"], [data-slot="product-card"]')).toHaveCount(0);
+    } else {
+      await expect(page.locator('[data-slot="landing-featured"] [data-slot="product-card"]')).toHaveCount(1);
+      await expect(page.locator('[data-slot="landing-latest"] [data-slot="product-card"]')).toHaveCount(2);
+      await expect(page.locator('[data-slot="landing-category"]')).toHaveCount(1);
+    }
+    await expect(page.getByRole("link", { name: "Ver todos los productos" })).toBeVisible();
+  });
+}
+
+test("editorial landing rejects an invalid public response and retries without leaking inactive content", async ({ page }) => {
+  await installCatalogApiFixture(page, "ANONYMOUS", { landingEditorial: "full" });
+  let invalid = true;
+  await page.route("**/api/v1/catalog/landing", async (route) => {
+    if (!invalid) { await route.fallback(); return; }
+    await route.fulfill({ contentType: "application/json", headers: {
+      "access-control-allow-origin": "http://localhost:3000", "access-control-allow-credentials": "true",
+    }, body: JSON.stringify({ featuredProducts: [{ name: "Inactive private product", status: "INACTIVE", isFeatured: true }], latestProducts: [], highlightedCategories: [] }) });
+  });
+  await page.goto("/");
+  await expect(page.getByText("No pudimos cargar las novedades. Inténtalo nuevamente o explora todos los productos.")).toBeVisible();
+  await expect(page.getByText("Inactive private product")).toHaveCount(0);
+  await expect(page.locator('[data-slot="product-card"]')).toHaveCount(0);
+  invalid = false;
+  await page.getByRole("button", { name: "Intentar nuevamente" }).click();
+  await expect(page.locator('[data-slot="landing-featured"] [data-slot="product-card"]')).toHaveCount(3);
+  await expect(page.locator('[data-slot="landing-category"]')).toHaveCount(3);
+});
 
 test("storefront combines search, filters and order with backend pagination, history and reload", async ({ page }) => {
   const { productRequests } = await installCatalogApiFixture(page, "CUSTOMER");

@@ -370,14 +370,24 @@ describe("development database seed", () => {
     expect(cards.every((card) => card.status === "ACTIVE" && card.coverImage && card.images === undefined)).toBe(true);
     const response = await server.inject({ method: "GET", url: "/api/v1/catalog/landing" });
     expect(response.statusCode).toBe(200);
-    const landing = response.json<{ latestProducts: PublicCard[]; featuredProducts: PublicCard[]; highlightedCategories: unknown[] }>();
-    // Seed writes share timestamps; landing explicitly breaks ties by ID DESC,
-    // whereas the general catalog uses ID ASC as its stable secondary key.
-    const expectedRecent = [...cards].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || right.id.localeCompare(left.id)).slice(0, 9);
+    const landing = response.json<{ latestProducts: PublicCard[]; featuredProducts: PublicCard[]; highlightedCategories: { category: { slug: string }; products: PublicCard[] }[] }>();
+    const featuredIds = new Set(landing.featuredProducts.map((product) => product.id));
+    const expectedRecent = cards.filter((card) => !featuredIds.has(card.id))
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || right.id.localeCompare(left.id)).slice(0, 9);
     expect(landing.latestProducts.map((product) => product.id)).toEqual(expectedRecent.map((product) => product.id));
-    // The editorial seed is deliberately deferred to 21.6.
-    expect(landing.featuredProducts).toEqual([]);
-    expect(landing.highlightedCategories).toEqual([]);
+    expect(landing.featuredProducts.map((card) => card.slug)).toEqual(["dev-phone-001", "dev-monitor-001", "dev-laptop-001"]);
+    expect(landing.latestProducts).toHaveLength(9);
+    expect(landing.latestProducts.map((card) => card.slug)).toEqual([
+      "dev-phone-005", "dev-phone-004", "dev-phone-003", "dev-phone-002",
+      "dev-keyboard-004", "dev-keyboard-003", "dev-keyboard-002", "dev-monitor-004", "dev-monitor-003",
+    ]);
+    expect(landing.highlightedCategories.map((section) => section.category.slug)).toEqual(["dev-laptop", "dev-monitor", "dev-phone"]);
+    expect(landing.highlightedCategories.every((section) => section.products.length === 3)).toBe(true);
+    expect(landing.highlightedCategories.map((section) => section.products.map((card) => card.slug))).toEqual([
+      ["dev-laptop-006", "dev-laptop-005", "dev-laptop-004"],
+      ["dev-monitor-004", "dev-monitor-003", "dev-monitor-002"],
+      ["dev-phone-005", "dev-phone-004", "dev-phone-003"],
+    ]);
     expect(Object.keys(landing).sort()).toEqual(["featuredProducts", "highlightedCategories", "latestProducts"]);
     for (const card of landing.latestProducts) {
       const byId = await server.inject({ method: "GET", url: `/api/v1/products/${card.id}` });
@@ -396,6 +406,37 @@ describe("development database seed", () => {
     expect((await server.inject({ method: "GET", url: `/api/v1/products/${inactive!.id}` })).statusCode).toBe(404);
     expect((await server.inject({ method: "GET", url: `/api/v1/products/slug/${inactive!.slug}` })).statusCode).toBe(404);
   });
+
+  it("restores deterministic demo editorial settings without duplicates or inventory changes", async () => {
+    const options = { accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" as const };
+    // updatedAt records the real seed write; content, dates used for ordering,
+    // identities and section order must stay reproducible instead.
+    const composition = (value: unknown) => JSON.stringify(value, (key, field: unknown) => key === "updatedAt" ? undefined : field);
+    const beforeLanding = composition((await server.inject({ method: "GET", url: "/api/v1/catalog/landing" })).json());
+    const beforeCounts = await readSeedCounts();
+    const beforeBalances = await database.select().from(inventoryBalances).orderBy(asc(inventoryBalances.productId));
+    const beforeProducts = await database.select().from(products).orderBy(asc(products.sku));
+    expect(beforeProducts.filter((product) => product.isFeatured)).toHaveLength(3);
+    expect(beforeProducts.filter((product) => !product.isFeatured && product.status === "ACTIVE")).toHaveLength(15);
+    const [laptop] = await database.select().from(categories).where(eq(categories.slug, "dev-laptop"));
+    const [monitor] = await database.select().from(categories).where(eq(categories.slug, "dev-monitor"));
+    await database.transaction(async (transaction) => {
+      await transaction.update(categories).set({ showOnLanding: false, landingOrder: null }).where(eq(categories.id, laptop!.id));
+      await transaction.update(categories).set({ landingOrder: 1 }).where(eq(categories.id, monitor!.id));
+      await transaction.update(categories).set({ showOnLanding: true, landingOrder: 2 }).where(eq(categories.id, laptop!.id));
+      await transaction.update(products).set({ isFeatured: false, featuredAt: null }).where(eq(products.sku, "DEV-PHONE-001"));
+      await transaction.update(products).set({ isFeatured: true, featuredAt: new Date() }).where(eq(products.sku, "DEV-LAPTOP-002"));
+    });
+    for (const phase of [1, 2]) {
+      const result = await runDevelopmentSeed(options);
+      expect(result.inventoryMovements).toBe(0);
+      expect(await readSeedCounts()).toEqual(beforeCounts);
+      expect(await database.select().from(inventoryBalances).orderBy(asc(inventoryBalances.productId))).toEqual(beforeBalances);
+      expect(composition((await server.inject({ method: "GET", url: "/api/v1/catalog/landing" })).json()), `rerun ${phase}`).toEqual(beforeLanding);
+      expect((await database.select().from(products).orderBy(asc(products.sku))).map(({ id, isFeatured, featuredAt, createdAt }) => ({ id, isFeatured, featuredAt, createdAt })))
+        .toEqual(beforeProducts.map(({ id, isFeatured, featuredAt, createdAt }) => ({ id, isFeatured, featuredAt, createdAt })));
+    }
+  }, 30_000);
 
   it("authenticates seeded ADMIN and CUSTOMER through REST before and after a rerun", async () => {
     const accounts = seedAccounts.filter((account) => account.role !== "BILLING");
@@ -499,6 +540,7 @@ describe("development database seed", () => {
   }, 30_000);
 
   it("rolls back the entire seed when an image write fails", async () => {
+    const beforeCategories = await database.select().from(categories).orderBy(asc(categories.id));
     const beforeProducts = await database.select().from(products).orderBy(asc(products.id));
     const beforeImages = await database.select().from(productImages).orderBy(asc(productImages.id));
     const beforeUsers = await database.select().from(users).orderBy(asc(users.id));
@@ -521,15 +563,38 @@ describe("development database seed", () => {
       expect(await database.select().from(products).orderBy(asc(products.id))).toEqual(beforeProducts);
       expect(await database.select().from(productImages).orderBy(asc(productImages.id))).toEqual(beforeImages);
       expect(await database.select().from(users).orderBy(asc(users.id))).toEqual(beforeUsers);
+      expect(await database.select().from(categories).orderBy(asc(categories.id))).toEqual(beforeCategories);
     } finally {
       await database.execute(sql`drop trigger reject_test_seed_image on product_images`);
       await database.execute(sql`drop function reject_test_seed_image()`);
     }
   }, 30_000);
 
+  it("preserves non-demo editorial selections and rolls back when landing slots are occupied", async () => {
+    const [demo] = await database.select().from(categories).where(eq(categories.slug, "dev-laptop"));
+    await database.update(categories).set({ showOnLanding: false, landingOrder: null }).where(eq(categories.id, demo!.id));
+    const [custom] = await database.insert(categories).values({ name: "Admin category", slug: "admin-custom-category", showOnLanding: true, landingOrder: 1 }).returning();
+    const beforeCategories = await database.select().from(categories).orderBy(asc(categories.id));
+    const beforeProducts = await database.select().from(products).orderBy(asc(products.id));
+    const beforeUsers = await database.select().from(users).orderBy(asc(users.id));
+    try {
+      await expect(runDevelopmentSeed({ accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" }))
+        .rejects.toThrow("Demo editorial seed requires free landing slots");
+      expect(await database.select().from(categories).orderBy(asc(categories.id))).toEqual(beforeCategories);
+      expect(await database.select().from(products).orderBy(asc(products.id))).toEqual(beforeProducts);
+      expect(await database.select().from(users).orderBy(asc(users.id))).toEqual(beforeUsers);
+    } finally {
+      // Only the unreferenced fixture created by this isolated test is removed.
+      await database.delete(categories).where(eq(categories.id, custom!.id));
+      await runDevelopmentSeed({ accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" });
+    }
+  }, 30_000);
+
   it("rejects production before changing persisted data", async () => {
     const countsBefore = await readSeedCounts();
     const usersBefore = await database.select().from(users).orderBy(asc(users.id));
+    const productsBefore = await database.select().from(products).orderBy(asc(products.id));
+    const categoriesBefore = await database.select().from(categories).orderBy(asc(categories.id));
 
     await expect(
       runDevelopmentSeed({
@@ -541,5 +606,7 @@ describe("development database seed", () => {
 
     expect(await readSeedCounts()).toEqual(countsBefore);
     expect(await database.select().from(users).orderBy(asc(users.id))).toEqual(usersBefore);
+    expect(await database.select().from(products).orderBy(asc(products.id))).toEqual(productsBefore);
+    expect(await database.select().from(categories).orderBy(asc(categories.id))).toEqual(categoriesBefore);
   });
 });

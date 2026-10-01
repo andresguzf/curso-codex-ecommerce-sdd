@@ -20,6 +20,7 @@ import { ProductTagEditor } from "./product-tag-editor";
 const DEFAULT_PRODUCT_IMAGE_URL = "/images/product-placeholder.svg";
 
 const productFormSchema = createProductRequestSchema.extend({
+  isFeatured: z.boolean().optional(),
   categoryId: z.union([z.uuid(), z.literal("")]).optional(),
   slug: z.string().trim().max(220).optional(),
   image: z
@@ -82,7 +83,7 @@ export function ProductForm({
 }: Readonly<{
   isPending: boolean;
   onCancel: () => void;
-  onSubmit: (input: CreateProductRequest & { image: ProductImageReference }) => void;
+  onSubmit: (input: CreateProductRequest & { image: ProductImageReference; isFeatured?: boolean }) => void;
   product?: ProductListItem;
 }>) {
   const [tagDraft, setTagDraft] = useState("");
@@ -92,6 +93,7 @@ export function ProductForm({
     defaultValues: product
       ? {
           description: product.description,
+          isFeatured: product.isFeatured ?? false,
           categoryId: product.category?.id ?? "",
           image: product.image,
           name: product.name,
@@ -104,6 +106,7 @@ export function ProductForm({
         }
       : {
           description: "",
+          isFeatured: false,
           categoryId: "",
           image: { storageKey: "", url: "" },
           name: "",
@@ -121,6 +124,7 @@ export function ProductForm({
     "min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 shadow-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-200 aria-invalid:border-red-700";
   const selectedTagIds = useWatch({ control, name: "tagIds" }) ?? [];
   const newTagNames = useWatch({ control, name: "tagNames" }) ?? [];
+  const isFeatured = useWatch({ control, name: "isFeatured" }) ?? false;
   const knownTags = [...(tagsQuery.data ?? []), ...(product?.tags ?? [])];
 
   function updateTags(draft: string): { tagIds: string[]; tagNames: string[] } | undefined {
@@ -148,8 +152,9 @@ export function ProductForm({
       onSubmit={handleSubmit((input) => {
         const merged = mergeTags(input.tagIds ?? [], input.tagNames ?? [], tagDraft, knownTags);
         if (merged.error) { setError("tagNames", { message: merged.error }); return; }
+        const { isFeatured: featuredSelection, ...commercialInput } = input;
         const payload = createProductRequestSchema.safeParse({
-          ...input,
+          ...commercialInput,
           categoryId: input.categoryId || null,
           image: normalizeImage(input.image, input.sku),
           slug: input.slug?.trim() || undefined,
@@ -161,7 +166,7 @@ export function ProductForm({
           return;
         }
         setTagDraft("");
-        onSubmit({ ...payload.data, image: normalizeImage(input.image, input.sku) });
+        onSubmit({ ...payload.data, ...(product ? { isFeatured: Boolean(featuredSelection) } : {}), image: normalizeImage(input.image, input.sku) });
       })}
     >
       <div className="grid gap-5 sm:grid-cols-2">
@@ -260,6 +265,15 @@ export function ProductForm({
           {product ? <p className="m-0 text-xs text-slate-500">El estado se cambia desde el listado.</p> : null}
         </div>
       </div>
+
+      {product ? <fieldset className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface-subtle)] p-4 text-[var(--ds-text)]">
+        <legend className="px-2 text-sm font-bold">Selección editorial</legend>
+        <label className="flex min-h-11 items-center gap-3 font-semibold" htmlFor="product-featured">
+          <input aria-describedby="product-featured-hint" className="size-5 accent-[var(--ds-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus)]" disabled={isPending || (product.status !== "ACTIVE" && !isFeatured)} id="product-featured" type="checkbox" {...register("isFeatured")} />
+          Destacar producto
+        </label>
+        <p className="mb-0 mt-2 text-sm text-[var(--ds-text-muted)]" id="product-featured-hint">Solo los productos activos pueden destacarse. La fecha la asigna el servidor al destacar; guardar otros cambios no la renueva.</p>
+      </fieldset> : null}
 
       <TextField
         error={formState.errors.image?.url?.message}

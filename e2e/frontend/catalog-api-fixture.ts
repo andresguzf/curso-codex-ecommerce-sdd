@@ -62,7 +62,7 @@ function productPage(page: number, pageSize: number) {
   };
 }
 
-export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string } = {}) {
+export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingEditorial?: "full" | "partial" | "empty"; editorialCategories?: boolean; landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string } = {}) {
   const productRequests: URL[] = [];
   const landingRequests: URL[] = [];
   const completedLandingRequests: URL[] = [];
@@ -72,6 +72,15 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
   });
   let cartHasItem = true;
   let productDeleteFails = false;
+  let isFeatured = false;
+  let featuredAt: string | null = null;
+  const editorialRequests: Record<string, unknown>[] = [];
+  const categoryEditorialRequests: { id: string; input: Record<string, unknown> }[] = [];
+  let editorialCategories = ["Portátiles", "Monitores", "Periféricos", "Audio", "Legado"].map((name, index) => ({
+    id: `30000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name, slug: `categoria-${index}`,
+    description: "Categoría de prueba", status: index === 4 ? "INACTIVE" : "ACTIVE", deletedAt: null,
+    createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z", showOnLanding: false, landingOrder: null as number | null,
+  }));
   const emptyClassificationPage = {
     items: [],
     page: 1,
@@ -182,6 +191,34 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
+    if (options.editorialCategories && url.pathname.startsWith("/api/v1/categories/") && request.method() === "PATCH") {
+      const id = url.pathname.split("/").at(-1)!;
+      const input = request.postDataJSON() as Record<string, unknown>;
+      categoryEditorialRequests.push({ id, input });
+      const previous = editorialCategories.find((category) => category.id === id)!;
+      if (role !== "ADMIN") { await route.fulfill({ status: 403, headers, contentType: "application/json", body: JSON.stringify({ code: "FORBIDDEN" }) }); return; }
+      if (input.showOnLanding === true && !previous.showOnLanding && editorialCategories.filter((category) => category.showOnLanding).length === 3) {
+        await route.fulfill({ status: 409, headers, contentType: "application/json", body: JSON.stringify({ code: "CATEGORY_LANDING_LIMIT_EXCEEDED" }) }); return;
+      }
+      const position = typeof input.landingOrder === "number" ? input.landingOrder : input.showOnLanding === true
+        ? [1, 2, 3].find((slot) => !editorialCategories.some((category) => category.landingOrder === slot))! : null;
+      editorialCategories = editorialCategories.map((category) => category.id === id
+        ? { ...category, showOnLanding: typeof input.showOnLanding === "boolean" ? input.showOnLanding : category.showOnLanding, landingOrder: position }
+        : input.landingOrder !== undefined && category.landingOrder === position ? { ...category, landingOrder: previous.landingOrder } : category);
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify(editorialCategories.find((category) => category.id === id)) }); return;
+    }
+
+    if (options.editorialCategories && url.pathname === "/api/v1/categories" && request.method() === "GET") {
+      const admin = url.searchParams.get("view") === "administrative";
+      if (admin && role !== "ADMIN") { await route.fulfill({ status: 403, headers, contentType: "application/json", body: JSON.stringify({ code: "FORBIDDEN" }) }); return; }
+      const filtered = editorialCategories.filter((category) => (admin || category.status === "ACTIVE") &&
+        (!url.searchParams.has("showOnLanding") || category.showOnLanding === (url.searchParams.get("showOnLanding") === "true")));
+      const pageSize = Number(url.searchParams.get("pageSize") ?? 20);
+      const requestedPage = Number(url.searchParams.get("page") ?? 1);
+      const items = filtered.slice((requestedPage - 1) * pageSize, requestedPage * pageSize).map(({ showOnLanding, landingOrder, ...category }) => ({ ...category, ...(admin ? { showOnLanding, landingOrder } : {}) }));
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify({ items, page: requestedPage, pageSize, totalItems: filtered.length, totalPages: Math.ceil(filtered.length / pageSize) }) }); return;
+    }
+
     if (url.pathname === "/api/v1/categories" || url.pathname === "/api/v1/tags") {
       await route.fulfill({
         body: JSON.stringify(emptyClassificationPage),
@@ -205,12 +242,27 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
+    if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421" && request.method() === "PATCH") {
+      const input = request.postDataJSON() as Record<string, unknown>;
+      editorialRequests.push(input);
+      if (role !== "ADMIN") {
+        await route.fulfill({ status: 403, headers, contentType: "application/json", body: JSON.stringify({ code: "FORBIDDEN", message: "Forbidden" }) });
+        return;
+      }
+      if (typeof input.isFeatured === "boolean" && input.isFeatured !== isFeatured) {
+        isFeatured = input.isFeatured;
+        featuredAt = isFeatured ? new Date().toISOString() : null;
+      }
+      await route.fulfill({ headers, contentType: "application/json", body: JSON.stringify({ ...productPage(1, 20).items[0], isFeatured, featuredAt, deletedAt: null }) });
+      return;
+    }
+
     if (url.pathname === "/api/v1/products" && request.method() === "GET") {
       productRequests.push(url);
       const requestedPage = Number(url.searchParams.get("page") ?? 1);
       const pageSize = Number(url.searchParams.get("pageSize") ?? 20);
       await route.fulfill({
-        body: JSON.stringify(productPage(requestedPage, pageSize)),
+        body: JSON.stringify({ ...productPage(requestedPage, pageSize), items: productPage(requestedPage, pageSize).items.map((product) => ({ ...product, ...(url.searchParams.get("view") === "administrative" ? { isFeatured, featuredAt } : {}) })) }),
         contentType: "application/json",
         headers,
       });
@@ -220,14 +272,27 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     if (request.method() === "GET" && url.pathname === "/api/v1/catalog/landing") {
       landingRequests.push(url);
       const product = productPage(1, 9).items[0]!;
-      const count = options.landingProductCount ?? 1;
+      const editorialCount = options.landingEditorial === "full" ? 3 : options.landingEditorial === "partial" ? 1 : 0;
+      const count = options.landingProductCount ?? (options.landingEditorial === "full" ? 9 : options.landingEditorial === "partial" ? 2 : options.landingEditorial === "empty" ? 0 : 1);
+      const categories = Array.from({ length: editorialCount }, (_, index) => ({
+        id: `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        name: ["Notebooks", "Monitores", "Smartphones"][index]!, slug: `categoria-${index}`, status: "ACTIVE",
+      }));
       const latestProducts = Array.from({ length: count }, (_, index) => ({
         ...product,
+        category: categories.length ? categories[index % categories.length]! : null,
         ...(count === 1 ? {} : { id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: `Equipo reciente ${index + 1}`, sku: `RECENT-${index + 1}`, slug: `equipo-reciente-${index + 1}` }),
         createdAt: new Date(Date.parse(product.createdAt) - index * 86_400_000).toISOString(),
       }));
+      const featuredProducts = Array.from({ length: editorialCount }, (_, index) => ({
+        ...product, id: `99999999-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        name: `Destacado ${index + 1}`, slug: `destacado-${index + 1}`, sku: `FEATURED-${index + 1}`, category: categories[index]!,
+      }));
+      const highlightedCategories = categories.map((category) => ({
+        category, products: [...featuredProducts, ...latestProducts].filter((item) => item.category?.id === category.id).slice(0, 3),
+      }));
       await route.fulfill({
-        body: JSON.stringify({ featuredProducts: [{ ...product, id: "99999999-0000-4000-8000-000000000000", name: "Destacado de prueba" }], latestProducts, highlightedCategories: [] }),
+        body: JSON.stringify({ featuredProducts, latestProducts, highlightedCategories }),
         contentType: "application/json",
         headers,
       });
@@ -242,7 +307,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     });
   });
 
-  return { productRequests, landingRequests, completedLandingRequests, failProductDeletion: () => { productDeleteFails = true; } };
+  return { productRequests, landingRequests, completedLandingRequests, editorialRequests, categoryEditorialRequests, failProductDeletion: () => { productDeleteFails = true; } };
 }
 
 export async function waitForProductQuery(

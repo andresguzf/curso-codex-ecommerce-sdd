@@ -7,6 +7,7 @@ import {
   type Category,
   type ClassificationListQuery,
   type Tag,
+  type UpdateCategoryRequest,
 } from "@technology-ecommerce/api-schemas";
 import { z } from "zod";
 
@@ -22,15 +23,21 @@ const errorCodeSchema = z.object({ code: z.string() });
 
 export class ClassificationApiError extends Error {
   constructor(readonly status: number, readonly code?: string) {
-    super(
+    const editorialMessages: Record<string, string> = {
+      CATEGORY_LANDING_LIMIT_EXCEEDED: "Solo puedes seleccionar hasta tres categorías. Retira una antes de añadir otra.",
+      CATEGORY_LANDING_REQUIRES_ACTIVE: "Solo puedes seleccionar u ordenar categorías activas. Retira primero las selecciones inactivas.",
+      CATEGORY_LANDING_POSITION_OCCUPIED: "Esa posición cambió. Revisa el orden actualizado e inténtalo nuevamente.",
+      CATEGORY_LANDING_INVALID: "Selecciona una posición válida entre 1 y 3.",
+    };
+    super((code && editorialMessages[code]) || (
       status === 401 ? "Tu sesión venció. Inicia sesión nuevamente."
         : status === 403 ? "Tu rol no puede administrar el catálogo."
           : code === "CLASSIFICATION_NAME_ALREADY_EXISTS" ? "Ya existe un registro con ese nombre."
             : code === "CLASSIFICATION_SLUG_ALREADY_EXISTS" ? "Ese slug ya está en uso."
               : code === "CLASSIFICATION_SLUG_INVALID" ? "El slug no es válido."
                 : status === 404 ? "El registro ya no está disponible. Actualiza la lista."
-                  : "No pudimos completar la operación. Inténtalo nuevamente.",
-    );
+                  : "No pudimos completar la operación. Inténtalo nuevamente."
+    ));
     this.name = "ClassificationApiError";
   }
 }
@@ -124,7 +131,7 @@ export async function createClassification(kind: ClassificationKind, accessToken
   return tagSchema.parse(result.data);
 }
 
-export async function updateClassification(kind: ClassificationKind, accessToken: string, id: string, input: Partial<ClassificationInput>): Promise<ClassificationRecord> {
+export async function updateClassification(kind: ClassificationKind, accessToken: string, id: string, input: UpdateCategoryRequest): Promise<ClassificationRecord> {
   if (kind === "categories") {
     const result = await client.PATCH("/api/v1/categories/{categoryId}", { headers: authorization(accessToken), params: { path: { categoryId: id } }, body: input });
     if (!result.data) throw failure(result);

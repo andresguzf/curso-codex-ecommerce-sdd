@@ -22,6 +22,7 @@ export const categoryPageSchema = paginationMetadataSchema.extend({ items: z.arr
 export const tagPageSchema = paginationMetadataSchema.extend({ items: z.array(tagSchema) });
 
 export const classificationListQuerySchema = z.object({
+  showOnLanding: z.boolean().optional(),
   page: z.number().int().min(1).max(1_000_000),
   pageSize: z.number().int().min(1).max(100),
   search: z.string().trim().min(1).max(200).optional(),

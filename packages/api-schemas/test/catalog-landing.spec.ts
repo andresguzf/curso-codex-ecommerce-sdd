@@ -42,4 +42,16 @@ describe("public landing boundary", () => {
       expect(catalogLandingQuerySchema.safeParse({ [name]: "1" }).success).toBe(false);
     }
   });
+
+  it("rejects inactive nested classifications and duplicate identities within sections", () => {
+    for (const invalid of [
+      { ...composition, featuredProducts: [], latestProducts: [{ ...product, status: "INACTIVE" }] },
+      { ...composition, featuredProducts: [{ ...product, category: { ...category, status: "INACTIVE" } }] },
+      { ...composition, featuredProducts: [{ ...product, tags: [{ ...category, status: "INACTIVE" }] }] },
+      { ...composition, highlightedCategories: [{ category: { ...category, status: "INACTIVE" }, products: [product] }] },
+      { ...composition, featuredProducts: [product, product] },
+      { ...composition, highlightedCategories: [composition.highlightedCategories[0], composition.highlightedCategories[0]] },
+      { ...composition, highlightedCategories: [{ category, products: [product, product] }] },
+    ]) expect(catalogLandingSchema.safeParse(invalid).success).toBe(false);
+  });
 });

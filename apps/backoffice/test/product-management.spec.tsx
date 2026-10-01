@@ -80,6 +80,58 @@ function renderManagement() {
 }
 
 describe("product administration", () => {
+  it("toggles destaque through REST, reports success and invalidates products and landing", async () => {
+    let featured = false;
+    api.listAdministrativeProducts.mockImplementation(async () => ({ items: [{ ...activeProduct, isFeatured: featured }], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 }));
+    api.updateProduct.mockImplementation(async (_token, _id, input) => { featured = input.isFeatured; return { ...activeProduct, isFeatured: featured }; });
+    const { invalidate } = renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "Destacar" }));
+    expect(await screen.findByText("Producto destacado correctamente.")).toBeInTheDocument();
+    expect(await screen.findByText("Destacado", { exact: true })).toBeInTheDocument();
+    expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, { isFeatured: true });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["catalog", "public", "landing"] });
+    fireEvent.click(await screen.findByRole("button", { name: "Retirar destaque" }));
+    expect(await screen.findByText("Destaque retirado correctamente.")).toBeInTheDocument();
+    expect(api.updateProduct).toHaveBeenLastCalledWith("admin-token", activeProduct.id, { isFeatured: false });
+  });
+
+  it("does not feature inactive products or duplicate pending requests and reports failures safely", async () => {
+    renderManagement();
+    await screen.findByText(activeProduct.name);
+    const inactiveRow = screen.getByText(inactiveProduct.name).closest("tr")!;
+    expect(within(inactiveRow).getByRole("button", { name: "Destacar" })).toBeDisabled();
+    api.updateProduct.mockRejectedValueOnce(new ProductApiError(403));
+    fireEvent.click(within(screen.getByText(activeProduct.name).closest("tr")!).getByRole("button", { name: "Destacar" }));
+    expect(await screen.findByText("No tienes permisos para administrar productos.")).toBeInTheDocument();
+    expect(screen.queryByText("Destacado", { exact: true })).not.toBeInTheDocument();
+    api.updateProduct.mockImplementationOnce(() => new Promise(() => undefined));
+    const action = within(screen.getByText(activeProduct.name).closest("tr")!).getByRole("button", { name: "Destacar" });
+    fireEvent.click(action);
+    await waitFor(() => expect(action).toBeDisabled());
+    fireEvent.click(action);
+    expect(api.updateProduct).toHaveBeenCalledTimes(2);
+  });
+
+  it("edits destaque in the form without sending server timestamps or resending an unchanged selection", async () => {
+    api.listAdministrativeProducts.mockResolvedValue({ items: [{ ...activeProduct, isFeatured: true, featuredAt: "2026-10-01T12:00:00.000Z" }], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 });
+    renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+    expect(screen.getByRole("checkbox", { name: "Destacar producto" })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledTimes(1));
+    expect(api.updateProduct.mock.calls[0]![2]).not.toHaveProperty("isFeatured");
+    expect(api.updateProduct.mock.calls[0]![2]).not.toHaveProperty("featuredAt");
+    await screen.findByText("Producto actualizado correctamente.");
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Destacar producto" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledTimes(2));
+    expect(api.updateProduct.mock.calls[1]![2]).toMatchObject({ isFeatured: false });
+    expect(api.updateProduct.mock.calls[1]![2]).not.toHaveProperty("featuredAt");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     navigation.searchParams = new URLSearchParams("page=1");

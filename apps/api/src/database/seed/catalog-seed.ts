@@ -11,6 +11,9 @@ const CLASSIFICATIONS = {
   keyboard: { name: "DEMO - Teclados", price: "149.90", quantity: 20 },
   phone: { name: "DEMO - Smartphones", price: "699.90", quantity: 15 },
 } as const;
+const LANDING_CATEGORIES = ["laptop", "monitor", "phone"] as const;
+const FEATURED_SKUS = ["DEV-LAPTOP-001", "DEV-MONITOR-001", "DEV-PHONE-001"];
+const EDITORIAL_EPOCH = Date.parse("2026-01-01T00:00:00.000Z");
 
 /** Seed-owned SKU/key namespace only; never resets operational inventory. */
 export async function seedCatalog(
@@ -19,12 +22,29 @@ export async function seedCatalog(
   adminUserId: string,
 ) {
   const manifest = getDevelopmentProductImageManifest(environment);
+  // Share the editorial lock with administrative mutations. Never evict a
+  // non-demo category to make room for the reproducible demo composition.
+  await transaction.execute(sql`select pg_advisory_xact_lock(84110420262102::bigint)`);
+  const selected = await transaction.select().from(schema.categories)
+    .where(eq(schema.categories.showOnLanding, true)).for("update");
+  const demoSlugs = Object.keys(CLASSIFICATIONS).map((kind) => `dev-${kind}`);
+  if (selected.some((category) => !demoSlugs.includes(category.slug))) {
+    throw new Error("Demo editorial seed requires free landing slots; retire non-demo selections explicitly before retrying");
+  }
+  // Clear only seed-owned positions first, allowing a prior admin swap to be
+  // restored without transient uniqueness violations inside this transaction.
+  for (const category of selected) {
+    await transaction.update(schema.categories).set({ showOnLanding: false, landingOrder: null })
+      .where(eq(schema.categories.id, category.id));
+  }
   const categoryIds = new Map<string, string>();
   for (const [kind, classification] of Object.entries(CLASSIFICATIONS)) {
+    const position = LANDING_CATEGORIES.findIndex((entry) => entry === kind);
+    const editorial = { showOnLanding: position >= 0, landingOrder: position >= 0 ? position + 1 : null };
     const [category] = await transaction.insert(schema.categories).values({
-      name: classification.name, slug: `dev-${kind}`, status: "ACTIVE",
+      name: classification.name, slug: `dev-${kind}`, status: "ACTIVE", ...editorial,
     }).onConflictDoUpdate({ target: schema.categories.slug, set: {
-      name: classification.name, status: "ACTIVE", deletedAt: null,
+      name: classification.name, status: "ACTIVE", deletedAt: null, ...editorial,
     } }).returning({ id: schema.categories.id });
     if (!category) throw new Error("Could not persist demo category");
     categoryIds.set(kind, category.id);
@@ -39,7 +59,7 @@ export async function seedCatalog(
   }
 
   let openingMovementsCreated = 0;
-  for (const entry of manifest) {
+  for (const [index, entry] of manifest.entries()) {
     const classification = CLASSIFICATIONS[entry.kind];
     const [existing] = await transaction.select().from(schema.products)
       .where(sql`upper(${schema.products.sku}) = ${entry.sku}`).for("update");
@@ -51,6 +71,12 @@ export async function seedCatalog(
       status: entry.sku === "DEV-KEYBOARD-001" || entry.sku === "DEV-PHONE-006"
         ? "INACTIVE" as const : "ACTIVE" as const,
       deletedAt: null, updatedAt: new Date(),
+      // Distinct fixed demo dates avoid UUID tie-breaks changing the composition
+      // between fresh databases. Only the seed-owned fichas are normalized.
+      createdAt: new Date(EDITORIAL_EPOCH + index * 60_000),
+      isFeatured: FEATURED_SKUS.includes(entry.sku),
+      featuredAt: FEATURED_SKUS.includes(entry.sku)
+        ? new Date(EDITORIAL_EPOCH + (FEATURED_SKUS.indexOf(entry.sku) + 1) * 86_400_000) : null,
     };
     const [product] = existing
       ? await transaction.update(schema.products).set(values).where(eq(schema.products.id, existing.id)).returning()

@@ -1,3 +1,3 @@
 import baseConfig from "@technology-ecommerce/config-eslint/base";
 
-export default baseConfig;
+export default [{ ignores: ["dist/**"] }, ...baseConfig];

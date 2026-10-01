@@ -9,6 +9,7 @@ export type ClassificationQuery = Readonly<{
   pageSize: number;
   search?: string;
   status?: ClassificationStatus;
+  showOnLanding?: boolean;
   sortBy: ClassificationSortField;
   sortOrder: "asc" | "desc";
   view: "public" | "administrative";

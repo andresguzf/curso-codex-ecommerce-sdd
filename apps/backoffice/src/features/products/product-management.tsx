@@ -127,7 +127,7 @@ export function ProductManagement() {
   }
 
   const saveMutation = useMutation({
-    mutationFn: async (input: CreateProductRequest & { image: ProductImageReference }) => {
+    mutationFn: async (input: CreateProductRequest & { image: ProductImageReference; isFeatured?: boolean }) => {
       if (form?.mode === "edit") {
         const tagsChanged = JSON.stringify([...(input.tagIds ?? [])].sort()) !== JSON.stringify([...(form.product.tags?.map((tag) => tag.id) ?? [])].sort());
         const changes: UpdateProductRequest = {
@@ -137,6 +137,7 @@ export function ProductManagement() {
           name: input.name,
           price: input.price,
           sku: input.sku,
+          ...(Boolean(input.isFeatured) !== Boolean(form.product.isFeatured) ? { isFeatured: Boolean(input.isFeatured) } : {}),
           ...(input.slug && input.slug !== form.product.slug ? { slug: input.slug } : {}),
           ...(tagsChanged || input.tagNames?.length ? { tagIds: input.tagIds ?? [], tagNames: input.tagNames ?? [] } : {}),
         };
@@ -150,6 +151,7 @@ export function ProductManagement() {
       setForm(undefined);
       showFlash("success", `Producto ${action} correctamente.`);
       void queryClient.invalidateQueries({ queryKey: productQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ["catalog", "public", "landing"] });
       void queryClient.invalidateQueries({ queryKey: ["classifications", "active-tags"] });
     },
   });
@@ -165,6 +167,16 @@ export function ProductManagement() {
       setConfirmation(undefined);
       showFlash("success", `Producto ${variables.status === "ACTIVE" ? "activado" : "desactivado"} correctamente.`);
       void queryClient.invalidateQueries({ queryKey: productQueryKey });
+    },
+  });
+
+  const featuredMutation = useMutation({
+    mutationFn: (product: ProductListItem) => updateProduct(accessToken, product.id, { isFeatured: !product.isFeatured }),
+    onError: (error: Error) => showFlash("error", error instanceof ProductApiError ? error.message : "No pudimos actualizar el destaque. Inténtalo nuevamente."),
+    onSuccess: (_product, original) => {
+      showFlash("success", original.isFeatured ? "Destaque retirado correctamente." : "Producto destacado correctamente.");
+      void queryClient.invalidateQueries({ queryKey: productQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ["catalog", "public", "landing"] });
     },
   });
 
@@ -191,6 +203,7 @@ export function ProductManagement() {
         <div>
           <p className="m-0 font-bold text-slate-950">{product.name}</p>
           <p className="m-0 mt-1 font-mono text-xs text-slate-500">{product.sku}</p>
+          {product.isFeatured ? <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-[var(--ds-border)] bg-[var(--ds-accent-soft)] px-2 py-1 text-xs font-bold text-[var(--ds-text)]"><Icon name="star" />Destacado</span> : <span className="mt-2 block text-xs text-[var(--ds-text-muted)]">No destacado</span>}
         </div>
       ),
       header: "Producto",
@@ -210,6 +223,7 @@ export function ProductManagement() {
     {
       cell: (product) => (
         <div className="flex min-w-64 flex-wrap gap-2">
+          <IconButton className="border-[var(--ds-border)] text-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)]" disabled={featuredMutation.isPending || saveMutation.isPending || statusMutation.isPending || deleteMutation.isPending || (product.status !== "ACTIVE" && !product.isFeatured)} icon="star" label={product.isFeatured ? "Retirar destaque" : "Destacar"} onClick={() => { if (!featuredMutation.isPending) featuredMutation.mutate(product); }} />
           <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setForm({ mode: "edit", product }); }} />
           {product.status === "ACTIVE" ? (
             <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50 focus-visible:ring-amber-700" icon="power" label="Desactivar" onClick={() => setConfirmation({ action: "deactivate", product })} />

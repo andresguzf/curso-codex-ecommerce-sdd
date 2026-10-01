@@ -36,6 +36,9 @@ export class ClassificationRepository {
   async list(kind: ClassificationKind, query: ClassificationQuery): Promise<ClassificationPage<ClassificationRecord>> {
     const table = this.table(kind);
     const conditions: SQL[] = [sql`${table.deletedAt} is null`];
+    if (kind === "category" && query.showOnLanding !== undefined) {
+      conditions.push(sql`${categories.showOnLanding} = ${query.showOnLanding}`);
+    }
     if (query.view === "public" || query.status) {
       conditions.push(sql`${table.status} = ${query.view === "public" ? "ACTIVE" : query.status}`);
     }

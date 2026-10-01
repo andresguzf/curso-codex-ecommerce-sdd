@@ -9,12 +9,16 @@ import { useAddToCart } from "../cart/use-add-to-cart";
 import { getCatalogLanding } from "./catalog-api";
 import { CatalogHero } from "./catalog-hero";
 import { ProductGrid } from "./product-grid";
+import { LandingProductSection } from "./landing-product-section";
 
 export function CatalogLanding() {
   const router = useRouter();
   const productsQuery = useQuery({
     queryFn: ({ signal }) => getCatalogLanding(signal),
     queryKey: ["catalog", "public", "landing"],
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
   });
   const { addProduct, isAdding } = useAddToCart();
 
@@ -27,6 +31,12 @@ export function CatalogLanding() {
   return (
     <main className="min-h-screen bg-[var(--ds-canvas)]">
       <CatalogHero initialSearchValue="" onSearch={handleHeroSearch} />
+      {productsQuery.data && !productsQuery.isError ? <LandingProductSection
+        id="featured" title="Productos destacados" eyebrow="Selección de la tienda"
+        description="Equipos seleccionados para descubrir antes de explorar el catálogo."
+        featured products={productsQuery.data.featuredProducts} isAdding={isAdding}
+        onAddToCart={(product) => void addProduct(product)}
+      /> : null}
       <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20" id="catalog" data-slot="landing-latest">
         <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
@@ -72,6 +82,12 @@ export function CatalogLanding() {
           ) : null}
         </div>
       </section>
+      {productsQuery.data && !productsQuery.isError ? productsQuery.data.highlightedCategories.map(({ category, products }) => (
+        <LandingProductSection key={category.id} id={`landing-category-${category.id}`} title={category.name}
+          eyebrow="Explora por categoría" description={`Lo más reciente en ${category.name}.`}
+          categoryId={category.id} products={products} isAdding={isAdding}
+          onAddToCart={(product) => void addProduct(product)} />
+      )) : null}
     </main>
   );
 }

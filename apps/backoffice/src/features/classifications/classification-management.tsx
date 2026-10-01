@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ClassificationListQuery, type ClassificationStatus } from "@technology-ecommerce/api-schemas";
+import { type Category, type ClassificationListQuery, type ClassificationStatus } from "@technology-ecommerce/api-schemas";
 import {
   ConfirmationDialog,
   DataTable,
@@ -30,9 +30,11 @@ import {
 } from "./classification-api";
 import { ClassificationForm } from "./classification-form";
 import { classificationQueryToParams, parseClassificationQuery } from "./classification-query";
+import { LandingCategoriesPanel } from "./landing-categories-panel";
+import { useLandingCategories } from "./use-landing-categories";
 
 type FormTarget = Readonly<{ mode: "create" }> | Readonly<{ mode: "edit"; record: ClassificationRecord }>;
-type ConfirmationTarget = Readonly<{ action: "deactivate" | "delete"; record: ClassificationRecord }>;
+type ConfirmationTarget = Readonly<{ action: "deactivate" | "delete" | "withdraw"; record: ClassificationRecord }>;
 
 function operationError(error: unknown): string {
   return error instanceof ClassificationApiError ? error.message : "No pudimos completar la operación. Inténtalo nuevamente.";
@@ -58,6 +60,7 @@ export function ClassificationManagement({ kind }: Readonly<{ kind: Classificati
   const queryRoot = ["backoffice", kind] as const;
   const plural = kind === "categories" ? "Categorías" : "Etiquetas";
   const singular = kind === "categories" ? "categoría" : "etiqueta";
+  const editorial = useLandingCategories(accessToken, session?.user.id, isAdmin && kind === "categories");
 
   useEffect(() => {
     if (sessionStatus === "anonymous") router.replace("/login");
@@ -125,17 +128,24 @@ export function ClassificationManagement({ kind }: Readonly<{ kind: Classificati
 
   function confirmAction() {
     if (!confirmation) return;
-    if (confirmation.action === "delete") deleteMutation.mutate(confirmation.record);
+    if (confirmation.action === "withdraw") {
+      editorial.withdraw(confirmation.record as Category);
+      setConfirmation(undefined);
+    } else if (confirmation.action === "delete") deleteMutation.mutate(confirmation.record);
     else statusMutation.mutate({ record: confirmation.record, status: "INACTIVE" });
   }
 
   const columns: readonly DataTableColumn<ClassificationRecord>[] = [
-    { id: "name", header: "Nombre", cell: (record) => <div><p className="m-0 font-bold">{record.name}</p><p className="m-0 mt-1 font-mono text-xs text-slate-500">/{record.slug}</p></div> },
+    { id: "name", header: "Nombre", cell: (record) => <div><p className="m-0 font-bold">{record.name}</p><p className="m-0 mt-1 font-mono text-xs text-slate-500">/{record.slug}</p>{"showOnLanding" in record && record.showOnLanding ? <p className="m-0 mt-1 text-xs font-semibold text-[var(--ds-accent)]">Landing · posición {record.landingOrder}</p> : null}</div> },
     ...(kind === "categories" ? [{ id: "description", header: "Descripción", cell: (record: ClassificationRecord) => <span className="line-clamp-2 max-w-xs text-sm text-slate-600">{"description" in record ? record.description || "Sin descripción" : ""}</span> }] : []),
     { id: "status", header: "Estado", cell: (record) => <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${record.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>{record.status === "ACTIVE" ? "Activo" : "Inactivo"}</span> },
     { id: "updatedAt", header: "Actualización", cell: (record) => <time dateTime={record.updatedAt}>{formatDate(record.updatedAt)}</time> },
     { id: "actions", header: "Acciones", cell: (record) => (
       <div className="flex min-w-36 flex-wrap gap-2">
+        {kind === "categories" ? <IconButton icon="star" label={(record as Category).showOnLanding ? `Retirar ${record.name} de la landing` : `Incluir ${record.name} en la landing`} disabled={!editorial.ready || saveMutation.isPending || statusMutation.isPending || deleteMutation.isPending || (!(record as Category).showOnLanding && (record.status !== "ACTIVE" || editorial.categories.length >= 3))} onClick={() => {
+          if ((record as Category).showOnLanding) setConfirmation({ action: "withdraw", record });
+          else editorial.select(record as Category);
+        }} /> : null}
         <IconButton icon="edit" label={`Editar ${record.name}`} onClick={() => { saveMutation.reset(); setFormTarget({ mode: "edit", record }); }} />
         {record.status === "ACTIVE"
           ? <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50" icon="power" label={`Desactivar ${record.name}`} onClick={() => setConfirmation({ action: "deactivate", record })} />
@@ -173,6 +183,8 @@ export function ClassificationManagement({ kind }: Readonly<{ kind: Classificati
           <Link aria-current={kind === "tags" ? "page" : undefined} className={`rounded-t-lg px-4 py-3 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 ${kind === "tags" ? "bg-white text-[#15345b]" : "text-slate-600 hover:bg-slate-200"}`} href="/tags">Etiquetas</Link>
         </nav>
 
+        {kind === "categories" ? <LandingCategoriesPanel categories={editorial.categories} error={editorial.query.isError} isLoading={editorial.query.isPending} isPending={editorial.isPending} ready={editorial.ready && !saveMutation.isPending && !statusMutation.isPending && !deleteMutation.isPending} onRetry={() => { void editorial.query.refetch(); }} onSwap={editorial.swap} onWithdraw={(record) => setConfirmation({ action: "withdraw", record })} /> : null}
+
         {formTarget ? (
           <section aria-labelledby="classification-form-title" className="my-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
             <h2 className="mt-0 text-2xl font-bold" id="classification-form-title">{formTarget.mode === "edit" ? `Editar ${formTarget.record.name}` : `Crear ${singular}`}</h2>
@@ -206,13 +218,13 @@ export function ClassificationManagement({ kind }: Readonly<{ kind: Classificati
         </BackofficeListLayout>
       </div>
       <ConfirmationDialog
-        confirmLabel={confirmation?.action === "delete" ? `Eliminar ${singular}` : `Desactivar ${singular}`}
-        description={confirmation ? `${confirmation.record.name} ${confirmation.action === "delete" ? "se eliminará lógicamente" : "quedará inactiva"}. Las referencias históricas se conservarán.` : ""}
-        isPending={statusMutation.isPending || deleteMutation.isPending}
+        confirmLabel={confirmation?.action === "withdraw" ? "Retirar de la landing" : confirmation?.action === "delete" ? `Eliminar ${singular}` : `Desactivar ${singular}`}
+        description={confirmation?.action === "withdraw" ? `${confirmation.record.name} dejará de estar seleccionada en la landing. No se elimina ni cambia sus productos. ${editorial.categories.filter((category) => category.id !== confirmation.record.id && category.status === "ACTIVE").length < 2 ? "La configuración quedará incompleta: se recomiendan al menos dos categorías activas." : ""}` : confirmation ? `${confirmation.record.name} ${confirmation.action === "delete" ? "se eliminará lógicamente" : "quedará inactiva"}. Las referencias históricas se conservarán.` : ""}
+        isPending={statusMutation.isPending || deleteMutation.isPending || editorial.isPending}
         onCancel={() => setConfirmation(undefined)}
         onConfirm={confirmAction}
         open={Boolean(confirmation)}
-        title={confirmation?.action === "delete" ? `¿Eliminar esta ${singular}?` : `¿Desactivar esta ${singular}?`}
+        title={confirmation?.action === "withdraw" ? "¿Retirar esta categoría de la landing?" : confirmation?.action === "delete" ? `¿Eliminar esta ${singular}?` : `¿Desactivar esta ${singular}?`}
       />
     </main>
   );

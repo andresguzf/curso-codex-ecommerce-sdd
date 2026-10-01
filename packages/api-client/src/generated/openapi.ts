@@ -3352,6 +3352,8 @@ export interface operations {
                 search?: string;
                 pageSize?: number;
                 page?: number;
+                /** @description ADMIN view only; filter selected categories including inactive selections */
+                showOnLanding?: boolean;
             };
             header?: never;
             path?: never;

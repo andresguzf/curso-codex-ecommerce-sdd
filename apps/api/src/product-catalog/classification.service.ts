@@ -74,7 +74,7 @@ export class ClassificationService {
 
   private checkView(query: ClassificationQuery, actor?: AuthenticatedUser): void {
     if (query.view === "administrative") this.assertAdmin(actor);
-    else if (query.status) {
+    else if (query.status || query.showOnLanding !== undefined) {
       throw new BadRequestException({ code: "CLASSIFICATION_STATUS_FILTER_REQUIRES_ADMIN", message: "Status filtering requires the administrative view" });
     }
   }

@@ -2,6 +2,8 @@
 
 Verificación realizada el 1 de octubre de 2026. La tarea 21.3 desbloqueó esta integración mediante `GET /api/v1/catalog/landing`.
 
+Este documento conserva la evidencia histórica de 20.7. La tarea 21.7 amplió la presentación con destacados y categorías; consulta [la landing editorial actual](landing-editorial.md). La galería también se implementó posteriormente en 20.9.
+
 ## Comportamiento implementado
 
 - La portada consume una composición pública REST y presenta únicamente `latestProducts`: hasta nueve productos activos, en el orden descendente decidido por el backend y sin repetir los destacados de la composición.

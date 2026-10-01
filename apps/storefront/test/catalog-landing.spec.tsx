@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ActiveCart, CatalogLanding as LandingComposition, ProductListItem } from "@technology-ecommerce/api-schemas";
+import { catalogLandingSchema } from "@technology-ecommerce/api-schemas";
 import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -128,6 +129,21 @@ function renderCatalog() {
 }
 
 describe("storefront catalog landing", () => {
+  it("revalidates the editorial composition when returning focus from backoffice", async () => {
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([]));
+    const rendered = renderCatalog();
+    await screen.findByRole("heading", { name: "Todavía no hay novedades" });
+    focusManager.setFocused(false);
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([product({ id: "10184fd0-3dcb-47cf-af70-a8be4c765421", name: "Nueva selección", sku: "NEW", status: "ACTIVE", stockAvailable: 5 })]));
+    try {
+      focusManager.setFocused(true);
+      expect(await screen.findByRole("heading", { name: "Nueva selección" })).toBeInTheDocument();
+      expect(getCatalogLanding).toHaveBeenCalledTimes(2);
+    } finally {
+      rendered.unmount();
+      focusManager.setFocused(undefined);
+    }
+  });
   beforeEach(() => {
     vi.mocked(addCartItem).mockReset();
     vi.mocked(getCart).mockReset();
@@ -363,8 +379,9 @@ describe("storefront catalog landing", () => {
     renderCatalog();
     await screen.findByRole("heading", { name: "Reciente 0" });
     expect(screen.getAllByRole("heading", { name: /Reciente \d/ }).map((heading) => heading.textContent)).toEqual(items.map((item) => item.name));
-    expect(screen.queryByText("Destacado separado")).not.toBeInTheDocument();
-    expect(document.querySelectorAll('[data-slot="product-card"]')).toHaveLength(9);
+    expect(screen.getByRole("region", { name: "Productos destacados" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Destacado separado" })).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="landing-latest"] [data-slot="product-card"]')).toHaveLength(9);
     expect(screen.getByRole("searchbox", { name: "Buscar en el catálogo" })).toHaveValue("");
     expect(getCatalogLanding).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
@@ -378,6 +395,71 @@ describe("storefront catalog landing", () => {
     expect(await screen.findByRole("heading", { name: "Todavía no hay novedades" })).toBeInTheDocument();
     expect(screen.queryByText("Prueba con una búsqueda más amplia.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver todos los productos" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Productos destacados" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="landing-category"]')).toHaveLength(0);
+  });
+
+  it.each([1, 3])("renders %i editorial items per section in API order, allowing repetition only across category contexts", async (count) => {
+    const items = Array.from({ length: 12 }, (_, index) => product({
+      id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      name: `Equipo ${index}`, sku: `EQUIPO-${index}`, status: "ACTIVE", stockAvailable: 5,
+    }));
+    const featured = items.slice(0, count);
+    const latest = count === 3 ? items.slice(3, 12) : [items[3]!];
+    const categories = Array.from({ length: count }, (_, index) => ({
+      id: `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      name: `Categoría ${index}`, slug: `categoria-${index}`, status: "ACTIVE" as const,
+    }));
+    vi.mocked(getCatalogLanding).mockResolvedValue(catalogLandingSchema.parse({
+      featuredProducts: featured, latestProducts: latest,
+      highlightedCategories: categories.map((category) => ({ category, products: featured.map((item) => ({ ...item, category })) })),
+    }));
+    renderCatalog();
+    const highlighted = await screen.findByRole("region", { name: "Productos destacados" });
+    expect(within(highlighted).getAllByRole("heading", { name: /^Equipo/ }).map((heading) => heading.textContent)).toEqual(featured.map((item) => item.name));
+    const recent = screen.getByRole("region", { name: "Lo último en tecnología" });
+    expect(within(recent).getAllByRole("heading", { name: /^Equipo/ }).map((heading) => heading.textContent)).toEqual(latest.map((item) => item.name));
+    expect([...document.querySelectorAll('[data-slot^="landing-"]')].map((section) => section.getAttribute("data-slot")))
+      .toEqual(["landing-featured", "landing-latest", ...categories.map(() => "landing-category")]);
+    for (const category of categories) {
+      const section = screen.getByRole("region", { name: category.name });
+      expect(within(section).getAllByRole("heading", { name: /^Equipo/ })).toHaveLength(count);
+      expect(within(section).getByRole("link", { name: `Explorar ${category.name}` })).toHaveAttribute("href", `/products?page=1&categoryId=${category.id}`);
+    }
+    expect(getCatalogLanding).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /paginación/i })).not.toBeInTheDocument();
+  });
+
+  it("adds a featured product to the visitor cart using the existing purchase flow", async () => {
+    const item = product({ id: "62ac275e-bbf6-43ab-8885-e5588bd24c87", name: "Destacado comprable", sku: "FEATURED", status: "ACTIVE", stockAvailable: 4 });
+    vi.mocked(getCatalogLanding).mockResolvedValue(catalogLandingSchema.parse({ ...page([]), featuredProducts: [item] }));
+    vi.mocked(addCartItem).mockResolvedValue({ ...cart(item), customerId: null });
+    renderCatalog();
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Agregar Destacado comprable al carrito" }));
+    expect(addCartItem).toHaveBeenCalledWith(undefined, item.id, 1);
+    expect(navigation.push).toHaveBeenCalledWith("/cart");
+  });
+
+  it("removes retired editorial sections on refocus while retaining authoritative recent content", async () => {
+    const category = { id: "20000000-0000-4000-8000-000000000001", name: "Selección anterior", slug: "seleccion-anterior", status: "ACTIVE" };
+    const item = product({ id: "62ac275e-bbf6-43ab-8885-e5588bd24c87", name: "Producto anterior", sku: "OLD", status: "ACTIVE", stockAvailable: 4 });
+    vi.mocked(getCatalogLanding).mockResolvedValue(catalogLandingSchema.parse({
+      featuredProducts: [{ ...item, category }], latestProducts: [], highlightedCategories: [{ category, products: [{ ...item, category }] }],
+    }));
+    const rendered = renderCatalog();
+    await screen.findByRole("region", { name: "Selección anterior" });
+    focusManager.setFocused(false);
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([item]));
+    try {
+      focusManager.setFocused(true);
+      await waitFor(() => expect(screen.queryByRole("region", { name: "Selección anterior" })).not.toBeInTheDocument());
+      expect(screen.queryByRole("region", { name: "Productos destacados" })).not.toBeInTheDocument();
+      expect(within(screen.getByRole("region", { name: "Lo último en tecnología" })).getByRole("heading", { name: "Producto anterior" })).toBeInTheDocument();
+    } finally {
+      rendered.unmount();
+      focusManager.setFocused(undefined);
+    }
   });
 
   it("shows loading, safe errors and a working retry without changing the URL", async () => {

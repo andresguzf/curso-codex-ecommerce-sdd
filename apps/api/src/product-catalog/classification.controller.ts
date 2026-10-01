@@ -38,6 +38,11 @@ const categoryCreateSchema = z.object({
   description: z.string().trim().max(10_000).default(""),
   status: z.enum(CLASSIFICATION_STATUSES).default("ACTIVE"),
 }).strict();
+const categoryListSchema = listSchema.extend({
+  showOnLanding: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+}).refine((value) => value.showOnLanding === undefined || value.view === "administrative", {
+  message: "Editorial filtering requires the administrative view", path: ["showOnLanding"],
+});
 const categoryUpdateSchema = categoryCreateSchema.partial().extend({
   description: z.string().trim().max(10_000).optional(),
   status: z.enum(CLASSIFICATION_STATUSES).optional(),
@@ -122,6 +127,7 @@ export class CategoryController {
   @Get()
   @UseGuards(OptionalAuthenticationGuard)
   @ApiOperation({ operationId: "listCategories", summary: "List categories" })
+  @ApiQuery({ name: "showOnLanding", required: false, type: Boolean, description: "ADMIN view only; filter selected categories including inactive selections" })
   @ApiOkResponse({ type: CategoryPageDto })
   @ApiBadRequestResponse({ description: "Invalid query" })
   @ApiUnauthorizedResponse({ description: "Administrative view requires authentication" })
@@ -134,7 +140,7 @@ export class CategoryController {
   @ApiQuery({ name: "sortOrder", required: false, enum: ["asc", "desc"] })
   @ApiQuery({ name: "view", required: false, enum: ["public", "administrative"] })
   list(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<ClassificationPage<CategoryRecord>> {
-    return this.classifications.listCategories(parse(listSchema, query) as ClassificationQuery, request.authUser);
+    return this.classifications.listCategories(parse(categoryListSchema, query) as ClassificationQuery, request.authUser);
   }
 
   @Get(":categoryId")

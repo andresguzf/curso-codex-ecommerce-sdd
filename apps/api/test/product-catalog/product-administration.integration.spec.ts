@@ -343,6 +343,25 @@ describe("administrative product lifecycle", () => {
     expect((await patchCategory(configured[1]!.id, { showOnLanding: true })).statusCode).toBe(200);
   });
 
+  it("filters the bounded editorial selection before counting and paging, including inactive slots only for Admin", async () => {
+    const configured = await Promise.all([1, 2, 3, 4].map(() => editorialCategory()));
+    for (const category of configured.slice(0, 3)) expect((await patchCategory(category.id, { showOnLanding: true })).statusCode).toBe(200);
+    expect((await patchCategory(configured[0]!.id, { status: "INACTIVE" })).statusCode).toBe(200);
+    const url = "/api/v1/categories?view=administrative&showOnLanding=true&page=1&pageSize=3";
+    const response = await server.inject({ method: "GET", url, headers: authorization(tokens.admin) });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ page: 1, pageSize: 3, totalItems: 3, totalPages: 1 });
+    expect(response.json().items.map((item: { id: string }) => item.id).sort()).toEqual(configured.slice(0, 3).map((category) => category.id).sort());
+    expect(response.json().items.every((item: { showOnLanding: boolean }) => item.showOnLanding)).toBe(true);
+    const remaining = await server.inject({ method: "GET", url: url.replace("showOnLanding=true", "showOnLanding=false"), headers: authorization(tokens.admin) });
+    expect(remaining.json()).toMatchObject({ totalItems: 1, items: [{ id: configured[3]!.id }] });
+    for (const token of [tokens.customer, tokens.billing]) expect((await server.inject({ method: "GET", url, headers: authorization(token) })).statusCode).toBe(403);
+    expect((await server.inject({ method: "GET", url })).statusCode).toBe(401);
+    for (const invalid of ["/api/v1/categories?showOnLanding=true", url.replace("showOnLanding=true", "showOnLanding=invalid"), "/api/v1/tags?view=administrative&showOnLanding=true"]) {
+      expect((await server.inject({ method: "GET", url: invalid, headers: authorization(tokens.admin) })).statusCode).toBe(400);
+    }
+  });
+
   it("serializes competing fourth-category selections and atomically rolls back a failed audit", async () => {
     const configured = await Promise.all([1, 2, 3, 4].map(() => editorialCategory()));
     for (const category of configured.slice(0, 2)) expect((await patchCategory(category.id, { showOnLanding: true })).statusCode).toBe(200);

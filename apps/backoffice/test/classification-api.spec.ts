@@ -21,6 +21,21 @@ const tag = {
 };
 
 describe("classification REST client", () => {
+  it("requests at most three editorial selections and sends only a position or selection flag", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ items: [{ ...category, showOnLanding: true, landingOrder: 1 }], page: 1, pageSize: 3, totalItems: 1, totalPages: 1 }))
+      .mockResolvedValueOnce(Response.json({ ...category, showOnLanding: true, landingOrder: 2 }))
+      .mockResolvedValueOnce(Response.json({ ...category, showOnLanding: false, landingOrder: null }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = await import("../src/features/classifications/classification-api");
+    await api.listClassifications("categories", "admin-token", { showOnLanding: true, page: 1, pageSize: 3, sortBy: "name", sortOrder: "asc" });
+    await api.updateClassification("categories", "admin-token", category.id, { landingOrder: 2 });
+    await api.updateClassification("categories", "admin-token", category.id, { showOnLanding: false });
+    const requests = fetchMock.mock.calls.map(([request]) => request as Request);
+    expect(new URL(requests[0]!.url).searchParams.get("showOnLanding")).toBe("true");
+    expect(await requests[1]!.json()).toEqual({ landingOrder: 2 });
+    expect(await requests[2]!.json()).toEqual({ showOnLanding: false });
+  });
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();

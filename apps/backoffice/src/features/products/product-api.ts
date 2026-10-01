@@ -27,6 +27,7 @@ export class ProductApiError extends Error {
 
 function productErrorMessage(status: number, code?: string): string {
   const messages: Record<string, string> = {
+    PRODUCT_FEATURED_REQUIRES_ACTIVE: "Activa el producto antes de destacarlo.",
     PRODUCT_CATEGORY_REQUIRED: "Selecciona una categoría para activar el producto.",
     PRODUCT_CLASSIFICATION_UNAVAILABLE: "La categoría o una etiqueta seleccionada ya no está activa.",
     PRODUCT_SLUG_ALREADY_EXISTS: "Ese slug de producto ya está en uso.",

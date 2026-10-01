@@ -2,14 +2,14 @@
 
 Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado revisado en la tarea 20.10, el 1 de octubre de 2026:
+Estado revisado en la tarea 21.8, el 1 de octubre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
 - Existen propuesta, diseño, siete especificaciones y 145 tareas verificables.
 - Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
-- Fases 19 y 20 completadas, además de 21.1–21.3: temas, dashboard, seed ampliado, imágenes, contratos de portada/galería, recientes y catálogo separado, galería accesible y API editorial. El plan tiene 140/145 tareas completadas; quedan 21.4–21.8. La siguiente tarea es 21.4; no la inicies sin una nueva petición del usuario.
-- La revisión 18.5 está registrada en `e2e/VALIDATION-18.5.md` como evidencia histórica. Los informes `e2e/ACCESSIBILITY.md` y `e2e/VALIDATION-18.3.md` no acreditan capacidades posteriores. La fase 19 tiene evidencia en los documentos de dashboard y temas; la fase 20 en `e2e/VALIDATION-20.10.md`, `docs/landing-latest-products.md` y `docs/product-gallery.md`. No confundas planificación con implementación: la galería existe, pero las secciones visuales de destacados/categorías importantes y sus controles administrativos siguen pendientes.
+- Fases 1–21 completadas: 145/145 tareas, incluidos controles editoriales administrativos, seed determinista y landing completa. No quedan tareas pendientes en este cambio activo, que todavía no está archivado. No infieras autorización para archivar, ejecutar el seed local, hacer commit/push o ampliar alcance.
+- La revisión 18.5 y los informes de fases 18–20 son evidencia histórica. La consolidación final está en `e2e/VALIDATION-21.8.md`; los controles y la composición editorial se documentan en `docs/backoffice-featured-products.md`, `docs/backoffice-landing-categories.md` y `docs/landing-editorial.md`. Las pruebas automatizadas no equivalen a certificación de producción ni a auditoría manual completa de accesibilidad.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
 ## Sources of truth
@@ -120,7 +120,7 @@ frontend    -x-> entidades internas del backend
 
 ## UI shells and implemented visual systems
 
-Los shells separados y cuatro temas están implementados. El storefront conserva su navbar azul oscuro fijo y translúcido al desplazar y su identidad comercial; el backoffice mantiene una identidad slate/navy/azul empresarial. `ADMIN` y `BILLING` pueden elegir claro u oscuro. La galería manual está implementada; la landing muestra nueve recientes, no todavía las secciones visuales de destacados/categorías de 21.7.
+Los shells separados y cuatro temas están implementados. El storefront conserva su navbar azul oscuro fijo y translúcido al desplazar y su identidad comercial; el backoffice mantiene una identidad slate/navy/azul empresarial. `ADMIN` y `BILLING` pueden elegir claro u oscuro. La galería manual y la landing editorial están implementadas: destacados, recientes deduplicados y categorías importantes ordenadas, sin filtros ni paginador en inicio.
 
 ```text
 StorefrontShell
@@ -158,11 +158,11 @@ BackofficeShell
 - El selector está fijo abajo a la derecha, tiene nombre accesible, `aria-pressed` y soporte de teclado. Las regiones `data-tone-region="inverse"` conservan franjas oscuras; formularios anidados usan `data-tone-region="surface"`.
 - Ejecuta `pnpm test:e2e:themes`, `pnpm test:e2e:design-tokens` y `pnpm test:e2e:frontends --workers=2` ante cambios visuales. La fase 19.8 verificó 57 pruebas de frontend, siete de tokens y 16 referencias de las cuatro combinaciones a 375/1440 px; esto no equivale a una auditoría manual completa de accesibilidad.
 - Las referencias PNG actuales son Chromium/macOS. En otra plataforma crea referencias propias revisadas; no actualices snapshots automáticamente para ocultar regresiones. Consulta `docs/theme-regression-testing.md` y el catálogo `docs/design-system.html`.
-- No hay gráficos de analítica implementados. Los nuevos componentes deben conservar los cuatro temas y no presentar métricas ficticias. La galería está implementada; la composición editorial visual completa requiere 21.7.
+- No hay gráficos de analítica implementados. Los nuevos componentes deben conservar los cuatro temas y no presentar métricas ficticias. Galería y composición editorial completa están implementadas; conserva su cobertura ante cambios posteriores.
 
 # Technology conventions
 
-Temas, dashboard, imágenes múltiples, seed y galería están implementados. El API editorial también existe; sus controles administrativos, seed editorial y composición visual completa siguen pendientes en 21.4–21.8.
+Temas, dashboard, imágenes múltiples, seed, galería, API editorial, controles administrativos y composición visual completa están implementados y verificados en 21.8.
 
 ## Monorepo
 
@@ -329,7 +329,7 @@ Los access tokens viajan como Bearer y se conservan solo en memoria. La cookie d
 
 ## Products and catalog
 
-- `GET /api/v1/catalog/landing`: composición pública fija de destacados, recientes deduplicados y categorías importantes; límites 3/9/3, sin parámetros de filtros/paginación ni campos editoriales administrativos. La UI actual consume únicamente `latestProducts`.
+- `GET /api/v1/catalog/landing`: composición pública fija de destacados, recientes deduplicados y categorías importantes; límites 3/9/3, sin parámetros de filtros/paginación ni campos editoriales administrativos. La UI consume las tres secciones en ese orden mediante una sola consulta.
 - `GET /api/v1/products`: catálogo, listado administrativo o autocomplete autorizado con `page`, `pageSize`, `search`, categoría, etiquetas, disponibilidad, precio, filtros y orden.
 - `POST /api/v1/products`: creación por `ADMIN`.
 - `GET /api/v1/products/:productId`: detalle autorizado.
@@ -343,7 +343,7 @@ Los access tokens viajan como Bearer y se conservan solo en memoria. La cookie d
 
 El contrato conserva `image` por compatibilidad, devuelve `coverImage` en listados y agrega `images` ordenadas en detalle. Las tarjetas presentan únicamente la portada; `ProductGallery` consume la colección del detalle, empieza en la portada y nunca modifica la portada persistida al navegar. No inventes rutas paralelas a `/products/slug/:slug`. Los filtros administrativos incluyen precio, categoría, etiquetas y `createdFrom`/`createdTo` como fechas ISO `YYYY-MM-DD`; los rangos de órdenes/facturas usan fecha-hora ISO. El formulario permite crear/asignar etiquetas por nombre y slug opcional; las categorías se administran aparte y se seleccionan.
 
-Implementado en 21.1–21.2: `PATCH /products/:productId` admite `isFeatured` y el servidor calcula `featuredAt`; `PATCH /categories/:categoryId` admite `showOnLanding` y `landingOrder`, rechazando una cuarta categoría importante. Ambas mutaciones requieren `ADMIN` y auditoría. No envíes `featuredAt` como entrada editable. Los controles de backoffice siguen pendientes de 21.4/21.5.
+Implementado en 21.1–21.5: `PATCH /products/:productId` admite `isFeatured` y el servidor calcula `featuredAt`; `PATCH /categories/:categoryId` admite `showOnLanding` y `landingOrder`, rechazando una cuarta categoría importante. Ambas mutaciones requieren `ADMIN` y auditoría. No envíes `featuredAt` como entrada editable. El backoffice ofrece estrellas en listado/formulario, selección de categorías, arrastre y controles alternativos de teclado; confirma las retiradas, advierte configuraciones incompletas e invalida consultas tras mutaciones exitosas. `GET /categories?showOnLanding=true|false` es administrativo; el panel consulta una página de tres seleccionadas, incluidas inactivas, sin descargar todas las categorías.
 
 ## Categories and tags
 
@@ -466,9 +466,9 @@ Antes de introducir o cambiar rutas, confirma si el contrato OpenAPI ya existe. 
 
 # Catalog and pagination behavior
 
-El seed ejecutable administra 20 SKU demo (18 activos, 2 inactivos), 60 imágenes, cuatro categorías, dos etiquetas, inventario de apertura, cuentas `ADMIN`/`BILLING`/`CUSTOMER` y perfil empresarial ficticio. Requiere `NODE_ENV=development|test`, `DATABASE_URL` no productiva y emails/contraseñas privadas configuradas; rechaza producción y no se ejecuta automáticamente. No elimina registros ajenos para forzar veinte registros globales ni repone stock consumido; conserva IDs y perfil editado. Véanse `docs/development-catalog-seed.md` y `docs/development-user-seed.md`. La configuración editorial del seed sigue pendiente de 21.6.
+El seed administra 20 SKU demo (18 activos: 3 destacados y 15 adicionales; 2 inactivos), 60 imágenes, cuatro categorías, dos etiquetas, inventario de apertura, cuentas `ADMIN`/`BILLING`/`CUSTOMER` y perfil ficticio. Configura laptops, monitores y teléfonos como categorías importantes con posiciones y fechas deterministas. Requiere `NODE_ENV=development|test`, `DATABASE_URL` no productiva y credenciales privadas; rechaza producción y no se ejecuta automáticamente. Conserva datos ajenos, IDs, perfil editado y stock consumido; restablece solo su selección editorial demo y aborta atómicamente ante posiciones ocupadas por categorías ajenas. Véanse `docs/development-catalog-seed.md` y `docs/development-user-seed.md`. La validación usa bases aisladas, no puebla la base local de demostración.
 
-Cada producto implementado incluye ID, SKU, slug, nombre, descripción, precio y moneda fija `USD`, `image`, `coverImage`, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada; el detalle incluye `images` ordenadas. Dashboard, cuatro temas, galería y recientes están implementados; la landing editorial visual completa sigue pendiente. Una futura multimoneda deberá configurarse globalmente mediante un cambio OpenSpec explícito, nunca por producto.
+Cada producto implementado incluye ID, SKU, slug, nombre, descripción, precio y moneda fija `USD`, `image`, `coverImage`, categoría principal, etiquetas, fechas, estado y disponibilidad proyectada; el detalle incluye `images` ordenadas. Dashboard, cuatro temas, galería y landing editorial completa están implementados. Una futura multimoneda deberá configurarse globalmente mediante un cambio OpenSpec explícito, nunca por producto.
 
 - El storefront solo muestra productos activos.
 - Un producto agotado puede mostrarse, pero no agregarse al carrito.
@@ -485,7 +485,7 @@ Cada producto implementado incluye ID, SKU, slug, nombre, descripción, precio y
 - La landing y el catálogo mantienen un look and feel comercial sin patrones visuales propios de administración.
 - El backoffice abre en un dashboard minimalista con indicadores y accesos permitidos por rol.
 - Todos los componentes, incluidos gráficos y estados interactivos, soportan las cuatro combinaciones visuales.
-- El API de landing devuelve una única respuesta agregada: hasta 3 destacados por `featuredAt`, hasta 9 recientes por `createdAt` excluyendo destacados y hasta 3 categorías por `landingOrder`. La UI actual solo muestra recientes; presentar destacados/categorías es 21.7. La respuesta admite configuración parcial o vacía.
+- El API de landing devuelve una única respuesta agregada: hasta 3 destacados por `featuredAt`, hasta 9 recientes por `createdAt` excluyendo destacados y hasta 3 categorías por `landingOrder`. La UI presenta las tres secciones en ese orden y admite configuración parcial o vacía; nunca reconstruye la selección desde consultas al catálogo completo.
 - Cada categoría importante muestra hasta 3 productos activos recientes; puede repetir productos anteriores por su contexto editorial.
 - Una categoría vacía o inactiva se omite sin modificar el orden persistido de las restantes.
 - “Ver todos los productos” navega al catálogo completo, donde búsqueda, filtros, orden y página viven en la URL.
@@ -493,7 +493,7 @@ Cada producto implementado incluye ID, SKU, slug, nombre, descripción, precio y
 - El seed incluye exactamente 20 productos, mínimo 3 imágenes por producto, categorías, etiquetas, precios y movimientos de inventario de apertura.
 - Las imágenes seed pueden usar temporalmente IDs fijos de Lorem Picsum revisados visualmente solo en desarrollo y pruebas; conserva asociaciones deterministas y futuras claves de Cloudinary, y reemplaza los hotlinks por assets gestionados antes de producción.
 - El seed incluye usuarios `ADMIN` y `CUSTOMER` no productivos, hashea contraseñas, no registra credenciales y rechaza producción.
-- Pendiente 21.6: el seed marcará 3 productos activos como destacados y 3 categorías activas como importantes con orden determinista. No asumas que el seed actual produce esas secciones.
+- El seed marca 3 productos activos como destacados y 3 categorías activas como importantes con orden determinista; las pruebas de idempotencia verifican composición completa, conservación de datos ajenos y rechazo de producción.
 
 # Transactional flows
 

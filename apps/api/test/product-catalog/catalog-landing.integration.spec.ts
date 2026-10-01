@@ -130,6 +130,57 @@ describe("fixed public landing composition", () => {
     expect(response.headers["set-cookie"]).toBeUndefined();
   });
 
+  it("denies non-admin editorial writes without changing the public composition or persistence", async () => {
+    const rows = await fixture(18, false);
+    const before = bodyOf(await getLanding());
+    const beforeProducts = await database.select().from(products).orderBy(products.id);
+    const beforeCategories = await database.select().from(categories).orderBy(categories.id);
+    for (const token of [undefined, tokens[1], tokens[2]]) {
+      const headers = token ? { authorization: `Bearer ${token}` } : {};
+      const expected = token ? 403 : 401;
+      for (const command of [
+        { url: `/api/v1/products/${productId(0)}`, payload: { isFeatured: true } },
+        { url: `/api/v1/categories/${rows[0]!.id}`, payload: { showOnLanding: true } },
+        { url: `/api/v1/categories/${rows[0]!.id}`, payload: { landingOrder: 1 } },
+      ]) {
+        const response = await server.inject({ method: "PATCH", headers, ...command });
+        expect(response.statusCode).toBe(expected);
+      }
+    }
+    expect(bodyOf(await getLanding())).toEqual(before);
+    expect(await database.select().from(products).orderBy(products.id)).toEqual(beforeProducts);
+    expect(await database.select().from(categories).orderBy(categories.id)).toEqual(beforeCategories);
+  });
+
+  it("reflects the administrative REST lifecycle in the public contract without changing inventory", async () => {
+    const rows = await fixture(18, false);
+    const beforeBalances = await database.select().from(inventoryBalances).orderBy(inventoryBalances.productId);
+    const patch = (url: string, payload: Record<string, unknown>) => server.inject({ method: "PATCH", url, payload, headers: { authorization: `Bearer ${tokens[0]}` } });
+    for (const index of [0, 1, 2]) expect((await patch(`/api/v1/products/${productId(index)}`, { isFeatured: true })).statusCode).toBe(200);
+    for (const index of [2, 0, 1]) expect((await patch(`/api/v1/categories/${rows[index]!.id}`, { showOnLanding: true })).statusCode).toBe(200);
+    const complete = bodyOf(await getLanding());
+    expect(new Set(complete.featuredProducts.map((row) => row.id))).toEqual(new Set([0, 1, 2].map(productId)));
+    expect(complete.latestProducts).toHaveLength(9);
+    expect(complete.latestProducts.some((row) => complete.featuredProducts.some((featured) => featured.id === row.id))).toBe(false);
+    expect(complete.highlightedCategories.map((section) => section.category.id)).toEqual([rows[2]!.id, rows[0]!.id, rows[1]!.id]);
+    const [extra] = await database.insert(categories).values({ name: "Fourth", slug: "fourth" }).returning();
+    expect((await patch(`/api/v1/categories/${extra!.id}`, { showOnLanding: true })).statusCode).toBe(409);
+    expect(bodyOf(await getLanding())).toEqual(complete);
+    expect((await patch(`/api/v1/categories/${rows[2]!.id}`, { landingOrder: 3 })).statusCode).toBe(200);
+    expect(bodyOf(await getLanding()).highlightedCategories.map((section) => section.category.id)).toEqual([rows[1]!.id, rows[0]!.id, rows[2]!.id]);
+    expect((await patch(`/api/v1/products/${productId(2)}/status`, { status: "INACTIVE" })).statusCode).toBe(200);
+    expect((await patch(`/api/v1/categories/${rows[0]!.id}`, { status: "INACTIVE" })).statusCode).toBe(200);
+    const partial = bodyOf(await getLanding());
+    expect(partial.featuredProducts.map((row) => row.id)).not.toContain(productId(2));
+    expect(partial.latestProducts.map((row) => row.id)).not.toContain(productId(2));
+    expect(partial.highlightedCategories.map((section) => section.category.id)).toEqual([rows[1]!.id, rows[2]!.id]);
+    expect((await patch(`/api/v1/products/${productId(0)}`, { isFeatured: false })).statusCode).toBe(200);
+    expect((await patch(`/api/v1/categories/${rows[1]!.id}`, { showOnLanding: false })).statusCode).toBe(200);
+    expect(bodyOf(await getLanding()).featuredProducts.map((row) => row.id)).toEqual([productId(1)]);
+    expect(bodyOf(await getLanding()).highlightedCategories.map((section) => section.category.id)).toEqual([rows[2]!.id]);
+    expect(await database.select().from(inventoryBalances).orderBy(inventoryBalances.productId)).toEqual(beforeBalances);
+  });
+
   it("applies SQL limits, deterministic date/ID ordering, deduplication and category repetition", async () => {
     const categoryRows = await fixture();
     const body = bodyOf(await getLanding());
