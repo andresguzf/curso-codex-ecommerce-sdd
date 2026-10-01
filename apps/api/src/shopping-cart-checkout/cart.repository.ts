@@ -549,7 +549,7 @@ export class CartRepository {
       })
       .from(cartItems)
       .innerJoin(products, eq(products.id, cartItems.productId))
-      .leftJoin(productImages, eq(productImages.productId, products.id))
+      .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
       .leftJoin(
         inventoryBalances,
         eq(inventoryBalances.productId, products.id),

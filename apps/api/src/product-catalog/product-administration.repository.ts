@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import {
   and,
   asc,
@@ -8,10 +8,12 @@ import {
   gte,
   inArray,
   isNull,
+  notInArray,
   lt,
   lte,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 
 import { createAuditEntry } from "../audit-observability/audit-entry";
@@ -28,6 +30,7 @@ import {
 } from "../database/schema";
 import type {
   AdministrativeProduct,
+  CatalogImage,
   CreateAdministrativeProduct,
   ProductListItem,
   ProductListQuery,
@@ -39,6 +42,7 @@ import type {
 } from "./product-administration.types";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
 import { normalizeSlug, slugCandidate } from "./slug";
+import type { CatalogLanding } from "./catalog-landing.types";
 
 const productSelection = {
   id: products.id,
@@ -50,11 +54,20 @@ const productSelection = {
   price: products.price,
   currency: products.currency,
   status: products.status,
+  isFeatured: products.isFeatured,
+  featuredAt: products.featuredAt,
   createdAt: products.createdAt,
   updatedAt: products.updatedAt,
   deletedAt: products.deletedAt,
   imageStorageKey: productImages.storageKey,
   imageUrl: productImages.url,
+  imageId: productImages.id,
+  imageAltText: productImages.altText,
+  imageIsPrimary: productImages.isPrimary,
+  imageSortOrder: productImages.sortOrder,
+  imageWidth: productImages.width,
+  imageHeight: productImages.height,
+  imageMimeType: productImages.mimeType,
 };
 
 const stockAvailableExpression = sql<number>`coalesce(${inventoryBalances.availableQuantity}, 0)`.mapWith(Number);
@@ -73,11 +86,20 @@ type ProductSelectionRow = Readonly<{
   price: string;
   currency: string;
   status: ProductStatus;
+  isFeatured: boolean;
+  featuredAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
-  imageStorageKey: string;
-  imageUrl: string;
+  imageStorageKey: string | null;
+  imageUrl: string | null;
+  imageId: string | null;
+  imageAltText: string | null;
+  imageIsPrimary: boolean | null;
+  imageSortOrder: number | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  imageMimeType: string | null;
 }>;
 
 export class ProductCategoryRequiredError extends Error {}
@@ -97,9 +119,44 @@ export class ProductAdministrationRepository {
     @Inject(DatabaseService) private readonly database: DatabaseService,
   ) {}
 
+  async readLandingComposition(): Promise<CatalogLanding> {
+    // SQL limits are applied before hydration. Every section, cover, stock and
+    // classification is read through the same read-only MVCC snapshot.
+    return this.database.client.transaction(async (transaction) => {
+      const readProducts = (limit: number, extra: SQL[], featured = false) => transaction
+        .select(productListSelection).from(products)
+        .innerJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
+        .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
+        .where(and(eq(products.status, "ACTIVE"), isNull(products.deletedAt), ...extra))
+        .orderBy(desc(featured ? products.featuredAt : products.createdAt), desc(products.id))
+        .limit(limit);
+
+      const featuredRows = await readProducts(3, [eq(products.isFeatured, true)], true);
+      const featuredIds = featuredRows.map((row) => row.id);
+      const latestRows = await readProducts(9, featuredIds.length ? [notInArray(products.id, featuredIds)] : []);
+      const selectedCategories = await transaction.select({ id: categories.id, name: categories.name, slug: categories.slug, status: categories.status })
+        .from(categories).where(and(eq(categories.showOnLanding, true), eq(categories.status, "ACTIVE"), isNull(categories.deletedAt)))
+        .orderBy(asc(categories.landingOrder), asc(categories.id)).limit(3);
+      const categorySections = [];
+      for (const category of selectedCategories) {
+        const rows = await readProducts(3, [eq(products.categoryId, category.id)]);
+        if (rows.length) categorySections.push({ category, rows });
+      }
+      const ids = [...new Set([...featuredRows, ...latestRows, ...categorySections.flatMap((section) => section.rows)].map((row) => row.id))];
+      const classifications = await this.loadClassifications(ids, transaction, true);
+      const project = (row: (typeof latestRows)[number]) => this.toListItem(row, classifications.get(row.id));
+      return {
+        featuredProducts: featuredRows.map(project),
+        latestProducts: latestRows.map(project),
+        highlightedCategories: categorySections.map(({ category, rows }) => ({ category, products: rows.map(project) })),
+      };
+    }, { isolationLevel: "repeatable read", accessMode: "read only" });
+  }
+
   async list(query: ProductListQuery): Promise<ProductPage> {
     const conditions = [isNull(products.deletedAt)];
 
+    if (query.view === "public") conditions.push(sql`${productImages.id} is not null`);
     if (query.search) {
       const pattern = `%${this.escapeLikePattern(query.search)}%`;
       conditions.push(
@@ -147,7 +204,7 @@ export class ProductAdministrationRepository {
     const [{ totalItems = 0 } = {}] = await this.database.client
       .select({ totalItems: count() })
       .from(products)
-      .innerJoin(productImages, eq(productImages.productId, products.id))
+        .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
       .leftJoin(
         inventoryBalances,
         eq(inventoryBalances.productId, products.id),
@@ -156,7 +213,7 @@ export class ProductAdministrationRepository {
     const rows = await this.database.client
       .select(productListSelection)
       .from(products)
-      .innerJoin(productImages, eq(productImages.productId, products.id))
+        .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
       .leftJoin(
         inventoryBalances,
         eq(inventoryBalances.productId, products.id),
@@ -168,7 +225,9 @@ export class ProductAdministrationRepository {
 
     const classifications = await this.loadClassifications(rows.map((row) => row.id));
     return {
-      items: rows.map((row) => this.toListItem(row, classifications.get(row.id))),
+      items: rows.map((row) => ({ ...this.toListItem(row, classifications.get(row.id)),
+        ...(query.view === "administrative" ? { isFeatured: row.isFeatured, featuredAt: row.featuredAt } : {}),
+      })),
       page: query.page,
       pageSize: query.pageSize,
       totalItems,
@@ -180,7 +239,7 @@ export class ProductAdministrationRepository {
     const [row] = await this.database.client
       .select(productSelection)
       .from(products)
-      .innerJoin(productImages, eq(productImages.productId, products.id))
+        .innerJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
       .where(and(eq(products.id, productId), isNull(products.deletedAt)))
       .limit(1);
 
@@ -189,49 +248,35 @@ export class ProductAdministrationRepository {
     return this.toProduct(row, classifications.get(row.id));
   }
 
-  async findDetailById(
-    productId: string,
-    includeInactive: boolean,
-  ): Promise<ProductDetail | undefined> {
-    const conditions = [
-      eq(products.id, productId),
-      isNull(products.deletedAt),
-    ];
-    if (!includeInactive) conditions.push(eq(products.status, "ACTIVE"));
-
-    const [row] = await this.database.client
-      .select(productListSelection)
-      .from(products)
-      .innerJoin(productImages, eq(productImages.productId, products.id))
-      .leftJoin(
-        inventoryBalances,
-        eq(inventoryBalances.productId, products.id),
-      )
-      .where(and(...conditions))
-      .limit(1);
-
-    if (!row) return undefined;
-    const classifications = await this.loadClassifications([row.id]);
-    const product = this.toListItem(row, classifications.get(row.id));
-    return {
-      ...product,
-      availability:
-        product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK",
-    };
+  async findDetailById(productId: string, includeInactive: boolean): Promise<ProductDetail | undefined> {
+    return this.loadDetail(and(eq(products.id, productId), isNull(products.deletedAt),
+      ...(includeInactive ? [] : [eq(products.status, "ACTIVE"), sql`${productImages.id} is not null`]))!, includeInactive);
   }
 
   async findPublicDetailBySlug(slug: string): Promise<ProductDetail | undefined> {
-    const [row] = await this.database.client
-      .select(productListSelection)
-      .from(products)
-      .innerJoin(productImages, eq(productImages.productId, products.id))
-      .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
-      .where(and(eq(products.slug, slug), eq(products.status, "ACTIVE"), isNull(products.deletedAt)))
-      .limit(1);
-    if (!row) return undefined;
-    const classifications = await this.loadClassifications([row.id]);
-    const product = this.toListItem(row, classifications.get(row.id));
-    return { ...product, availability: product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK" };
+    return this.loadDetail(and(eq(products.slug, slug), eq(products.status, "ACTIVE"),
+      isNull(products.deletedAt), sql`${productImages.id} is not null`)!);
+  }
+
+  private async loadDetail(where: SQL, administrative = false): Promise<ProductDetail | undefined> {
+    // Cover, classifications and gallery must come from the same committed snapshot.
+    return this.database.client.transaction(async (transaction) => {
+      const [row] = await transaction.select(productListSelection).from(products)
+        .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
+        .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
+        .where(where).limit(1);
+      if (!row) return undefined;
+      const classifications = await this.loadClassifications([row.id], transaction);
+      const product = this.toListItem(row, classifications.get(row.id));
+      const images: CatalogImage[] = await transaction.select({
+        id: productImages.id, storageKey: productImages.storageKey, url: productImages.url,
+        altText: productImages.altText, isPrimary: productImages.isPrimary, sortOrder: productImages.sortOrder,
+        width: productImages.width, height: productImages.height, mimeType: productImages.mimeType,
+      }).from(productImages).where(eq(productImages.productId, row.id))
+        .orderBy(asc(productImages.sortOrder), asc(productImages.id));
+      return { ...product, images, ...(administrative ? { isFeatured: row.isFeatured, featuredAt: row.featuredAt } : {}),
+        availability: product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK" };
+    }, { isolationLevel: "repeatable read", accessMode: "read only" });
   }
 
   async create(
@@ -279,6 +324,7 @@ export class ProductAdministrationRepository {
 
       await transaction.insert(productImages).values({
         productId: product.id,
+        altText: product.name,
         storageKey: input.image.storageKey,
         url: input.image.url,
       });
@@ -316,11 +362,15 @@ export class ProductAdministrationRepository {
       const [currentRow] = await transaction
         .select(productSelection)
         .from(products)
-        .innerJoin(productImages, eq(productImages.productId, products.id))
+        .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
         .where(and(eq(products.id, productId), isNull(products.deletedAt)))
+        .for("update", { of: products })
         .limit(1);
 
       if (!currentRow) return undefined;
+      if (input.isFeatured === true && !currentRow.isFeatured && currentRow.status !== "ACTIVE") {
+        throw new BadRequestException({ code: "PRODUCT_FEATURED_REQUIRES_ACTIVE", message: "Only active products can be highlighted" });
+      }
       const before = await this.loadClassifications([productId], transaction);
       const current = this.toProduct(currentRow, before.get(productId));
       const replacingTags = input.tagIds !== undefined || input.tagNames !== undefined;
@@ -342,6 +392,10 @@ export class ProductAdministrationRepository {
           ...(input.sku === undefined ? {} : { sku: input.sku }),
           ...(input.slug === undefined ? {} : { slug: input.slug }),
           ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
+          ...(input.isFeatured === undefined ? {} : {
+            isFeatured: input.isFeatured,
+            featuredAt: input.isFeatured ? (currentRow.isFeatured ? currentRow.featuredAt : now) : null,
+          }),
           updatedAt: now,
         })
         .where(eq(products.id, productId))
@@ -355,10 +409,14 @@ export class ProductAdministrationRepository {
           .update(productImages)
           .set({
             storageKey: input.image.storageKey,
+            altText: updated.name,
+            width: null,
+            height: null,
+            mimeType: null,
             updatedAt: now,
             url: input.image.url,
           })
-          .where(eq(productImages.productId, productId))
+          .where(and(eq(productImages.productId, productId), eq(productImages.isPrimary, true)))
           .returning({
             storageKey: productImages.storageKey,
             url: productImages.url,
@@ -405,8 +463,9 @@ export class ProductAdministrationRepository {
       const [currentRow] = await transaction
         .select(productSelection)
         .from(products)
-        .innerJoin(productImages, eq(productImages.productId, products.id))
+        .innerJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
         .where(and(eq(products.id, productId), isNull(products.deletedAt)))
+        .for("update", { of: products })
         .limit(1);
       if (!currentRow) return undefined;
 
@@ -453,8 +512,9 @@ export class ProductAdministrationRepository {
       const [currentRow] = await transaction
         .select(productSelection)
         .from(products)
-        .innerJoin(productImages, eq(productImages.productId, products.id))
+        .innerJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
         .where(and(eq(products.id, productId), isNull(products.deletedAt)))
+        .for("update", { of: products })
         .limit(1);
       if (!currentRow) return false;
 
@@ -574,18 +634,19 @@ export class ProductAdministrationRepository {
   private async loadClassifications(
     productIds: string[],
     client: DatabaseTransaction | DatabaseService["client"] = this.database.client,
+    publicOnly = false,
   ): Promise<Map<string, Classifications>> {
     const result = new Map<string, Classifications>();
     if (!productIds.length) return result;
     const categoryRows = await client.select({ productId: products.id, id: categories.id, name: categories.name, slug: categories.slug, status: categories.status })
-      .from(products).leftJoin(categories, eq(products.categoryId, categories.id))
+      .from(products).leftJoin(categories, and(eq(products.categoryId, categories.id), ...(publicOnly ? [eq(categories.status, "ACTIVE"), isNull(categories.deletedAt)] : [])))
       .where(inArray(products.id, productIds));
     for (const row of categoryRows) {
       result.set(row.productId, { category: row.id && row.name && row.slug && row.status ? { id: row.id, name: row.name, slug: row.slug, status: row.status } : null, tags: [] });
     }
     const tagRows = await client.select({ productId: productTags.productId, id: tags.id, name: tags.name, slug: tags.slug, status: tags.status })
       .from(productTags).innerJoin(tags, eq(productTags.tagId, tags.id))
-      .where(inArray(productTags.productId, productIds))
+      .where(and(inArray(productTags.productId, productIds), ...(publicOnly ? [eq(tags.status, "ACTIVE"), isNull(tags.deletedAt)] : [])))
       .orderBy(asc(productTags.sortOrder), asc(tags.id));
     for (const row of tagRows) result.get(row.productId)?.tags.push({ id: row.id, name: row.name, slug: row.slug, status: row.status });
     return result;
@@ -602,8 +663,10 @@ export class ProductAdministrationRepository {
       description: row.description,
       price: row.price,
       currency: SYSTEM_CURRENCY,
-      image: { storageKey: row.imageStorageKey, url: row.imageUrl },
+      image: { storageKey: row.imageStorageKey ?? `products/${row.id}/placeholder`, url: row.imageUrl ?? "/images/product-placeholder.svg" },
       status: row.status,
+      isFeatured: row.isFeatured,
+      featuredAt: row.featuredAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       deletedAt: row.deletedAt,
@@ -628,6 +691,11 @@ export class ProductAdministrationRepository {
       image: product.image,
       status: product.status,
       stockAvailable: row.stockAvailable,
+      coverImage: row.imageId ? {
+        id: row.imageId, storageKey: row.imageStorageKey!, url: row.imageUrl!,
+        altText: row.imageAltText!, isPrimary: row.imageIsPrimary!, sortOrder: row.imageSortOrder!,
+        width: row.imageWidth, height: row.imageHeight, mimeType: row.imageMimeType,
+      } : null,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };
@@ -651,6 +719,8 @@ export class ProductAdministrationRepository {
       image: product.image,
       status: product.status,
       createdAt: product.createdAt.toISOString(),
+      isFeatured: product.isFeatured,
+      featuredAt: product.featuredAt?.toISOString() ?? null,
       updatedAt: product.updatedAt.toISOString(),
       deletedAt: product.deletedAt?.toISOString() ?? null,
     };

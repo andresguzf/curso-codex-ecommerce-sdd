@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -194,17 +195,14 @@ describe("invoice lifecycle persistence", () => {
       displayName: "Invoice billing",
       role: "BILLING",
     };
-    const [product] = await database
-      .insert(products)
-      .values({
+    const [product] = await insertProductFixtures(database, {
         sku: "INVOICE-LIFECYCLE-001",
         name: "Historical invoice product",
         description: "Original product description",
         price: "100.00",
         currency: "USD",
         status: "ACTIVE",
-      })
-      .returning({ id: products.id });
+      });
     if (!product) throw new Error("Expected PostgreSQL to return the product");
     productId = product.id;
   }, 30_000);

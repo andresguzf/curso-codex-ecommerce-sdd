@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -16,7 +17,7 @@ import { currentIssuerSnapshot } from "../../src/billing-invoicing/issuer-snapsh
 import { DocumentExportService } from "../../src/document-export/document-export.service";
 import { SimplePdfAdapter } from "../../src/document-export/simple-pdf.adapter";
 import type { DatabaseService } from "../../src/database/database.service";
-import { invoices, orders, payments, products, roleAssignments, storeLogoAssets, users } from "../../src/database/schema";
+import { invoices, orders, payments, roleAssignments, storeLogoAssets, users } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import type { AuthenticatedUser } from "../../src/identity-access/auth.types";
 import { CustomerOrdersService } from "../../src/order-management/customer-orders.service";
@@ -61,9 +62,9 @@ describe("historical issuer snapshots", () => {
     admin = { id: adminRow.id, email: adminRow.email, displayName: adminRow.displayName, role: "ADMIN" };
     customer = { id: customerRow.id, email: customerRow.email, displayName: customerRow.displayName, role: "CUSTOMER" };
     await database.insert(roleAssignments).values({ userId: customer.id, role: "CUSTOMER" });
-    const [product] = await database.insert(products).values({
+    const [product] = await insertProductFixtures(database, {
       sku: "ISSUER-TEST", name: "Teclado", description: "Teclado de prueba", price: "100.00", currency: "USD", status: "ACTIVE",
-    }).returning();
+    });
     if (!product) throw new Error("Product fixture missing");
     productId = product.id;
   }, 30_000);

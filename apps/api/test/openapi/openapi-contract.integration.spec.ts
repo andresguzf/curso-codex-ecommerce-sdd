@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -10,9 +11,11 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import type { FastifyInstance } from "fastify";
+import { Pool } from "pg";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AppModule } from "../../src/app.module";
+import { DatabaseService } from "../../src/database/database.service";
 import { configureApplication } from "../../src/application";
 import { manualInvoiceRequestSchema } from "../../src/billing-invoicing/manual-invoice.service";
 
@@ -179,8 +182,22 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
   let document: ContractDocument;
   let generatedClientSource: string;
   let server: FastifyInstance;
+  let maintenancePool: Pool | undefined;
+  let databaseCreated = false;
+  const originalDatabaseUrl = process.env.DATABASE_URL;
+  const databaseName = `ecommerce_contract_${randomUUID().replaceAll("-", "")}`;
+  if (!/^ecommerce_contract_[a-f0-9]{32}$/.test(databaseName)) throw new Error("Unsafe contract test database name");
 
   beforeAll(async () => {
+    if (!originalDatabaseUrl) throw new Error("DATABASE_URL is required for contract integration tests");
+    const maintenanceUrl = new URL(originalDatabaseUrl);
+    maintenanceUrl.pathname = "/postgres";
+    const isolatedUrl = new URL(originalDatabaseUrl);
+    isolatedUrl.pathname = `/${databaseName}`;
+    maintenancePool = new Pool({ connectionString: maintenanceUrl.toString(), max: 1 });
+    await maintenancePool.query(`create database "${databaseName}" template template0`);
+    databaseCreated = true;
+    process.env.DATABASE_URL = isolatedUrl.toString();
     [document, generatedClientSource] = await Promise.all([
       readFile(resolve("openapi/openapi.json"), "utf8").then(
         (contents) => JSON.parse(contents) as ContractDocument,
@@ -191,6 +208,7 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
       ),
     ]);
 
+    const { AppModule } = await import("../../src/app.module");
     app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
       new FastifyAdapter(),
@@ -198,13 +216,23 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
     );
     configureApplication(app);
     await app.init();
+    await migrate(app.get(DatabaseService).client, {
+      migrationsFolder: resolve("src/database/migrations"), migrationsSchema: "drizzle", migrationsTable: "__drizzle_migrations",
+    });
     server = app.getHttpAdapter().getInstance() as FastifyInstance;
     await server.ready();
-  });
+  }, 30_000);
 
   afterAll(async () => {
-    await app.close();
-  });
+    await app?.close();
+    if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = originalDatabaseUrl;
+    if (maintenancePool && databaseCreated) {
+      await maintenancePool.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()", [databaseName]);
+      await maintenancePool.query(`drop database "${databaseName}"`);
+    }
+    await maintenancePool?.end();
+  }, 30_000);
 
   it("contains every OpenAPI path and operation in the generated TypeScript client", () => {
     const operations = collectOperations(document);
@@ -269,6 +297,11 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
   );
 
   it.each<JsonResponseCase>([
+    {
+      method: "get",
+      path: "/api/v1/catalog/landing",
+      url: "/api/v1/catalog/landing",
+    },
     {
       method: "get",
       path: "/api/v1/health",

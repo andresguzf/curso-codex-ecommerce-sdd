@@ -38,12 +38,22 @@ vi.mock("@technology-ecommerce/api-client", async (importOriginal) => ({
   getActiveTags: vi.fn(),
 }));
 
+const fixtureCoverImage = {
+  ...{
+    storageKey: "development/products/keyboard/cover.webp",
+    url: "https://picsum.photos/id/96/1200/900.webp",
+  },
+  id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada de producto de ejemplo",
+  isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null,
+};
+
 const exampleProduct: ProductListItem = {
   category: null,
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   description: "Teclado mecánico para trabajo y juego.",
   id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
+  coverImage: fixtureCoverImage,
   image: {
     storageKey: "development/products/keyboard/cover.webp",
     url: "https://picsum.photos/id/96/1200/900.webp",

@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  boolean,
   index,
   integer,
   numeric,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -24,6 +26,8 @@ export const categories = pgTable(
     slug: varchar("slug", { length: 220 }).notNull(),
     description: text("description").notNull().default(""),
     status: classificationStatus("status").notNull().default("ACTIVE"),
+    showOnLanding: boolean("show_on_landing").notNull().default(false),
+    landingOrder: smallint("landing_order"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -32,6 +36,13 @@ export const categories = pgTable(
     uniqueIndex("categories_name_unique").on(sql`upper(${table.name})`),
     uniqueIndex("categories_slug_unique").on(table.slug),
     index("categories_status_name_idx").on(table.status, table.name),
+    uniqueIndex("categories_landing_order_unique")
+      .on(table.landingOrder)
+      .where(sql`${table.showOnLanding} = true`),
+    check("categories_landing_selection_consistent", sql`
+      (${table.showOnLanding} = true and ${table.landingOrder} is not null and ${table.landingOrder} between 1 and 3)
+      or (${table.showOnLanding} = false and ${table.landingOrder} is null)
+    `),
     check("categories_name_not_blank", sql`btrim(${table.name}) <> ''`),
     check("categories_slug_format", sql`${table.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     check("categories_deleted_status_consistent", sql`${table.deletedAt} is null or ${table.status} = 'INACTIVE'`),
@@ -71,6 +82,8 @@ export const products = pgTable(
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     status: productStatus("status").notNull().default("INACTIVE"),
+    isFeatured: boolean("is_featured").notNull().default(false),
+    featuredAt: timestamp("featured_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -85,6 +98,13 @@ export const products = pgTable(
     index("products_category_idx").on(table.categoryId),
     index("products_status_idx").on(table.status),
     index("products_created_at_idx").on(table.createdAt),
+    index("products_public_featured_idx")
+      .on(table.isFeatured, table.featuredAt.desc(), table.id.desc())
+      .where(sql`${table.status} = 'ACTIVE' and ${table.deletedAt} is null`),
+    index("products_public_recent_idx")
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.status} = 'ACTIVE' and ${table.deletedAt} is null`),
+    check("products_featured_timestamp_required", sql`${table.isFeatured} = false or ${table.featuredAt} is not null`),
     index("products_name_search_idx").using("gin", table.name.op("gin_trgm_ops")),
     index("products_description_search_idx").using("gin", table.description.op("gin_trgm_ops")),
     index("products_sku_search_idx").using("gin", table.sku.op("gin_trgm_ops")),
@@ -130,6 +150,12 @@ export const productImages = pgTable(
       .references(() => products.id, { onDelete: "cascade" }),
     storageKey: varchar("storage_key", { length: 512 }).notNull(),
     url: text("url").notNull(),
+    altText: text("alt_text").notNull().default("Imagen del producto"),
+    isPrimary: boolean("is_primary").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    width: integer("width"),
+    height: integer("height"),
+    mimeType: varchar("mime_type", { length: 100 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -138,13 +164,19 @@ export const productImages = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("product_images_product_unique").on(table.productId),
+    uniqueIndex("product_images_primary_unique").on(table.productId).where(sql`${table.isPrimary} = true`),
+    uniqueIndex("product_images_product_order_unique").on(table.productId, table.sortOrder),
     uniqueIndex("product_images_storage_key_unique").on(table.storageKey),
     check(
       "product_images_storage_key_not_blank",
       sql`btrim(${table.storageKey}) <> ''`,
     ),
     check("product_images_url_not_blank", sql`btrim(${table.url}) <> ''`),
+    check("product_images_alt_text_not_blank", sql`btrim(${table.altText}) <> ''`),
+    check("product_images_sort_order_non_negative", sql`${table.sortOrder} >= 0`),
+    check("product_images_width_positive", sql`${table.width} is null or ${table.width} > 0`),
+    check("product_images_height_positive", sql`${table.height} is null or ${table.height} > 0`),
+    check("product_images_mime_type_image", sql`${table.mimeType} is null or ${table.mimeType} ~ '^image/[a-z0-9.+-]+$'`),
   ],
 );
 

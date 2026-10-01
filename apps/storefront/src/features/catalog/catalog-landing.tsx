@@ -3,54 +3,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { ErrorState, LoadingState } from "@technology-ecommerce/ui";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { useAddToCart } from "../cart/use-add-to-cart";
-import { getPublicProducts } from "./catalog-api";
-import { CatalogFilters, type CatalogFilterValues } from "./catalog-filters";
+import { getCatalogLanding } from "./catalog-api";
 import { CatalogHero } from "./catalog-hero";
-import { CATALOG_LANDING_PAGE_SIZE, parseCatalogQuery } from "./catalog-query";
 import { ProductGrid } from "./product-grid";
 
 export function CatalogLanding() {
-  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
-  const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const query = parseCatalogQuery(searchParams);
   const productsQuery = useQuery({
-    queryFn: () => getPublicProducts(query, CATALOG_LANDING_PAGE_SIZE),
-    queryKey: ["catalog", "public", "landing", query],
+    queryFn: ({ signal }) => getCatalogLanding(signal),
+    queryKey: ["catalog", "public", "landing"],
   });
   const { addProduct, isAdding } = useAddToCart();
-
-  function navigateWith(updates: Record<string, string | undefined>) {
-    const nextParams = new URLSearchParams(searchParams.toString());
-
-    Object.entries(updates).forEach(([name, value]) => {
-      if (value === undefined || value === "") {
-        nextParams.delete(name);
-      } else {
-        nextParams.set(name, value);
-      }
-    });
-    nextParams.set("page", "1");
-
-    router.push(`${pathname}?${nextParams.toString()}`, { scroll: false });
-  }
-
-  function handleApplyFilters(values: CatalogFilterValues) {
-    navigateWith({
-      availability: values.availability,
-      categoryId: values.categoryId,
-      tagIds: values.tagIds?.join(","),
-      maxPrice: values.maxPrice,
-      minPrice: values.minPrice,
-      sortBy: values.sortBy,
-      sortOrder: values.sortOrder,
-    });
-  }
 
   function handleHeroSearch(search: string) {
     const params = new URLSearchParams({ page: "1" });
@@ -60,75 +26,50 @@ export function CatalogLanding() {
 
   return (
     <main className="min-h-screen bg-[var(--ds-canvas)]">
-      <CatalogHero
-        initialSearchValue={query.search ?? ""}
-        key={`hero-search:${query.search ?? ""}`}
-        onSearch={handleHeroSearch}
-      />
-      <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20" id="catalog">
-        <div className="mb-9 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <CatalogHero initialSearchValue="" onSearch={handleHeroSearch} />
+      <section aria-labelledby="catalog-title" className="mx-auto max-w-7xl px-6 py-14 lg:px-10 lg:py-20" id="catalog" data-slot="landing-latest">
+        <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Catálogo activo</p>
+            <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Novedades del catálogo</p>
             <h2 className="mb-0 mt-2 text-3xl font-black tracking-tight text-[var(--ds-text)] sm:text-4xl" id="catalog-title">
-              Equipos listos para elegir
+              Lo último en tecnología
             </h2>
+            <p className="mb-0 mt-3 text-sm text-[var(--ds-text-muted)]">Los equipos que acaban de llegar a la tienda.</p>
           </div>
-          {productsQuery.data ? (
-            <p className="m-0 text-sm font-semibold text-[var(--ds-text-muted)]">
-              {productsQuery.data.totalItems} productos encontrados
-            </p>
-          ) : null}
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--ds-accent)] px-5 py-2 text-sm font-black text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2"
+            className="inline-flex min-h-11 items-center justify-center gap-3 rounded-xl bg-[var(--ds-accent)] px-5 py-2 text-sm font-black text-[var(--ds-accent-text)] transition hover:bg-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2"
             href="/products"
           >
             Ver todos los productos
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
-
-        <div
-          className={filtersCollapsed
-            ? "grid gap-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-8"
-            : "grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[18rem_minmax(0,1fr)]"}
-          data-filters-collapsed={filtersCollapsed}
-        >
-          <CatalogFilters
-            collapsed={filtersCollapsed}
-            key={`filters:${query.categoryId ?? "all"}:${query.tagIds?.join(",") ?? ""}:${query.availability ?? "all"}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.sortBy}:${query.sortOrder}`}
-            onApply={handleApplyFilters}
-            onClear={() => navigateWith({
-              availability: undefined,
-              categoryId: undefined,
-              tagIds: undefined,
-              maxPrice: undefined,
-              minPrice: undefined,
-              sortBy: undefined,
-              sortOrder: undefined,
-            })}
-            onCollapsedChange={setFiltersCollapsed}
-            query={query}
-          />
-
-          <div className="min-w-0" id="catalog-results">
-            {productsQuery.isPending ? <LoadingState message="Cargando productos disponibles…" /> : null}
-            {productsQuery.isError ? (
-              <ErrorState
-                action={(
-                  <button className="min-h-11 rounded-lg bg-[var(--ds-accent)] px-4 py-2 text-sm font-bold text-[var(--ds-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
-                    Intentar nuevamente
-                  </button>
-                )}
-                message="Comprueba que la API esté disponible y vuelve a intentarlo."
-              />
-            ) : null}
-            {productsQuery.data ? (
+        <div className="min-w-0" id="catalog-results" aria-busy={productsQuery.isPending}>
+          {productsQuery.isPending ? <LoadingState message="Cargando novedades…" /> : null}
+          {productsQuery.isError ? (
+            <ErrorState
+              action={(
+                <button className="min-h-11 rounded-lg bg-[var(--ds-accent)] px-4 py-2 text-sm font-bold text-[var(--ds-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => void productsQuery.refetch()} type="button">
+                  Intentar nuevamente
+                </button>
+              )}
+              message="No pudimos cargar las novedades. Inténtalo nuevamente o explora todos los productos."
+            />
+          ) : null}
+          {productsQuery.data && !productsQuery.isError ? (
+            productsQuery.data.latestProducts.length ? (
               <ProductGrid
                 isAdding={isAdding}
                 onAddToCart={(product) => void addProduct(product)}
-                products={productsQuery.data.items}
+                products={productsQuery.data.latestProducts}
               />
-            ) : null}
-          </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--ds-border)] bg-[var(--ds-surface)] px-6 py-14 text-center">
+                <h3 className="m-0 text-xl font-black text-[var(--ds-text)]">Todavía no hay novedades</h3>
+                <p className="mb-0 mt-2 text-sm text-[var(--ds-text-muted)]">Puedes explorar el catálogo completo desde “Ver todos los productos”.</p>
+              </div>
+            )
+          ) : null}
         </div>
       </section>
     </main>

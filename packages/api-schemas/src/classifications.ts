@@ -14,7 +14,9 @@ const baseRecordSchema = z.object({
   deletedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
-export const categorySchema = baseRecordSchema.extend({ description: z.string() });
+export const categorySchema = baseRecordSchema.extend({ description: z.string(),
+  showOnLanding: z.boolean().optional(), landingOrder: z.number().int().min(1).max(3).nullable().optional(),
+});
 export const tagSchema = baseRecordSchema;
 export const categoryPageSchema = paginationMetadataSchema.extend({ items: z.array(categorySchema) });
 export const tagPageSchema = paginationMetadataSchema.extend({ items: z.array(tagSchema) });
@@ -38,6 +40,7 @@ export const createCategoryRequestSchema = z.object({
   status: classificationStatusSchema.optional(),
 }).strict();
 export const updateCategoryRequestSchema = createCategoryRequestSchema.partial()
+  .extend({ showOnLanding: z.boolean().optional(), landingOrder: z.number().int().min(1).max(3).nullable().optional() })
   .refine((value) => Object.keys(value).length > 0);
 export const createTagRequestSchema = z.object({
   name: classificationNameSchema.max(120),

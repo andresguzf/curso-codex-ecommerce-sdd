@@ -15,6 +15,8 @@ export type ClassificationQuery = Readonly<{
 }>;
 
 export type ClassificationRecord = Readonly<{
+  showOnLanding?: boolean;
+  landingOrder?: number | null;
   id: string;
   name: string;
   slug: string;
@@ -41,4 +43,4 @@ export type ClassificationInput = Readonly<{
   description?: string;
   status?: ClassificationStatus;
 }>;
-export type ClassificationPatch = Readonly<Partial<ClassificationInput>>;
+export type ClassificationPatch = Readonly<Partial<ClassificationInput> & { showOnLanding?: boolean; landingOrder?: number | null }>;

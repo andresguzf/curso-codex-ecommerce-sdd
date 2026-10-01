@@ -39,7 +39,7 @@ export const createProductRequestSchema = z
 export const updateProductRequestSchema = createProductRequestSchema
   .omit({ status: true, image: true })
   .partial()
-  .extend({ image: productImageReferenceSchema.optional() })
+  .extend({ image: productImageReferenceSchema.optional(), isFeatured: z.boolean().optional() })
   .refine((value) => Object.keys(value).length > 0);
 
 export const updateProductStatusRequestSchema = z
@@ -54,6 +54,8 @@ export const productClassificationSchema = z.object({
 });
 
 export const administrativeProductSchema = z.object({
+  isFeatured: z.boolean().optional(),
+  featuredAt: z.iso.datetime({ offset: true }).nullable().optional(),
   id: z.uuid(),
   slug: productSlugSchema.nullable(),
   category: productClassificationSchema.nullable(),
@@ -71,6 +73,13 @@ export const administrativeProductSchema = z.object({
 });
 
 export const productAvailabilitySchema = z.enum(["IN_STOCK", "OUT_OF_STOCK"]);
+export const catalogImageSchema = z.object({
+  id: z.uuid(), storageKey: z.string().min(1), url: z.string().min(1),
+  altText: z.string().min(1), isPrimary: z.boolean(), sortOrder: z.number().int().nonnegative(),
+  width: z.number().int().positive().nullable(), height: z.number().int().positive().nullable(),
+  mimeType: z.string().nullable(),
+}).strict();
+export type CatalogImage = z.infer<typeof catalogImageSchema>;
 export const productListViewSchema = z.enum(["public", "administrative"]);
 export const productSortFieldSchema = z.enum([
   "createdAt",
@@ -83,10 +92,11 @@ export const productSortFieldSchema = z.enum([
 
 export const productListItemSchema = administrativeProductSchema
   .omit({ deletedAt: true })
-  .extend({ stockAvailable: z.number().int().nonnegative() });
+  .extend({ stockAvailable: z.number().int().nonnegative(), coverImage: catalogImageSchema.nullable() });
 
 export const productDetailSchema = productListItemSchema.extend({
   availability: productAvailabilitySchema,
+  images: z.array(catalogImageSchema),
 });
 
 export const productPageSchema = paginationMetadataSchema.extend({

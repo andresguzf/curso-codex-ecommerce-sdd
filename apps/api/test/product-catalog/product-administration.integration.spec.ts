@@ -1,18 +1,27 @@
 import { randomUUID } from "node:crypto";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import sharp from "sharp";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { ProductImagesRepository } from "../../src/product-catalog/product-images.repository";
+import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
 
 import { configureApplication } from "../../src/application";
 import {
@@ -44,6 +53,7 @@ const originalEnvironment = {
   accessTtl: process.env.AUTH_ACCESS_TOKEN_TTL_SECONDS,
   databaseUrl: process.env.DATABASE_URL,
   refreshTtl: process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS,
+  imageRoot: process.env.IMAGE_STORAGE_LOCAL_ROOT,
 };
 const testDatabaseName = `ecommerce_product_admin_${randomUUID().replaceAll("-", "")}`;
 if (!/^ecommerce_product_admin_[a-f0-9]{32}$/.test(testDatabaseName)) {
@@ -80,6 +90,10 @@ let database: NodePgDatabase<typeof schema>;
 let isolatedDatabaseCreated = false;
 let tokens: Record<"admin" | "billing" | "customer", string>;
 let userIds: Record<"admin" | "billing" | "customer", string>;
+let imageRoot: string;
+let imageBytes: Buffer;
+const imageProductIds: string[] = [];
+const imageCategoryIds: string[] = [];
 
 const productPayload = {
   description: "Notebook profesional para desarrollo",
@@ -103,6 +117,7 @@ function restoreEnvironment(): void {
     AUTH_ACCESS_TOKEN_TTL_SECONDS: originalEnvironment.accessTtl,
     AUTH_REFRESH_TOKEN_TTL_SECONDS: originalEnvironment.refreshTtl,
     DATABASE_URL: originalEnvironment.databaseUrl,
+    IMAGE_STORAGE_LOCAL_ROOT: originalEnvironment.imageRoot,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -136,6 +151,9 @@ describe("administrative product lifecycle", () => {
       "product-administration-test-secret-at-least-32-characters";
     process.env.AUTH_ACCESS_TOKEN_TTL_SECONDS = "900";
     process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS = "3600";
+    imageRoot = await mkdtemp(resolve(tmpdir(), "ecommerce-product-images-"));
+    process.env.IMAGE_STORAGE_LOCAL_ROOT = imageRoot;
+    imageBytes = await sharp({ create: { width: 8, height: 6, channels: 3, background: "blue" } }).png().toBuffer();
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
       import("../../src/app.module"),
@@ -198,6 +216,7 @@ describe("administrative product lifecycle", () => {
       await maintenancePool.query(`drop database ${quotedTestDatabaseName}`);
     }
     await maintenancePool?.end();
+    if (imageRoot) await rm(imageRoot, { recursive: true, force: true });
   }, 30_000);
 
   it("rejects anonymous, CUSTOMER and BILLING product mutations", async () => {
@@ -207,6 +226,331 @@ describe("administrative product lifecycle", () => {
       server.inject({ method: "POST", url: "/api/v1/products", headers: authorization(tokens.billing), payload: productPayload }),
     ]);
     expect(responses.map((response) => response.statusCode)).toEqual([401, 403, 403]);
+  });
+
+  async function imageProduct(active = false) {
+    const [category] = await database.insert(categories).values({ name: `Images ${randomUUID()}`, slug: `images-${randomUUID()}`, status: "ACTIVE" }).returning();
+    const [product] = await insertProductFixtures(database, { name: "Gallery", description: "Gallery fixture", sku: randomUUID(), price: "10.00", categoryId: category!.id, status: active ? "ACTIVE" : "INACTIVE" });
+    imageProductIds.push(product!.id);
+    imageCategoryIds.push(category!.id);
+    return product!;
+  }
+  afterEach(async () => {
+    if (imageProductIds.length) await database.delete(products).where(inArray(products.id, imageProductIds.splice(0)));
+    if (imageCategoryIds.length) await database.delete(categories).where(inArray(categories.id, imageCategoryIds.splice(0)));
+  });
+  function uploadImage(productId: string, query = "altText=Teclado", token = tokens.admin, bytes = imageBytes) {
+    return server.inject({ method: "POST", url: `/api/v1/products/${productId}/images?${query}`, headers: { ...authorization(token), "content-type": "image/png" }, payload: bytes });
+  }
+  type GalleryImage = { id: string; isPrimary: boolean; sortOrder: number; storageKey: string; width: number; height: number; altText: string };
+
+  async function editorialCategory() {
+    const [category] = await database.insert(categories).values({ name: `Editorial ${randomUUID()}`, slug: `editorial-${randomUUID()}` }).returning();
+    imageCategoryIds.push(category!.id);
+    return category!;
+  }
+  function patchCategory(id: string, payload: Record<string, unknown>, token = tokens.admin) {
+    return server.inject({ method: "PATCH", url: `/api/v1/categories/${id}`, headers: authorization(token), payload });
+  }
+
+  it("activates and withdraws product destaque with server timestamps, audit and no association/stock changes", async () => {
+    const product = await imageProduct(true);
+    const patch = (payload: Record<string, unknown>) => server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload });
+    const beforeImages = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    const beforeStock = await database.select().from(inventoryBalances).where(eq(inventoryBalances.productId, product.id));
+    const highlighted = await patch({ isFeatured: true });
+    expect(highlighted.statusCode).toBe(200);
+    const featuredAt = highlighted.json().featuredAt as string;
+    expect(highlighted.json()).toMatchObject({ isFeatured: true, categoryId: product.categoryId });
+    expect(Number.isNaN(Date.parse(featuredAt))).toBe(false);
+    expect((await patch({ description: "Edit without changing destaque" })).json().featuredAt).toBe(featuredAt);
+    expect((await patch({ isFeatured: true })).json().featuredAt).toBe(featuredAt);
+    const adminDetail = await server.inject({ method: "GET", url: `/api/v1/products/${product.id}?view=administrative`, headers: authorization(tokens.admin) });
+    expect(adminDetail.json()).toMatchObject({ isFeatured: true, featuredAt });
+    const publicDetail = await server.inject({ method: "GET", url: `/api/v1/products/${product.id}` });
+    expect(publicDetail.json()).not.toHaveProperty("isFeatured");
+    expect(publicDetail.json()).not.toHaveProperty("featuredAt");
+    const audit = await database.select().from(auditEntries).where(and(eq(auditEntries.entityId, product.id), eq(auditEntries.action, "PRODUCT_UPDATED")));
+    expect(audit[0]!.actorUserId).toBe(userIds.admin);
+    expect(audit[0]!.changes).toMatchObject({ before: { isFeatured: false, featuredAt: null }, after: { isFeatured: true, featuredAt } });
+    expect((await patch({ isFeatured: false })).json()).toMatchObject({ isFeatured: false, featuredAt: null });
+    await database.update(products).set({ featuredAt: new Date("2020-01-01T00:00:00Z") }).where(eq(products.id, product.id));
+    const again = await patch({ isFeatured: true });
+    expect(again.json().featuredAt).not.toBe("2020-01-01T00:00:00.000Z");
+    expect((await patch({ featuredAt: "2000-01-01T00:00:00Z" })).statusCode).toBe(400);
+    expect(await database.select().from(productImages).where(eq(productImages.productId, product.id))).toEqual(beforeImages);
+    expect(await database.select().from(inventoryBalances).where(eq(inventoryBalances.productId, product.id))).toEqual(beforeStock);
+    expect((await database.select().from(products).where(eq(products.id, product.id)))[0]!.categoryId).toBe(product.categoryId);
+    await database.update(products).set({ status: "INACTIVE" }).where(eq(products.id, product.id));
+    await database.delete(productImages).where(eq(productImages.productId, product.id));
+    expect((await patch({ isFeatured: false })).json()).toMatchObject({ isFeatured: false, featuredAt: null });
+  });
+
+  it("rejects inactive destaque and unauthorized editorial commands without mutations", async () => {
+    const product = await imageProduct(false);
+    const category = await editorialCategory();
+    const anonymous = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, payload: { isFeatured: true } });
+    expect(anonymous.statusCode).toBe(401);
+    for (const token of [tokens.billing, tokens.customer]) {
+      expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(token), payload: { isFeatured: true } })).statusCode).toBe(403);
+      expect((await patchCategory(category.id, { showOnLanding: true }, token)).statusCode).toBe(403);
+    }
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/categories/${category.id}`, payload: { showOnLanding: true } })).statusCode).toBe(401);
+    const inactive = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { isFeatured: true } });
+    expect(inactive.statusCode).toBe(400);
+    expect(inactive.json().code).toBe("PRODUCT_FEATURED_REQUIRES_ACTIVE");
+    expect((await database.select().from(products).where(eq(products.id, product.id)))[0]!.isFeatured).toBe(false);
+    expect(await database.select().from(auditEntries).where(eq(auditEntries.entityId, category.id))).toEqual([]);
+  });
+
+  it("selects up to three categories, swaps positions, removes selections and preserves associations", async () => {
+    const product = await imageProduct(true);
+    const existingCategory = (await database.select().from(categories).where(eq(categories.id, product.categoryId!)))[0]!;
+    await database.update(categories).set({ description: "Preserve this category description" }).where(eq(categories.id, existingCategory.id));
+    const configured = [existingCategory, await editorialCategory(), await editorialCategory(), await editorialCategory()];
+    for (const [index, category] of configured.slice(0, 3).entries()) {
+      const result = await patchCategory(category.id, { showOnLanding: true });
+      expect(result.statusCode).toBe(200);
+      expect(result.json()).toMatchObject({ showOnLanding: true, landingOrder: index + 1 });
+    }
+    const fourth = await patchCategory(configured[3]!.id, { showOnLanding: true });
+    expect(fourth.statusCode).toBe(409);
+    expect(fourth.json().code).toBe("CATEGORY_LANDING_LIMIT_EXCEEDED");
+    const swapped = await patchCategory(existingCategory.id, { landingOrder: 3 });
+    expect(swapped.statusCode).toBe(200);
+    const third = (await database.select().from(categories).where(eq(categories.id, configured[2]!.id)))[0]!;
+    expect(third.landingOrder).toBe(1);
+    expect((await database.select().from(auditEntries).where(eq(auditEntries.entityId, third.id))).at(-1)!.changes)
+      .toMatchObject({ before: { landingOrder: 3 }, after: { landingOrder: 1 } });
+    expect((await patchCategory(configured[1]!.id, { showOnLanding: false })).json()).toMatchObject({ showOnLanding: false, landingOrder: null });
+    expect((await patchCategory(configured[3]!.id, { showOnLanding: true })).json().landingOrder).toBe(2);
+    const publicCategory = await server.inject({ method: "GET", url: `/api/v1/categories/${existingCategory.id}` });
+    expect(publicCategory.json()).not.toHaveProperty("showOnLanding");
+    const administrative = await server.inject({ method: "GET", url: `/api/v1/categories/${existingCategory.id}?view=administrative`, headers: authorization(tokens.admin) });
+    expect(administrative.json()).toMatchObject({ showOnLanding: true, landingOrder: 3 });
+    expect((await patchCategory(existingCategory.id, { status: "INACTIVE" })).statusCode).toBe(200);
+    expect((await patchCategory(existingCategory.id, { showOnLanding: true })).statusCode).toBe(400);
+    expect((await patchCategory(existingCategory.id, { showOnLanding: false })).statusCode).toBe(200);
+    for (const payload of [{ showOnLanding: true, landingOrder: null }, { landingOrder: 0 }, { landingOrder: 4 }, { landingOrder: 1.5 }, { showOnLanding: "true" }, { showOnLanding: false, landingOrder: 2 }]) {
+      expect((await patchCategory(configured[1]!.id, payload)).statusCode).toBe(400);
+    }
+    expect((await database.select().from(products).where(eq(products.id, product.id)))[0]!.categoryId).toBe(existingCategory.id);
+    expect((await database.select().from(categories).where(eq(categories.id, existingCategory.id)))[0]!.description).toBe("Preserve this category description");
+    const deleted = await server.inject({ method: "DELETE", url: `/api/v1/categories/${configured[3]!.id}`, headers: authorization(tokens.admin) });
+    expect(deleted.statusCode).toBe(204);
+    expect((await database.select().from(categories).where(eq(categories.id, configured[3]!.id)))[0])
+      .toMatchObject({ showOnLanding: false, landingOrder: null, status: "INACTIVE" });
+    expect((await patchCategory(configured[1]!.id, { showOnLanding: true })).statusCode).toBe(200);
+  });
+
+  it("serializes competing fourth-category selections and atomically rolls back a failed audit", async () => {
+    const configured = await Promise.all([1, 2, 3, 4].map(() => editorialCategory()));
+    for (const category of configured.slice(0, 2)) expect((await patchCategory(category.id, { showOnLanding: true })).statusCode).toBe(200);
+    const competing = await Promise.all(configured.slice(2).map((category) => patchCategory(category.id, { showOnLanding: true })));
+    expect(competing.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+    const before = await database.select().from(categories).where(inArray(categories.id, configured.map((category) => category.id))).orderBy(asc(categories.id));
+    const auditBefore = await database.select().from(auditEntries).where(inArray(auditEntries.entityId, configured.map((category) => category.id)));
+    const product = await imageProduct(true);
+    await database.execute(sql`create function fail_editorial_audit() returns trigger language plpgsql as $$
+      begin if NEW.action in ('CATEGORY_UPDATED', 'PRODUCT_UPDATED') then raise exception 'simulated audit failure'; end if; return NEW; end; $$`);
+    await database.execute(sql`create trigger fail_editorial_audit before insert on audit_entries for each row execute function fail_editorial_audit()`);
+    try {
+      const failed = await patchCategory(configured[0]!.id, { landingOrder: 2 });
+      expect(failed.statusCode).toBe(500);
+      expect(await database.select().from(categories).where(inArray(categories.id, configured.map((category) => category.id))).orderBy(asc(categories.id))).toEqual(before);
+      expect(await database.select().from(auditEntries).where(inArray(auditEntries.entityId, configured.map((category) => category.id)))).toEqual(auditBefore);
+      const failedProduct = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { isFeatured: true } });
+      expect(failedProduct.statusCode).toBe(500);
+      expect((await database.select().from(products).where(eq(products.id, product.id)))[0]).toMatchObject({ isFeatured: false, featuredAt: null });
+    } finally {
+      await database.execute(sql`drop trigger fail_editorial_audit on audit_entries`);
+      await database.execute(sql`drop function fail_editorial_audit()`);
+    }
+  });
+
+  it("returns only the cover in lists and an ordered gallery in both detail routes", async () => {
+    const product = await imageProduct(true);
+    const slug = `public-gallery-${product.id}`;
+    await database.transaction(async (transaction) => {
+      await transaction.update(products).set({ slug }).where(eq(products.id, product.id));
+      await transaction.update(productImages).set({ isPrimary: false }).where(eq(productImages.productId, product.id));
+      await transaction.insert(productImages).values([
+        { productId: product.id, storageKey: `gallery/${product.id}/side`, url: "https://example.com/side.webp", altText: "Vista lateral", isPrimary: false, sortOrder: 1, width: 800, height: 600, mimeType: "image/webp" },
+        { productId: product.id, storageKey: `gallery/${product.id}/cover`, url: "https://example.com/cover.webp", altText: "Portada seleccionada", isPrimary: true, sortOrder: 2, width: 1200, height: 900, mimeType: "image/webp" },
+      ]);
+    });
+    const listing = await server.inject({ method: "GET", url: `/api/v1/products?search=${product.sku}&pageSize=1` });
+    expect(listing.statusCode).toBe(200);
+    const page = listing.json<{ items: Record<string, unknown>[]; totalItems: number }>();
+    expect(page.totalItems).toBe(1);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).not.toHaveProperty("images");
+    expect(page.items[0]?.coverImage).toMatchObject({ isPrimary: true, sortOrder: 2, altText: "Portada seleccionada", width: 1200, height: 900 });
+    const byId = await server.inject({ method: "GET", url: `/api/v1/products/${product.id}` });
+    const bySlug = await server.inject({ method: "GET", url: `/api/v1/products/slug/${slug}` });
+    expect(byId.statusCode).toBe(200);
+    expect(bySlug.statusCode).toBe(200);
+    expect(bySlug.json()).toEqual(byId.json());
+    const detail = byId.json<{ coverImage: Record<string, unknown>; images: { id: string; sortOrder: number; isPrimary: boolean }[] }>();
+    expect(detail.images.map((image) => image.sortOrder)).toEqual([0, 1, 2]);
+    expect(detail.images.filter((image) => image.isPrimary)).toHaveLength(1);
+    expect(detail.coverImage).toEqual(detail.images[2]);
+    expect(detail.images[0]).not.toHaveProperty("productId");
+    expect(detail.images[0]).not.toHaveProperty("createdAt");
+    const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
+    const validator = new Ajv({ strict: false });
+    addFormats(validator);
+    validator.addSchema({ $id: "urn:technology-ecommerce:catalog-images-contract", components: document.components });
+    for (const [type, body] of [["ProductPageResponseDto", listing.json()], ["ProductDetailResponseDto", byId.json()]]) {
+      const validate = validator.compile({ $ref: `urn:technology-ecommerce:catalog-images-contract#/components/schemas/${type}` });
+      expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+    }
+  });
+
+  it("returns one-image galleries and a safe fallback for drafts without a cover", async () => {
+    const product = await imageProduct();
+    const path = `/api/v1/products/${product.id}?view=administrative`;
+    const headers = authorization(tokens.admin);
+    const single = await server.inject({ method: "GET", url: path, headers });
+    expect(single.statusCode).toBe(200);
+    const one = single.json<{ coverImage: unknown; images: unknown[] }>();
+    expect(one.images).toHaveLength(1);
+    expect(one.coverImage).toEqual(one.images[0]);
+    expect(one.coverImage).toMatchObject({ url: "/images/product-placeholder.svg", altText: "Gallery" });
+    await database.delete(productImages).where(eq(productImages.productId, product.id));
+    const empty = await server.inject({ method: "GET", url: path, headers });
+    expect(empty.statusCode).toBe(200);
+    expect(empty.json()).toMatchObject({ coverImage: null, images: [], image: { url: "/images/product-placeholder.svg" } });
+    const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
+    const validator = new Ajv({ strict: false });
+    addFormats(validator);
+    validator.addSchema({ $id: "urn:technology-ecommerce:empty-gallery", components: document.components });
+    const validate = validator.compile({ $ref: "urn:technology-ecommerce:empty-gallery#/components/schemas/ProductDetailResponseDto" });
+    expect(validate(empty.json()), JSON.stringify(validate.errors)).toBe(true);
+    const administrative = await server.inject({ method: "GET", url: `/api/v1/products?view=administrative&search=${product.sku}`, headers });
+    expect(administrative.statusCode).toBe(200);
+    expect(administrative.json()).toMatchObject({ totalItems: 1, items: [{ id: product.id, coverImage: null }] });
+    expect((await server.inject({ method: "GET", url: `/api/v1/products/${product.id}` })).statusCode).toBe(404);
+    expect((await server.inject({ method: "GET", url: `/api/v1/products?search=${product.sku}` })).json()).toMatchObject({ totalItems: 0, items: [] });
+    // An inactive gallery may exist without a selected primary image.
+    await database.insert(productImages).values({ productId: product.id, storageKey: `draft/${product.id}/side`, url: "/images/product-placeholder.svg", altText: "Imagen del borrador", isPrimary: false, sortOrder: 0 });
+    const unselected = await server.inject({ method: "GET", url: path, headers });
+    expect(unselected.json()).toMatchObject({ coverImage: null, images: [{ isPrimary: false, sortOrder: 0 }] });
+  });
+
+  it("authorizes all image mutations exclusively for ADMIN", async () => {
+    const product = await imageProduct();
+    for (const method of ["POST", "PATCH", "DELETE"] as const) {
+      for (const role of [undefined, "customer", "billing"] as const) {
+        const response = await server.inject({ method, url: `/api/v1/products/${product.id}/images${method === "POST" ? "?altText=Test" : `/${randomUUID()}`}`, ...(role ? { headers: authorization(tokens[role]) } : {}), ...(method === "PATCH" ? { payload: { altText: "Test" } } : {}) });
+        expect(response.statusCode).toBe(role ? 403 : 401);
+      }
+    }
+  });
+
+  it("uploads validated bytes, captures dimensions, edits metadata, reorders and selects a cover atomically", async () => {
+    const product = await imageProduct(true);
+    const added = await uploadImage(product.id);
+    expect(added.statusCode, added.body).toBe(201);
+    const image = added.json<GalleryImage>();
+    const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
+    const validator = new Ajv({ strict: false });
+    addFormats(validator);
+    validator.addSchema({ $id: "urn:technology-ecommerce:product-images", components: document.components });
+    const validateResponse = validator.compile({ $ref: "urn:technology-ecommerce:product-images#/components/schemas/ProductGalleryImageDto" });
+    expect(validateResponse(image), JSON.stringify(validateResponse.errors)).toBe(true);
+    expect(image).toMatchObject({ altText: "Teclado", width: 8, height: 6, isPrimary: false, sortOrder: 1 });
+    expect((await app.get(ImageStorageService).read(image.storageKey)).data).toEqual(imageBytes);
+    const changed = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true, sortOrder: 0, altText: "Teclado iluminado" } });
+    expect(changed.statusCode, changed.body).toBe(200);
+    expect(changed.json()).toMatchObject({ isPrimary: true, sortOrder: 0, altText: "Teclado iluminado" });
+    const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    expect(gallery.map((row) => row.sortOrder)).toEqual([0, 1]);
+    expect(gallery.filter((row) => row.isPrimary).map((row) => row.id)).toEqual([image.id]);
+    const audits = await database.select().from(auditEntries).where(eq(auditEntries.entityId, product.id));
+    expect(audits.map((row) => row.action)).toEqual(["PRODUCT_IMAGE_ADD", "PRODUCT_IMAGE_EDIT"]);
+  });
+
+  it("rejects deleting or demoting an active cover and rejects cross-product image IDs", async () => {
+    const product = await imageProduct(true);
+    const [cover] = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    for (const method of ["DELETE", "PATCH"] as const) {
+      const response = await server.inject({ method, url: `/api/v1/products/${product.id}/images/${cover!.id}`, headers: authorization(tokens.admin), ...(method === "PATCH" ? { payload: { isPrimary: false } } : {}) });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().code).toBe("PRODUCT_PRIMARY_IMAGE_REQUIRED");
+    }
+    const other = await imageProduct();
+    const response = await server.inject({ method: "DELETE", url: `/api/v1/products/${other.id}/images/${cover!.id}`, headers: authorization(tokens.admin) });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().code).toBe("PRODUCT_IMAGE_NOT_FOUND");
+  });
+
+  it("removes an additional image and its managed file, normalizing positions", async () => {
+    const product = await imageProduct(true);
+    const first = (await uploadImage(product.id)).json<GalleryImage>();
+    const second = (await uploadImage(product.id)).json<GalleryImage>();
+    const response = await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${first.id}`, headers: authorization(tokens.admin) });
+    expect(response.statusCode).toBe(204);
+    expect(await readdir(imageRoot)).not.toContain(first.storageKey);
+    const [remaining] = await database.select().from(productImages).where(eq(productImages.id, second.id));
+    expect(remaining!.sortOrder).toBe(1);
+  });
+
+  it("supports an empty inactive gallery, first cover upload and insertion between existing images", async () => {
+    const product = await imageProduct();
+    const [placeholder] = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${placeholder!.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    const first = (await uploadImage(product.id)).json<GalleryImage>();
+    expect(first).toMatchObject({ isPrimary: true, sortOrder: 0 });
+    const second = (await uploadImage(product.id)).json<GalleryImage>();
+    const middleResponse = await uploadImage(product.id, "altText=Detalle&sortOrder=1");
+    expect(middleResponse.statusCode).toBe(201);
+    const middle = middleResponse.json<GalleryImage>();
+    const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    expect(gallery.map((row) => row.id)).toEqual([first.id, middle.id, second.id]);
+    expect(gallery.map((row) => row.sortOrder)).toEqual([0, 1, 2]);
+  });
+
+  it("serializes concurrent cover selections without duplicate covers or positions", async () => {
+    const product = await imageProduct(true);
+    const images = [(await uploadImage(product.id)).json<GalleryImage>(), (await uploadImage(product.id)).json<GalleryImage>()];
+    const responses = await Promise.all(images.map((image) => server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true, sortOrder: 0 } })));
+    expect(responses.map((response) => response.statusCode)).toEqual([200, 200]);
+    const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    expect(gallery.map((row) => row.sortOrder)).toEqual([0, 1, 2]);
+    expect(gallery.filter((row) => row.isPrimary)).toHaveLength(1);
+  });
+
+  it("rejects invalid metadata, positions, unsupported bytes, oversized bodies and missing products without orphan uploads", async () => {
+    const product = await imageProduct();
+    const before = await readdir(imageRoot);
+    for (const query of ["", "altText=", "altText=X&isPrimary=1", "altText=X&sortOrder=-1", "altText=X&sortOrder=4", "altText=X&url=https://bad.example"]) expect((await uploadImage(product.id, query)).statusCode).toBe(400);
+    expect((await uploadImage(product.id, "altText=X", tokens.admin, Buffer.from("not an image"))).statusCode).toBe(400);
+    expect((await uploadImage(product.id, "altText=X", tokens.admin, imageBytes.subarray(0, 8))).statusCode).toBe(400);
+    const limit = app.get(ConfigService).get<number>("IMAGE_STORAGE_MAX_BYTES")!;
+    expect((await uploadImage(product.id, "altText=X", tokens.admin, Buffer.alloc(limit + 1))).statusCode).toBe(413);
+    expect((await uploadImage(randomUUID())).statusCode).toBe(404);
+    const [cover] = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    for (const payload of [{}, { sortOrder: 2 }, { isPrimary: "true" }, { storageKey: "fake" }]) expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${cover!.id}`, headers: authorization(tokens.admin), payload })).statusCode).toBe(400);
+    expect(await readdir(imageRoot)).toEqual(before);
+  });
+
+  it("cleans up an upload after a repository failure and never masks that failure", async () => {
+    const product = await imageProduct();
+    const before = await readdir(imageRoot);
+    const spy = vi.spyOn(app.get(ProductImagesRepository), "mutate").mockRejectedValueOnce(new Error("simulated persistence failure"));
+    try { expect((await uploadImage(product.id)).statusCode).toBe(500); } finally { spy.mockRestore(); }
+    expect(await readdir(imageRoot)).toEqual(before);
+  });
+
+  it("does not report a failed mutation when post-commit file cleanup fails", async () => {
+    const product = await imageProduct();
+    const image = (await uploadImage(product.id)).json<GalleryImage>();
+    const spy = vi.spyOn(app.get(ImageStorageService), "deleteIfUnreferenced").mockRejectedValueOnce(new Error("storage temporarily unavailable"));
+    try { expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204); } finally { spy.mockRestore(); }
+    expect(await database.select().from(productImages).where(eq(productImages.id, image.id))).toHaveLength(0);
+    expect(await readdir(imageRoot)).toContain(image.storageKey);
+    await app.get(ImageStorageService).deleteIfUnreferenced(image.storageKey);
   });
 
   it("allows ADMIN to create and read a normalized product with its image", async () => {
@@ -481,9 +825,7 @@ describe("administrative product lifecycle", () => {
         stock: 3,
       },
     ];
-    const created = await database
-      .insert(products)
-      .values(
+    const created = await insertProductFixtures(database,
         fixtures.map((fixture) => ({
           description: fixture.description,
           name: fixture.name,
@@ -491,15 +833,14 @@ describe("administrative product lifecycle", () => {
           sku: fixture.sku,
           status: fixture.status,
         })),
-      )
-      .returning({ id: products.id, sku: products.sku });
-    await database.insert(productImages).values(
-      created.map((product) => ({
-        productId: product.id,
+      (product) => ({
         storageKey: `products/${product.sku.toLowerCase()}/cover.webp`,
         url: `https://cdn.example.com/products/${product.sku.toLowerCase()}/cover.webp`,
-      })),
-    );
+      }));
+    await database.insert(productImages).values(created.map((product) => ({
+      productId: product.id, storageKey: `products/${product.sku.toLowerCase()}/gallery.webp`,
+      url: "/images/product-placeholder.svg", altText: `Vista adicional de ${product.name}`, isPrimary: false, sortOrder: 1,
+    })));
     await database.insert(inventoryBalances).values(
       created
         .map((product) => ({
@@ -897,16 +1238,13 @@ describe("administrative product lifecycle", () => {
   });
 
   it("atomically prevents two purchases from consuming the same last unit and restores it", async () => {
-    const [product] = await database
-      .insert(products)
-      .values({
+    const [product] = await insertProductFixtures(database, {
         description: "Fixture for concurrent inventory deduction",
         name: "Last Unit Fixture",
         price: "1000.00",
         sku: `LAST-UNIT-${randomUUID()}`,
         status: "ACTIVE",
-      })
-      .returning({ id: products.id });
+      });
     if (!product) throw new Error("Expected the concurrent inventory fixture");
     await database.insert(inventoryBalances).values({
       availableQuantity: 1,

@@ -7,15 +7,34 @@ vi.mock("../src/features/wishlist/wishlist-button", () => ({
   WishlistButton: () => <button type="button">Guardar en deseos</button>,
 }));
 
+const fixtureCoverImage = {
+  ...{ url: "/images/product-placeholder.svg", storageKey: "default" },
+  id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada de producto de ejemplo",
+  isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null,
+};
+
 const product: ProductListItem = {
   id: "10184fd0-3dcb-47cf-af70-a8be4c765421", name: "Monitor profesional Nova 27",
   sku: "NOVA-27", slug: "monitor-nova-27", description: "Pantalla para trabajar y crear.",
   price: "1299.90", currency: "USD", stockAvailable: 14, status: "ACTIVE",
+  coverImage: fixtureCoverImage,
   image: { url: "/images/product-placeholder.svg", storageKey: "default" },
   category: null, tags: [], createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z",
 };
 
 describe("commercial product card", () => {
+  it("uses only the explicit cover rather than a divergent legacy image", () => {
+    render(<ProductCard product={{ ...product, coverImage: { ...fixtureCoverImage, url: "/images/explicit-cover.svg" }, image: { storageKey: "legacy", url: "/images/legacy-image.svg" } }} onAddToCart={vi.fn()} />);
+    expect(new URL(screen.getByRole("img", { name: product.name }).getAttribute("src")!, "http://localhost").pathname).toBe("/images/explicit-cover.svg");
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /Imagen siguiente|Imagen anterior/ })).not.toBeInTheDocument();
+  });
+
+  it("retains the safe compatibility fallback when no explicit cover exists", () => {
+    render(<ProductCard product={{ ...product, coverImage: null }} onAddToCart={vi.fn()} />);
+    expect(new URL(screen.getByRole("img", { name: product.name }).getAttribute("src")!, "http://localhost").pathname).toBe("/images/product-placeholder.svg");
+  });
+
   it("prioritizes image, title, USD price, availability and public purchase without administrative UI", () => {
     const onAddToCart = vi.fn();
     render(<ProductCard product={product} onAddToCart={onAddToCart} />);

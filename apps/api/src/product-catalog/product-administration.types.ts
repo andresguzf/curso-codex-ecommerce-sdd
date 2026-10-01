@@ -7,6 +7,18 @@ export type ProductImageReference = Readonly<{
   url: string;
 }>;
 
+export type CatalogImage = Readonly<{
+  id: string;
+  storageKey: string;
+  url: string;
+  altText: string;
+  isPrimary: boolean;
+  sortOrder: number;
+  width: number | null;
+  height: number | null;
+  mimeType: string | null;
+}>;
+
 export type ProductClassificationSummary = Readonly<{
   id: string;
   name: string;
@@ -26,6 +38,8 @@ export type AdministrativeProduct = Readonly<{
   currency: ProductCurrency;
   image: ProductImageReference;
   status: ProductStatus;
+  isFeatured?: boolean;
+  featuredAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -48,11 +62,11 @@ export const PRODUCT_SORT_FIELDS = [
 export type ProductSortField = (typeof PRODUCT_SORT_FIELDS)[number];
 
 export type ProductListItem = Readonly<
-  Omit<AdministrativeProduct, "deletedAt"> & { stockAvailable: number }
+  Omit<AdministrativeProduct, "deletedAt"> & { stockAvailable: number; coverImage: CatalogImage | null }
 >;
 
 export type ProductDetail = Readonly<
-  ProductListItem & { availability: ProductAvailability }
+  ProductListItem & { availability: ProductAvailability; images: CatalogImage[] }
 >;
 
 export type ProductListQuery = Readonly<{
@@ -95,6 +109,7 @@ export type CreateAdministrativeProduct = Readonly<{
 }>;
 
 export type UpdateAdministrativeProduct = Readonly<{
+  isFeatured?: boolean;
   sku?: string;
   slug?: string;
   categoryId?: string | null;

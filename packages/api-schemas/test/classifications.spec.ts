@@ -21,6 +21,16 @@ const baseRecord = {
 };
 
 describe("classification HTTP schemas", () => {
+  it("validates editorial category patches without accepting them on tags or creation", () => {
+    expect(updateCategoryRequestSchema.parse({ showOnLanding: true, landingOrder: 3 })).toEqual({ showOnLanding: true, landingOrder: 3 });
+    expect(updateCategoryRequestSchema.parse({ showOnLanding: false, landingOrder: null })).toEqual({ showOnLanding: false, landingOrder: null });
+    for (const landingOrder of [0, 4, 1.5, "1"]) expect(updateCategoryRequestSchema.safeParse({ landingOrder }).success).toBe(false);
+    expect(updateCategoryRequestSchema.safeParse({ showOnLanding: "true" }).success).toBe(false);
+    expect(updateTagRequestSchema.safeParse({ showOnLanding: true }).success).toBe(false);
+    expect(createCategoryRequestSchema.safeParse({ name: "Demo", showOnLanding: true }).success).toBe(false);
+    const response = { items: [{ ...baseRecord, description: "Demo", showOnLanding: true, landingOrder: 2 }], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 };
+    expect(categoryPageSchema.parse(response).items[0]).toMatchObject({ showOnLanding: true, landingOrder: 2 });
+  });
   it("validates category and tag requests against the REST contract", () => {
     expect(createCategoryRequestSchema.safeParse({ name: "Periféricos" }).success).toBe(true);
     expect(createTagRequestSchema.safeParse({ name: "Gamer", slug: "gamer" }).success).toBe(true);

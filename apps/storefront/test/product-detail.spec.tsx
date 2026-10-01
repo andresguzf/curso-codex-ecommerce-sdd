@@ -35,13 +35,24 @@ vi.mock("../src/features/catalog/catalog-api", async (importOriginal) => {
   };
 });
 
+const fixtureCoverImage = {
+  ...{
+    storageKey: "development/products/keyboard/cover.webp",
+    url: "https://picsum.photos/id/60/1200/900.webp",
+  },
+  id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada de producto de ejemplo",
+  isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null,
+};
+
 const availableProduct: ProductDetailModel = {
   availability: "IN_STOCK",
+  images: [fixtureCoverImage],
   category: null,
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   description: "Teclado mecánico de perfil compacto con iluminación configurable.",
   id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
+  coverImage: fixtureCoverImage,
   image: {
     storageKey: "development/products/keyboard/cover.webp",
     url: "https://picsum.photos/id/60/1200/900.webp",
@@ -88,7 +99,7 @@ describe("storefront product detail", () => {
     renderDetail();
 
     expect(await screen.findByRole("heading", { name: "Teclado Relay 75" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Teclado Relay 75" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: fixtureCoverImage.altText })).toBeInTheDocument();
     expect(screen.getByText(availableProduct.description)).toBeInTheDocument();
     expect(screen.getByText("$149.90")).toBeInTheDocument();
     expect(screen.getByRole("article")).toHaveClass("bg-[var(--ds-surface)]");

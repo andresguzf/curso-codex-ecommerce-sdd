@@ -26,7 +26,7 @@ export function ProductCard({
             className="object-cover transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none"
             fill
             sizes="(min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100vw"
-            src={product.image.url}
+            src={product.coverImage?.url ?? product.image.url}
           />
         </Link>
         <span data-tone-region="inverse" className="absolute left-4 top-4 rounded-full bg-[#081426]/90 px-3 py-1.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">

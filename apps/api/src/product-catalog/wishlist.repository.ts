@@ -102,7 +102,7 @@ export class WishlistRepository {
         .from(wishlistItems)
         .innerJoin(wishlists, eq(wishlistItems.wishlistId, wishlists.id))
         .innerJoin(products, eq(wishlistItems.productId, products.id))
-        .leftJoin(productImages, eq(productImages.productId, products.id))
+        .leftJoin(productImages, and(eq(productImages.productId, products.id), eq(productImages.isPrimary, true)))
         .leftJoin(inventoryBalances, eq(inventoryBalances.productId, products.id))
         .where(where)
         .orderBy(direction(sortColumn), direction(wishlistItems.id))

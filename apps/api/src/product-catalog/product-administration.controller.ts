@@ -79,6 +79,7 @@ const createProductSchema = z
   .strict();
 const updateProductSchema = z
   .object({
+    isFeatured: z.boolean().optional(),
     description: z.string().trim().min(1).max(10_000).optional(),
     image: imageReferenceSchema.optional(),
     name: z.string().trim().min(1).max(200).optional(),
@@ -144,6 +145,8 @@ class CreateProductRequestDto {
 }
 
 class UpdateProductRequestDto {
+  @ApiPropertyOptional({ description: "Activate or withdraw editorial destaque; timestamp is assigned by the server" })
+  isFeatured?: boolean;
   @ApiPropertyOptional({ maxLength: 64 })
   sku?: string;
 
@@ -174,6 +177,8 @@ class UpdateProductStatusRequestDto {
 }
 
 class AdministrativeProductResponseDto {
+  @ApiProperty({ type: Boolean }) isFeatured!: boolean;
+  @ApiProperty({ type: String, format: "date-time", nullable: true }) featuredAt!: string | null;
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() sku!: string;
   @ApiProperty({ nullable: true, type: String }) slug!: string | null;

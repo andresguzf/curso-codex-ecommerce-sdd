@@ -1,5 +1,7 @@
 import { createApiClient } from "@technology-ecommerce/api-client";
 import {
+  catalogLandingSchema,
+  type CatalogLanding,
   productDetailSchema,
   productPageSchema,
   type ProductDetail,
@@ -11,6 +13,12 @@ import { CATALOG_LANDING_PAGE_SIZE, type CatalogQuery } from "./catalog-query";
 const apiClient = createApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001",
 });
+
+export async function getCatalogLanding(signal?: AbortSignal): Promise<CatalogLanding> {
+  const { data, error } = await apiClient.GET("/api/v1/catalog/landing", { signal });
+  if (error || !data) throw new Error("No fue posible cargar las novedades.");
+  return catalogLandingSchema.parse(data);
+}
 
 export class PublicProductNotFoundError extends Error {
   constructor() {

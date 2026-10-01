@@ -12,11 +12,16 @@ import { ClassificationRepository } from "./classification.repository";
 import { ClassificationService } from "./classification.service";
 import { WishlistRepository } from "./wishlist.repository";
 import { WishlistController } from "./wishlist.controller";
+import { ProductImagesController } from "./product-images.controller";
+import { ProductImagesRepository } from "./product-images.repository";
+import { ProductImagesService } from "./product-images.service";
+import { CatalogLandingController } from "./catalog-landing.controller";
+import { CatalogLandingService } from "./catalog-landing.service";
 
 @Module({
-  controllers: [ProductAdministrationController, ProductListingController, CategoryController, TagController, WishlistController],
+  controllers: [ProductAdministrationController, ProductListingController, CategoryController, TagController, WishlistController, ProductImagesController, CatalogLandingController],
   imports: [AuthModule, ImageStorageModule],
-  providers: [CatalogSummaryReader, ProductAdministrationRepository, ProductAdministrationService, ClassificationRepository, ClassificationService, WishlistRepository],
+  providers: [CatalogSummaryReader, ProductAdministrationRepository, ProductAdministrationService, ClassificationRepository, ClassificationService, WishlistRepository, ProductImagesRepository, ProductImagesService, CatalogLandingService],
   exports: [ImageStorageModule, CatalogSummaryReader],
 })
 export class ProductCatalogModule {}

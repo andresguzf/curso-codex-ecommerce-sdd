@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -36,7 +37,6 @@ import {
   orderItems,
   orders,
   payments,
-  productImages,
   products,
   roleAssignments,
   storeProfiles,
@@ -195,24 +195,24 @@ async function createProduct(input: {
   status: "ACTIVE" | "INACTIVE";
   stock: number;
 }): Promise<string> {
-  const [product] = await database
-    .insert(products)
-    .values({
+  const [product] = await insertProductFixtures(database, {
       currency: "USD",
       description: `Cart fixture ${input.sku}`,
       name: `Cart product ${input.sku}`,
       price: input.price ?? "100.00",
       sku: input.sku,
       status: input.status,
-    })
-    .returning({ id: products.id });
+    }, (product) => ({
+      storageKey: `products/${product.sku.toLowerCase()}/cover.webp`,
+      url: `https://cdn.example.com/products/${product.sku.toLowerCase()}/cover.webp`,
+    }));
   if (!product) throw new Error(`Cart product ${input.sku} was not created`);
 
-  await database.insert(productImages).values({
-    productId: product.id,
-    storageKey: `products/${input.sku.toLowerCase()}/cover.webp`,
-    url: `https://cdn.example.com/products/${input.sku.toLowerCase()}/cover.webp`,
+  await database.insert(schema.productImages).values({ productId: product.id,
+    storageKey: `products/${input.sku.toLowerCase()}/gallery.webp`, url: "/images/product-placeholder.svg",
+    altText: `Vista adicional de ${product.name}`, isPrimary: false, sortOrder: 1,
   });
+
   await database.insert(inventoryBalances).values({
     availableQuantity: input.stock,
     productId: product.id,

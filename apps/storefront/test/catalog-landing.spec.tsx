@@ -1,15 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
-import type { ActiveCart, ProductListItem, ProductPage } from "@technology-ecommerce/api-schemas";
+import type { ActiveCart, CatalogLanding as LandingComposition, ProductListItem } from "@technology-ecommerce/api-schemas";
 import { FlashRegion, useFlashStore } from "@technology-ecommerce/ui";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionStore } from "../src/features/auth/session";
 import { addCartItem, CartApiError, getCart } from "../src/features/cart/cart-api";
 import { CatalogLanding } from "../src/features/catalog/catalog-landing";
-import { getPublicProducts } from "../src/features/catalog/catalog-api";
+import { getCatalogLanding } from "../src/features/catalog/catalog-api";
 
 const navigation = vi.hoisted(() => ({
   pathname: "/",
@@ -24,13 +23,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("../src/features/catalog/catalog-api", () => ({
-  getPublicProducts: vi.fn(),
-}));
-
-vi.mock("@technology-ecommerce/api-client", async (importOriginal) => ({
-  ...await importOriginal<typeof import("@technology-ecommerce/api-client")>(),
-  getActiveCategories: vi.fn(),
-  getActiveTags: vi.fn(),
+  getCatalogLanding: vi.fn(),
 }));
 
 vi.mock("../src/features/cart/cart-api", async (importOriginal) => {
@@ -45,11 +38,21 @@ vi.mock("../src/features/cart/cart-api", async (importOriginal) => {
   };
 });
 
+const fixtureCoverImage = {
+  ...{
+    storageKey: "development/products/example/cover.webp",
+    url: "https://picsum.photos/id/60/1200/900.webp",
+  },
+  id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada de producto de ejemplo",
+  isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null,
+};
+
 const productBase = {
   category: null,
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   description: "Producto tecnológico preparado para trabajo exigente.",
+  coverImage: fixtureCoverImage,
   image: {
     storageKey: "development/products/example/cover.webp",
     url: "https://picsum.photos/id/60/1200/900.webp",
@@ -66,13 +69,11 @@ function product(
   return { ...productBase, ...input, tags: [] };
 }
 
-function page(items: readonly ProductListItem[]): ProductPage {
+function page(items: readonly ProductListItem[]): LandingComposition {
   return {
-    items: [...items],
-    page: 1,
-    pageSize: 9,
-    totalItems: items.length,
-    totalPages: items.length === 0 ? 0 : 1,
+    featuredProducts: [],
+    latestProducts: items as LandingComposition["latestProducts"],
+    highlightedCategories: [],
   };
 }
 
@@ -130,9 +131,7 @@ describe("storefront catalog landing", () => {
   beforeEach(() => {
     vi.mocked(addCartItem).mockReset();
     vi.mocked(getCart).mockReset();
-    vi.mocked(getPublicProducts).mockReset();
-    vi.mocked(getActiveCategories).mockResolvedValue([]);
-    vi.mocked(getActiveTags).mockResolvedValue([]);
+    vi.mocked(getCatalogLanding).mockReset();
     vi.mocked(getCart).mockResolvedValue({
       createdAt: "2026-09-08T12:00:00.000Z",
       currency: null,
@@ -152,20 +151,13 @@ describe("storefront catalog landing", () => {
   });
 
   it("renders the hero and only active products returned by the public catalog", async () => {
-    vi.mocked(getPublicProducts).mockResolvedValue(page([
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([
       product({
         id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
         name: "Monitor Studio 27",
         sku: "MONITOR-027",
         status: "ACTIVE",
         stockAvailable: 5,
-      }),
-      product({
-        id: "076c5a64-7d8a-4d98-8d4c-347334d65aa7",
-        name: "Producto interno",
-        sku: "INACTIVE-001",
-        status: "INACTIVE",
-        stockAvailable: 4,
       }),
     ]));
 
@@ -179,15 +171,13 @@ describe("storefront catalog landing", () => {
       "/products/10184fd0-3dcb-47cf-af70-a8be4c765421",
     );
     expect(screen.queryByText("Producto interno")).not.toBeInTheDocument();
-    expect(getPublicProducts).toHaveBeenCalledWith({
-      page: 1,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    }, 9);
+    expect(getCatalogLanding).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(screen.queryByRole("button", { name: /Filtros/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /paginación/i })).not.toBeInTheDocument();
   });
 
   it("shows category and tag links on a classified product card", async () => {
-    vi.mocked(getPublicProducts).mockResolvedValue(page([{
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([{
       ...product({
         id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
         name: "Monitor Studio 27",
@@ -206,7 +196,7 @@ describe("storefront catalog landing", () => {
   });
 
   it("disables the purchase action for an exhausted product", async () => {
-    vi.mocked(getPublicProducts).mockResolvedValue(page([
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([
       product({
         id: "0b130d30-ad61-45ca-b2c5-ff0c38701f1e",
         name: "Ultrabook Atlas",
@@ -239,7 +229,7 @@ describe("storefront catalog landing", () => {
       stockAvailable: 12,
     });
     const updatedCart = cart(availableProduct);
-    vi.mocked(getPublicProducts).mockResolvedValue(page([availableProduct]));
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([availableProduct]));
     vi.mocked(getCart).mockResolvedValue({
       ...updatedCart,
       currency: null,
@@ -291,7 +281,7 @@ describe("storefront catalog landing", () => {
       stockAvailable: 12,
     });
     const updatedCart = { ...cart(availableProduct), customerId: null };
-    vi.mocked(getPublicProducts).mockResolvedValue(page([availableProduct]));
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([availableProduct]));
     vi.mocked(getCart).mockResolvedValue({
       ...updatedCart,
       currency: null,
@@ -326,7 +316,7 @@ describe("storefront catalog landing", () => {
       status: "ACTIVE",
       stockAvailable: 12,
     });
-    vi.mocked(getPublicProducts).mockResolvedValue(page([availableProduct]));
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([availableProduct]));
     vi.mocked(addCartItem).mockRejectedValue(new CartApiError(409, {
       code: "CART_INSUFFICIENT_STOCK",
       details: { availableQuantity: 4, requestedQuantity: 5 },
@@ -346,9 +336,9 @@ describe("storefront catalog landing", () => {
 
   it("navigates with the hero search in the URL and resets the page", async () => {
     navigation.searchParams = new URLSearchParams("page=4&availability=OUT_OF_STOCK&minPrice=100");
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([]));
     renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ page: 4 }), 9));
+    await waitFor(() => expect(getCatalogLanding).toHaveBeenCalledTimes(1));
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Buscar en el catálogo" }), {
       target: { value: " monitor " },
@@ -356,155 +346,51 @@ describe("storefront catalog landing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buscar productos" }));
 
     expect(navigation.push).toHaveBeenCalledWith("/products?page=1&search=monitor", { scroll: true });
-    expect(screen.getByRole("region", { name: "Equipos listos para elegir" })).toHaveAttribute("id", "catalog");
+    expect(screen.getByRole("region", { name: "Lo último en tecnología" })).toHaveAttribute("id", "catalog");
   });
 
-  it("restores search, filters, order and page from the URL on reload", async () => {
-    navigation.searchParams = new URLSearchParams(
-      "search=teclado&availability=IN_STOCK&minPrice=100&maxPrice=300&page=3&sortBy=price&sortOrder=asc",
-    );
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
 
+  it("ignores legacy URL criteria and preserves the nine recent products in backend order", async () => {
+    navigation.searchParams = new URLSearchParams("search=teclado&page=8&availability=OUT_OF_STOCK&sortBy=price");
+    const items = Array.from({ length: 9 }, (_, index) => product({
+      id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      name: `Reciente ${index}`, sku: `RECENT-${index}`, status: "ACTIVE", stockAvailable: 5,
+    }));
+    vi.mocked(getCatalogLanding).mockResolvedValue({
+      ...page(items),
+      featuredProducts: [{ ...page(items).latestProducts[0]!, id: "62ac275e-bbf6-43ab-8885-e5588bd24c87", name: "Destacado separado" }],
+    });
     renderCatalog();
-
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith({
-      availability: "IN_STOCK",
-      maxPrice: "300",
-      minPrice: "100",
-      page: 3,
-      search: "teclado",
-      sortBy: "price",
-      sortOrder: "asc",
-    }, 9));
-    expect(screen.getByRole("searchbox", { name: "Buscar en el catálogo" })).toHaveValue("teclado");
-    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
-    expect(drawer.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
-    expect(drawer.getByRole("combobox", { name: "Ordenar por" })).toHaveValue("price:asc");
+    await screen.findByRole("heading", { name: "Reciente 0" });
+    expect(screen.getAllByRole("heading", { name: /Reciente \d/ }).map((heading) => heading.textContent)).toEqual(items.map((item) => item.name));
+    expect(screen.queryByText("Destacado separado")).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="product-card"]')).toHaveLength(9);
+    expect(screen.getByRole("searchbox", { name: "Buscar en el catálogo" })).toHaveValue("");
+    expect(getCatalogLanding).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Filtros|página/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver todos los productos" })).toHaveAttribute("href", "/products");
   });
 
-  it("writes filters and order to the URL and returns to page one", async () => {
-    navigation.searchParams = new URLSearchParams("search=monitor&page=5");
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
+  it("shows an explicit empty state without encouraging filters", async () => {
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([]));
     renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
-    fireEvent.change(drawer.getByRole("combobox", { name: "Disponibilidad" }), {
-      target: { value: "OUT_OF_STOCK" },
-    });
-    fireEvent.change(drawer.getByRole("spinbutton", { name: "Mínimo" }), {
-      target: { value: "200" },
-    });
-    fireEvent.change(drawer.getByRole("spinbutton", { name: "Máximo" }), {
-      target: { value: "900" },
-    });
-    fireEvent.change(drawer.getByRole("combobox", { name: "Ordenar por" }), {
-      target: { value: "price:desc" },
-    });
-    await waitFor(() => expect(drawer.getByRole("button", { name: "Aplicar" })).toBeEnabled());
-    fireEvent.click(drawer.getByRole("button", { name: "Aplicar" }));
-
-    expect(navigation.push).toHaveBeenCalledTimes(1);
-    const [href, options] = navigation.push.mock.calls[0] as [string, { scroll: boolean }];
-    const nextUrl = new URL(href, "http://localhost:3000");
-    expect(Object.fromEntries(nextUrl.searchParams)).toEqual({
-      availability: "OUT_OF_STOCK",
-      maxPrice: "900",
-      minPrice: "200",
-      page: "1",
-      search: "monitor",
-      sortBy: "price",
-      sortOrder: "desc",
-    });
-    expect(options).toEqual({ scroll: false });
+    expect(await screen.findByRole("heading", { name: "Todavía no hay novedades" })).toBeInTheDocument();
+    expect(screen.queryByText("Prueba con una búsqueda más amplia.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver todos los productos" })).toBeInTheDocument();
   });
 
-  it("restores category and tags accessibly and resets pagination when selection changes", async () => {
-    const categoryId = "8f732799-c098-45c1-961e-332c6becd13a";
-    const tagId = "62ac275e-bbf6-43ab-8885-e5588bd24c87";
-    navigation.searchParams = new URLSearchParams(`page=4&categoryId=${categoryId}&tagIds=${tagId}`);
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
-    vi.mocked(getActiveCategories).mockResolvedValue([{ id: categoryId, name: "Teclados", slug: "teclados", status: "ACTIVE", description: "", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
-    vi.mocked(getActiveTags).mockResolvedValue([{ id: tagId, name: "RGB", slug: "rgb", status: "ACTIVE", createdAt: "2026-09-04T12:00:00.000Z", updatedAt: "2026-09-04T12:00:00.000Z", deletedAt: null }]);
-
+  it("shows loading, safe errors and a working retry without changing the URL", async () => {
+    let rejectRequest!: (error: Error) => void;
+    vi.mocked(getCatalogLanding).mockImplementationOnce(() => new Promise((_, reject) => { rejectRequest = reject; }));
     renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({ categoryId, tagIds: [tagId], page: 4 }), 9));
-    fireEvent.click(screen.getByRole("button", { name: /Filtros/ }));
-    const drawer = within(screen.getByRole("dialog", { name: "Filtros del catálogo" }));
-    await waitFor(() => expect(drawer.getByRole("combobox", { name: "Categoría" })).toHaveValue(categoryId));
-    expect(drawer.getByRole("checkbox", { name: "RGB" })).toBeChecked();
-    fireEvent.change(drawer.getByRole("combobox", { name: "Categoría" }), { target: { value: "" } });
-    fireEvent.click(drawer.getByRole("button", { name: "Aplicar" }));
-
-    const [href] = navigation.push.mock.calls[0] as [string];
-    const nextUrl = new URL(href, "http://localhost:3000");
-    expect(nextUrl.searchParams.get("page")).toBe("1");
-    expect(nextUrl.searchParams.has("categoryId")).toBe(false);
-    expect(nextUrl.searchParams.get("tagIds")).toBe(tagId);
-  });
-
-  it("requests the criteria restored by browser history navigation", async () => {
-    navigation.searchParams = new URLSearchParams("search=monitor&page=2");
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
-    const { rerenderCatalog } = renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({
-      page: 2,
-      search: "monitor",
-    }), 9));
-
-    navigation.searchParams = new URLSearchParams("search=teclado&page=1&sortBy=name&sortOrder=asc");
-    rerenderCatalog();
-
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({
-      page: 1,
-      search: "teclado",
-      sortBy: "name",
-      sortOrder: "asc",
-    }), 9));
-  });
-
-  it("collapses and restores the desktop sidebar without changing the URL criteria", async () => {
-    navigation.searchParams = new URLSearchParams("search=monitor&availability=IN_STOCK&page=3");
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
-    const user = userEvent.setup();
-
-    renderCatalog();
-    await waitFor(() => expect(getPublicProducts).toHaveBeenCalledWith(expect.objectContaining({
-      availability: "IN_STOCK",
-      page: 3,
-      search: "monitor",
-    }), 9));
-
-    await user.click(screen.getByRole("button", { name: "Ocultar filtros del catálogo" }));
-    expect(screen.getByRole("button", { name: "Mostrar filtros del catálogo" })).toHaveAttribute("aria-expanded", "false");
-    expect(document.querySelector("[data-filters-collapsed='true']")).toBeInTheDocument();
+    expect(screen.getByText("Cargando novedades…")).toBeInTheDocument();
+    rejectRequest(new Error("Internal database details"));
+    expect(await screen.findByText("No pudimos cargar las novedades. Inténtalo nuevamente o explora todos los productos.")).toBeInTheDocument();
+    expect(screen.queryByText("Internal database details")).not.toBeInTheDocument();
+    vi.mocked(getCatalogLanding).mockResolvedValue(page([]));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Intentar nuevamente" }));
+    expect(await screen.findByRole("heading", { name: "Todavía no hay novedades" })).toBeInTheDocument();
     expect(navigation.push).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: "Equipos listos para elegir" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Mostrar filtros del catálogo" }));
-    expect(screen.getByRole("button", { name: "Ocultar filtros del catálogo" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("combobox", { name: "Disponibilidad" })).toHaveValue("IN_STOCK");
-    expect(navigation.push).not.toHaveBeenCalled();
-  });
-
-  it("opens the mobile filter drawer, traps focus, and restores focus on close", async () => {
-    vi.mocked(getPublicProducts).mockResolvedValue(page([]));
-    const user = userEvent.setup();
-
-    renderCatalog();
-    const trigger = screen.getByRole("button", { name: /Filtros/ });
-    await user.click(trigger);
-    const dialog = screen.getByRole("dialog", { name: "Filtros del catálogo" });
-    const close = within(dialog).getByRole("button", { name: "Cerrar" });
-    expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(close).toHaveFocus();
-    within(dialog).getByRole("button", { name: "Limpiar" }).focus();
-    await user.tab();
-    expect(close).toHaveFocus();
-    await user.keyboard("{Escape}");
-    expect(dialog.closest("[data-slot='filter-drawer']")).toHaveAttribute("aria-hidden", "true");
-    expect(trigger).toHaveFocus();
   });
 });

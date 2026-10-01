@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
 
 import "dotenv/config";
 import { eq } from "drizzle-orm";
@@ -269,4 +270,115 @@ describe("catalog and inventory persistence constraints", () => {
       },
     });
   });
+
+  it("stores multiple ordered images with one primary and validated metadata", async () => {
+    const product = await insertProduct("GALLERY-001");
+    const [cover] = await database.insert(productImages).values({ productId: product.id,
+      storageKey: "gallery/cover", url: "/cover.webp", altText: "Vista frontal del monitor",
+      width: 1200, height: 800, mimeType: "image/webp" }).returning();
+    await database.insert(productImages).values({ productId: product.id,
+      storageKey: "gallery/back", url: "/back.webp", altText: "Puertos del monitor", isPrimary: false, sortOrder: 1 });
+    expect(cover).toMatchObject({ isPrimary: true, sortOrder: 0, width: 1200, height: 800, mimeType: "image/webp" });
+    await expect(database.insert(productImages).values({ productId: product.id,
+      storageKey: "gallery/duplicate-cover", url: "/other.webp", sortOrder: 2 })).rejects.toMatchObject({
+        cause: { code: "23505", constraint: "product_images_primary_unique" },
+      });
+    await expect(database.insert(productImages).values({ productId: product.id,
+      storageKey: "gallery/duplicate-order", url: "/other.webp", isPrimary: false, sortOrder: 1 })).rejects.toMatchObject({
+        cause: { code: "23505", constraint: "product_images_product_order_unique" },
+      });
+    for (const [values, constraint] of [
+      [{ sortOrder: -1 }, "product_images_sort_order_non_negative"],
+      [{ altText: "  " }, "product_images_alt_text_not_blank"],
+      [{ width: 0 }, "product_images_width_positive"],
+      [{ height: -1 }, "product_images_height_positive"],
+      [{ mimeType: "text/html" }, "product_images_mime_type_image"],
+    ] as const) {
+      await expect(database.insert(productImages).values({ productId: product.id,
+        storageKey: `gallery/invalid-${constraint}`, url: "/other.webp", isPrimary: false, sortOrder: 3, ...values,
+      })).rejects.toMatchObject({ cause: { code: "23514", constraint } });
+    }
+  });
+
+  it("rejects creating or activating an active product without a primary image", async () => {
+    await expect(database.insert(products).values({ sku: "MISSING-COVER", name: "Sin portada", description: "Prueba",
+      price: "1.00", status: "ACTIVE" })).rejects.toMatchObject({ cause: { code: "23514", constraint: "products_active_primary_image_required" } });
+    const product = await insertProduct("ONLY-GALLERY");
+    await database.insert(productImages).values({ productId: product.id, storageKey: "gallery/only", url: "/only.webp", isPrimary: false });
+    await expect(database.update(products).set({ status: "ACTIVE" }).where(eq(products.id, product.id)))
+      .rejects.toMatchObject({ cause: { code: "23514", constraint: "products_active_primary_image_required" } });
+  });
+
+  it("preserves a cover at commit and permits an atomic cover replacement", async () => {
+    const product = await insertProduct("SWAP-COVER");
+    const [first] = await database.insert(productImages).values({ productId: product.id, storageKey: "swap/first", url: "/first.webp" }).returning();
+    const [second] = await database.insert(productImages).values({ productId: product.id, storageKey: "swap/second", url: "/second.webp", isPrimary: false, sortOrder: 1 }).returning();
+    await database.update(products).set({ status: "ACTIVE" }).where(eq(products.id, product.id));
+    await expect(database.delete(productImages).where(eq(productImages.id, first!.id)))
+      .rejects.toMatchObject({ cause: { constraint: "products_active_primary_image_required" } });
+    await expect(database.update(productImages).set({ isPrimary: false }).where(eq(productImages.id, first!.id)))
+      .rejects.toMatchObject({ cause: { constraint: "products_active_primary_image_required" } });
+    await database.transaction(async (tx) => {
+      await tx.update(productImages).set({ isPrimary: false }).where(eq(productImages.id, first!.id));
+      await tx.update(productImages).set({ isPrimary: true }).where(eq(productImages.id, second!.id));
+    });
+    const rows = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect(rows.filter((image) => image.isPrimary).map((image) => image.id)).toEqual([second!.id]);
+    const other = await insertProduct("TRANSFER-COVER");
+    await expect(database.update(productImages).set({ productId: other.id }).where(eq(productImages.id, second!.id)))
+      .rejects.toMatchObject({ cause: { constraint: "products_active_primary_image_required" } });
+    // Inactive products may be edited without a cover; cascading deletion remains valid.
+    await database.transaction(async (tx) => {
+      await tx.update(products).set({ status: "INACTIVE" }).where(eq(products.id, product.id));
+      await tx.delete(productImages).where(eq(productImages.productId, product.id));
+    });
+    await database.delete(products).where(eq(products.id, product.id));
+  });
+
+  it("permits parent deletion to cascade without a spurious missing-cover failure", async () => {
+    const product = await insertProduct("CASCADE-COVER");
+    await database.insert(productImages).values({ productId: product.id, storageKey: "cascade/cover", url: "/cover.webp" });
+    await database.update(products).set({ status: "ACTIVE" }).where(eq(products.id, product.id));
+    await database.delete(products).where(eq(products.id, product.id));
+    expect(await database.select().from(productImages).where(eq(productImages.productId, product.id))).toEqual([]);
+  });
+
+  it("serializes concurrent activation and cover deletion without invalid active products", async () => {
+    const product = await insertProduct("CONCURRENT-COVER");
+    await database.insert(productImages).values({ productId: product.id, storageKey: "concurrent/cover", url: "/cover.webp" });
+    const results = await Promise.allSettled([
+      database.update(products).set({ status: "ACTIVE" }).where(eq(products.id, product.id)),
+      database.delete(productImages).where(eq(productImages.productId, product.id)),
+    ]);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const [stored] = await database.select().from(products).where(eq(products.id, product.id));
+    const images = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect(stored?.status !== "ACTIVE" || images.some((image) => image.isPrimary)).toBe(true);
+  });
+
+  it("migrates legacy images without losing data and supplies missing active covers", async () => {
+    const legacyName = `ecommerce_catalog_${randomUUID().replaceAll("-", "")}`;
+    const url = new URL(databaseUrl!); url.pathname = `/${legacyName}`;
+    const pool = new Pool({ connectionString: url.toString(), max: 1 });
+    await maintenancePool!.query(`create database "${legacyName}" template template0`);
+    try {
+      const folder = resolve("src/database/migrations");
+      const journal = JSON.parse(await readFile(resolve(folder, "meta/_journal.json"), "utf8")) as { entries: { tag: string }[] };
+      const imageMigrationIndex = journal.entries.findIndex((entry) => entry.tag === "0013_lucky_the_watchers");
+      if (imageMigrationIndex < 0) throw new Error("Product image migration missing from journal");
+      for (const entry of journal.entries.slice(0, imageMigrationIndex)) {
+        for (const statement of (await readFile(resolve(folder, `${entry.tag}.sql`), "utf8")).split("--> statement-breakpoint")) await pool.query(statement);
+      }
+      const original = await pool.query("insert into products (sku,name,description,price,status) values ('LEGACY-COVER','Monitor histórico','Demo',10,'ACTIVE'), ('LEGACY-MISSING','Sin imagen','Demo',20,'ACTIVE') returning id,sku");
+      const id = original.rows.find((row) => row.sku === "LEGACY-COVER").id;
+      await pool.query("insert into product_images (product_id,storage_key,url) values ($1,'legacy/original','/original.webp')", [id]);
+      for (const statement of (await readFile(resolve(folder, `${journal.entries[imageMigrationIndex]!.tag}.sql`), "utf8")).split("--> statement-breakpoint")) await pool.query(statement);
+      const migrated = await pool.query("select * from product_images where product_id=$1", [id]);
+      expect(migrated.rows[0]).toMatchObject({ storage_key: "legacy/original", url: "/original.webp", alt_text: "Monitor histórico", is_primary: true, sort_order: 0, width: null, height: null, mime_type: null });
+      expect((await pool.query("select count(*)::int as total from product_images where is_primary")).rows[0].total).toBe(2);
+    } finally {
+      await pool.end();
+      await maintenancePool!.query(`drop database "${legacyName}"`);
+    }
+  }, 30_000);
 });

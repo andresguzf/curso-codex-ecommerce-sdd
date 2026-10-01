@@ -2691,6 +2691,286 @@
         ]
       }
     },
+    "/api/v1/products/{productId}/images": {
+      "post": {
+        "operationId": "addProductImage",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "content-type",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 2147483646,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "isPrimary",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "altText",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 500,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductGalleryImageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid image, metadata or position"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product or image not found"
+          },
+          "409": {
+            "description": "An active product must retain its cover"
+          },
+          "413": {
+            "description": "Image exceeds the configured upload limit"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Upload a product image; append by default, first image becomes cover",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/images/{imageId}": {
+      "patch": {
+        "operationId": "updateProductImage",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "imageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "altText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "isPrimary": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483646
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductGalleryImageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid image, metadata or position"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product or image not found"
+          },
+          "409": {
+            "description": "An active product must retain its cover"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Edit alt text, move to a zero-based position or select the cover atomically",
+        "tags": [
+          "products"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteProductImage",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "imageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Image reference removed; remaining positions normalized"
+          },
+          "400": {
+            "description": "Invalid image, metadata or position"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "ADMIN role required"
+          },
+          "404": {
+            "description": "Product or image not found"
+          },
+          "409": {
+            "description": "An active product must retain its cover"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove an image, preserving the cover of active products",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/catalog/landing": {
+      "get": {
+        "description": "Up to three featured products, nine latest products excluding the displayed featured IDs, and three ordered non-empty categories with up to three products each. No query parameters are accepted. All sections share one database snapshot; no administrative editorial fields are exposed.",
+        "operationId": "getCatalogLanding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogLandingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameters are not supported; use GET /products for search, filters and pagination"
+          }
+        },
+        "summary": "Read the fixed public landing composition",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/api/v1/cart": {
       "get": {
         "operationId": "getCart",
@@ -3710,6 +3990,10 @@
     {
       "name": "products",
       "description": "Administrative and public product catalog"
+    },
+    {
+      "name": "catalog",
+      "description": "Fixed public editorial catalog compositions"
     },
     {
       "name": "inventory",
@@ -5170,6 +5454,14 @@
       "AdministrativeProductResponseDto": {
         "type": "object",
         "properties": {
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "featuredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -5252,6 +5544,8 @@
           }
         },
         "required": [
+          "isFeatured",
+          "featuredAt",
           "id",
           "sku",
           "slug",
@@ -5271,6 +5565,10 @@
       "UpdateProductRequestDto": {
         "type": "object",
         "properties": {
+          "isFeatured": {
+            "type": "boolean",
+            "description": "Activate or withdraw editorial destaque; timestamp is assigned by the server"
+          },
           "sku": {
             "type": "string",
             "maxLength": 64
@@ -5349,6 +5647,16 @@
       "ProductListItemDto": {
         "type": "object",
         "properties": {
+          "isFeatured": {
+            "type": "boolean",
+            "description": "ADMIN view only"
+          },
+          "featuredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "ADMIN view only"
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -5407,7 +5715,28 @@
             "example": "USD"
           },
           "image": {
-            "$ref": "#/components/schemas/ProductListImageDto"
+            "deprecated": true,
+            "description": "Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductListImageDto"
+              }
+            ]
+          },
+          "coverImage": {
+            "description": "Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogImageDto"
+              },
+              {
+                "type": "object",
+                "nullable": true,
+                "enum": [
+                  null
+                ]
+              }
+            ]
           },
           "status": {
             "type": "string",
@@ -5440,6 +5769,7 @@
           "price",
           "currency",
           "image",
+          "coverImage",
           "status",
           "stockAvailable",
           "createdAt",
@@ -5481,9 +5811,70 @@
           "totalPages"
         ]
       },
+      "CatalogImageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "storageKey",
+          "url",
+          "altText",
+          "isPrimary",
+          "sortOrder",
+          "width",
+          "height",
+          "mimeType"
+        ]
+      },
       "ProductDetailResponseDto": {
         "type": "object",
         "properties": {
+          "isFeatured": {
+            "type": "boolean",
+            "description": "ADMIN view only"
+          },
+          "featuredAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "ADMIN view only"
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -5542,7 +5933,28 @@
             "example": "USD"
           },
           "image": {
-            "$ref": "#/components/schemas/ProductListImageDto"
+            "deprecated": true,
+            "description": "Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductListImageDto"
+              }
+            ]
+          },
+          "coverImage": {
+            "description": "Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogImageDto"
+              },
+              {
+                "type": "object",
+                "nullable": true,
+                "enum": [
+                  null
+                ]
+              }
+            ]
           },
           "status": {
             "type": "string",
@@ -5563,6 +5975,13 @@
             "type": "string",
             "format": "date-time"
           },
+          "images": {
+            "description": "Full gallery ordered by sortOrder, without autoplay semantics",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogImageDto"
+            }
+          },
           "availability": {
             "type": "string",
             "enum": [
@@ -5582,10 +6001,12 @@
           "price",
           "currency",
           "image",
+          "coverImage",
           "status",
           "stockAvailable",
           "createdAt",
           "updatedAt",
+          "images",
           "availability"
         ]
       },
@@ -5621,6 +6042,17 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "showOnLanding": {
+            "type": "boolean",
+            "description": "ADMIN view and mutation responses only"
+          },
+          "landingOrder": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 3,
+            "description": "ADMIN view and mutation responses only"
           },
           "description": {
             "type": "string"
@@ -5702,6 +6134,16 @@
       "UpdateCategoryDto": {
         "type": "object",
         "properties": {
+          "showOnLanding": {
+            "type": "boolean"
+          },
+          "landingOrder": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 3,
+            "description": "Swap positions when both categories are already selected"
+          },
           "name": {
             "type": "string",
             "maxLength": 200
@@ -6014,6 +6456,272 @@
         "required": [
           "productId",
           "added"
+        ]
+      },
+      "ProductGalleryImageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "storageKey",
+          "url",
+          "altText",
+          "isPrimary",
+          "sortOrder",
+          "width",
+          "height",
+          "mimeType",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LandingProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "INACTIVE"
+                ]
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductClassificationDto"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "example": "1299990.00"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD"
+            ],
+            "example": "USD"
+          },
+          "image": {
+            "deprecated": true,
+            "description": "Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductListImageDto"
+              }
+            ]
+          },
+          "coverImage": {
+            "description": "Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogImageDto"
+              },
+              {
+                "type": "object",
+                "nullable": true,
+                "enum": [
+                  null
+                ]
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          },
+          "stockAvailable": {
+            "type": "number",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "slug",
+          "category",
+          "tags",
+          "name",
+          "description",
+          "price",
+          "currency",
+          "image",
+          "coverImage",
+          "status",
+          "stockAvailable",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LandingCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "status"
+        ]
+      },
+      "HighlightedCategoryDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/LandingCategoryDto"
+          },
+          "products": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LandingProductDto"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "products"
+        ]
+      },
+      "CatalogLandingDto": {
+        "type": "object",
+        "properties": {
+          "featuredProducts": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LandingProductDto"
+            }
+          },
+          "latestProducts": {
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LandingProductDto"
+            }
+          },
+          "highlightedCategories": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HighlightedCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "featuredProducts",
+          "latestProducts",
+          "highlightedCategories"
         ]
       },
       "CartImageDto": {

@@ -1,3 +1,4 @@
+import { CatalogImageDto } from "./catalog-image.dto";
 import {
   BadRequestException,
   Controller,
@@ -16,9 +17,11 @@ import {
   ApiOperation,
   ApiParam,
   ApiProperty,
+  ApiPropertyOptional,
   ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
+  getSchemaPath,
 } from "@nestjs/swagger";
 import { z } from "zod";
 
@@ -101,7 +104,9 @@ class ProductClassificationDto {
   @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] }) status!: "ACTIVE" | "INACTIVE";
 }
 
-class ProductListItemDto {
+export class ProductListItemDto {
+  @ApiPropertyOptional({ type: Boolean, description: "ADMIN view only" }) isFeatured?: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, format: "date-time", description: "ADMIN view only" }) featuredAt?: string | null;
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty() sku!: string;
   @ApiProperty({ nullable: true, type: String }) slug!: string | null;
@@ -111,7 +116,15 @@ class ProductListItemDto {
   @ApiProperty() description!: string;
   @ApiProperty({ example: "1299990.00", type: String }) price!: string;
   @ApiProperty({ enum: ["USD"], example: "USD" }) currency!: "USD";
-  @ApiProperty({ type: ProductListImageDto }) image!: ProductListImageDto;
+  @ApiProperty({ type: ProductListImageDto, deprecated: true, description: "Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover." }) image!: ProductListImageDto;
+  @ApiProperty({
+    required: true,
+    description: "Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails.",
+    oneOf: [
+      { $ref: getSchemaPath(CatalogImageDto) },
+      { type: "object", nullable: true, enum: [null] },
+    ],
+  }) coverImage!: CatalogImageDto | null;
   @ApiProperty({ enum: PRODUCT_STATUSES }) status!: (typeof PRODUCT_STATUSES)[number];
   @ApiProperty({ minimum: 0 }) stockAvailable!: number;
   @ApiProperty({ format: "date-time" }) createdAt!: string;
@@ -127,6 +140,7 @@ class ProductPageResponseDto {
 }
 
 class ProductDetailResponseDto extends ProductListItemDto {
+  @ApiProperty({ type: [CatalogImageDto], description: "Full gallery ordered by sortOrder, without autoplay semantics" }) images!: CatalogImageDto[];
   @ApiProperty({ enum: PRODUCT_AVAILABILITIES })
   availability!: (typeof PRODUCT_AVAILABILITIES)[number];
 }

@@ -29,7 +29,7 @@ export class ClassificationService {
   async listCategories(query: ClassificationQuery, actor?: AuthenticatedUser): Promise<ClassificationPage<CategoryRecord>> {
     this.checkView(query, actor);
     const page = await this.repository.list("category", query);
-    return { ...page, items: page.items.map((item) => this.asCategory(item)) };
+    return { ...page, items: page.items.map((item) => this.asCategory(item, query.view === "administrative")) };
   }
 
   async listTags(query: ClassificationQuery, actor?: AuthenticatedUser): Promise<ClassificationPage<TagRecord>> {
@@ -40,7 +40,7 @@ export class ClassificationService {
 
   async getCategory(id: string, administrative: boolean, actor?: AuthenticatedUser): Promise<CategoryRecord> {
     if (administrative) this.assertAdmin(actor);
-    return this.asCategory(await this.get("category", id, administrative));
+    return this.asCategory(await this.get("category", id, administrative), administrative);
   }
 
   async getTag(id: string, administrative: boolean, actor?: AuthenticatedUser): Promise<TagRecord> {
@@ -111,6 +111,8 @@ export class ClassificationService {
 
   private async update(kind: ClassificationKind, id: string, input: ClassificationPatch, actorUserId: string): Promise<ClassificationRecord> {
     const normalized: ClassificationPatch = {
+      ...(input.showOnLanding === undefined ? {} : { showOnLanding: input.showOnLanding }),
+      ...(input.landingOrder === undefined ? {} : { landingOrder: input.landingOrder }),
       ...(input.name === undefined ? {} : { name: input.name.trim() }),
       ...(input.slug === undefined ? {} : { slug: this.validatedSlug(input.slug, kind === "category" ? 220 : 140) }),
       ...(input.description === undefined ? {} : { description: input.description.trim() }),
@@ -147,6 +149,8 @@ export class ClassificationService {
     if (error instanceof NotFoundException) throw error;
     const prefix = kind === "category" ? "categories" : "tags";
     const constraint = this.constraint(error);
+    if (constraint === "categories_landing_order_unique") throw new ConflictException({ code: "CATEGORY_LANDING_POSITION_OCCUPIED", message: "This landing position is occupied" });
+    if (constraint === "categories_landing_selection_consistent") throw new BadRequestException({ code: "CATEGORY_LANDING_INVALID", message: "Select a position from 1 to 3 or remove the selection" });
     if (constraint === `${prefix}_name_unique`) throw new ConflictException({ code: "CLASSIFICATION_NAME_ALREADY_EXISTS", message: "A classification with this name already exists" });
     if (constraint === `${prefix}_slug_unique`) throw new ConflictException({ code: "CLASSIFICATION_SLUG_ALREADY_EXISTS", message: "A classification with this slug already exists" });
     throw error;
@@ -156,8 +160,9 @@ export class ClassificationService {
     return new NotFoundException({ code: kind === "category" ? "CATEGORY_NOT_FOUND" : "TAG_NOT_FOUND", message: "The requested classification does not exist" });
   }
 
-  private asCategory(record: ClassificationRecord): CategoryRecord {
-    return { ...record, description: record.description ?? "" };
+  private asCategory(record: ClassificationRecord, administrative = true): CategoryRecord {
+    const { showOnLanding, landingOrder, ...publicRecord } = record;
+    return { ...publicRecord, ...(administrative ? { showOnLanding, landingOrder } : {}), description: record.description ?? "" };
   }
 
   private asTag(record: ClassificationRecord): TagRecord {

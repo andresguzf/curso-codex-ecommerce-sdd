@@ -111,6 +111,8 @@ export {
 } from "./inventory";
 export {
   administrativeProductSchema,
+  catalogImageSchema,
+  type CatalogImage,
   createProductImageReferenceSchema,
   createProductRequestSchema,
   productClassificationSchema,
@@ -174,3 +176,5 @@ export {
   type InvoiceSummary,
 } from "./invoices";
 export { dashboardSummarySchema, adminDashboardSummarySchema, billingDashboardSummarySchema, type DashboardSummary } from "./dashboard";
+export { productGalleryImageSchema, updateProductImageRequestSchema, type ProductGalleryImage, type UpdateProductImageRequest } from "./product-images";
+export { catalogLandingSchema, catalogLandingQuerySchema, landingProductSchema, landingCategorySchema, type CatalogLanding, type LandingProduct } from "./catalog-landing";

@@ -20,9 +20,19 @@ const validInput = {
   price: "1299990.00",
   sku: "NOTEBOOK-001",
 };
-const validProduct = { ...validInput, currency: "USD" as const, slug: "notebook-pro", category: null, tags: [] };
+const coverImage = {
+  ...validInput.image, id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada del notebook",
+  isPrimary: true, sortOrder: 0, width: 1200, height: 900, mimeType: "image/webp",
+};
+const validProduct = { ...validInput, coverImage, currency: "USD" as const, slug: "notebook-pro", category: null, tags: [] };
 
 describe("product HTTP schemas", () => {
+  it("validates a destaque command but rejects client-controlled timestamps", () => {
+    expect(updateProductRequestSchema.parse({ isFeatured: true })).toEqual({ isFeatured: true });
+    expect(updateProductRequestSchema.parse({ isFeatured: false })).toEqual({ isFeatured: false });
+    expect(updateProductRequestSchema.safeParse({ isFeatured: "true" }).success).toBe(false);
+    expect(updateProductRequestSchema.safeParse({ featuredAt: "2026-10-01T00:00:00Z" }).success).toBe(false);
+  });
   it("accepts fixed-precision product input and rejects stock or float values", () => {
     expect(createProductRequestSchema.safeParse(validInput).success).toBe(true);
     expect(createProductRequestSchema.safeParse({ ...validInput, image: undefined, slug: "notebook-pro", categoryId: "8f732799-c098-45c1-961e-332c6becd13a", tagIds: ["62ac275e-bbf6-43ab-8885-e5588bd24c87"] }).success).toBe(true);
@@ -108,6 +118,7 @@ describe("product HTTP schemas", () => {
     const detail = {
       ...validProduct,
       availability: "OUT_OF_STOCK",
+      images: [coverImage],
       id: "8f732799-c098-45c1-961e-332c6becd13a",
       status: "ACTIVE",
       stockAvailable: 0,
@@ -116,6 +127,10 @@ describe("product HTTP schemas", () => {
     };
 
     expect(productDetailSchema.safeParse(detail).success).toBe(true);
+    expect(productDetailSchema.safeParse({ ...detail, images: undefined }).success).toBe(false);
+    expect(productDetailSchema.safeParse({ ...detail, coverImage: undefined }).success).toBe(false);
+    expect(productDetailSchema.safeParse({ ...detail, images: [{ ...coverImage, width: 0 }] }).success).toBe(false);
+    expect(productDetailSchema.safeParse({ ...detail, status: "INACTIVE", coverImage: null, images: [] }).success).toBe(true);
     expect(
       productDetailSchema.safeParse({ ...detail, availability: "UNKNOWN" }),
     ).toMatchObject({ success: false });

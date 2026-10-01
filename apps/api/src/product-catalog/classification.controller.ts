@@ -38,7 +38,12 @@ const categoryCreateSchema = z.object({
   description: z.string().trim().max(10_000).default(""),
   status: z.enum(CLASSIFICATION_STATUSES).default("ACTIVE"),
 }).strict();
-const categoryUpdateSchema = categoryCreateSchema.partial().refine((value) => Object.keys(value).length > 0);
+const categoryUpdateSchema = categoryCreateSchema.partial().extend({
+  description: z.string().trim().max(10_000).optional(),
+  status: z.enum(CLASSIFICATION_STATUSES).optional(),
+  showOnLanding: z.boolean().optional(),
+  landingOrder: z.number().int().min(1).max(3).nullable().optional(),
+}).refine((value) => Object.keys(value).length > 0);
 const tagCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   slug: z.string().trim().min(1).max(140).optional(),
@@ -65,6 +70,8 @@ class ClassificationBaseDto {
   @ApiProperty({ format: "date-time", nullable: true, type: String }) deletedAt!: string | null;
 }
 class CategoryDto extends ClassificationBaseDto {
+  @ApiPropertyOptional({ type: Boolean, description: "ADMIN view and mutation responses only" }) showOnLanding?: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 3, description: "ADMIN view and mutation responses only" }) landingOrder?: number | null;
   @ApiProperty() description!: string;
 }
 class TagDto extends ClassificationBaseDto {}
@@ -89,6 +96,8 @@ class CreateCategoryDto {
   @ApiPropertyOptional({ enum: CLASSIFICATION_STATUSES }) status?: "ACTIVE" | "INACTIVE";
 }
 class UpdateCategoryDto {
+  @ApiPropertyOptional({ type: Boolean }) showOnLanding?: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 3, description: "Swap positions when both categories are already selected" }) landingOrder?: number | null;
   @ApiPropertyOptional({ maxLength: 200 }) name?: string;
   @ApiPropertyOptional({ maxLength: 220 }) slug?: string;
   @ApiPropertyOptional({ maxLength: 10_000 }) description?: string;

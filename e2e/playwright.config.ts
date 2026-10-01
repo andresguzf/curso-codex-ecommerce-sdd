@@ -16,7 +16,7 @@ export default defineConfig({
   projects: [
     {
       name: "storefront",
-      testMatch: [/storefront-(catalog|accessibility|theme|design)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
+      testMatch: [/storefront-(catalog|gallery|accessibility|theme|design)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
       use: { baseURL: "http://localhost:3000" },
     },
     {

@@ -4,15 +4,17 @@ Aplicación e-commerce para comercializar un catálogo de productos tecnológico
 
 > Estado actual: la planificación está completa y la implementación avanza por tareas OpenSpec. Ya existen storefront, backoffice, API, persistencia, autenticación, catálogo, inventario, carrito, checkout, órdenes, facturación, PDF, observabilidad, contenedores y CI funcionales; las ampliaciones posteriores continúan pendientes según `tasks.md`.
 
-La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Los artefactos de planificación están completos, no toda la implementación. El plan contiene 145 tareas, con 128 completadas al cerrar la fase 19; siguen pendientes 17 tareas de las fases 20–21, salvo 20.8, que ya está implementada. La revisión de escenarios 18.5 está registrada en [su informe histórico](e2e/VALIDATION-18.5.md); la evidencia posterior de temas y dashboard se enlaza abajo.
+La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/). Los artefactos de planificación están completos, no toda la implementación. Al cerrar la fase 20 hay 140/145 tareas completadas; quedan 21.4–21.8. La revisión de escenarios 18.5 está registrada en [su informe histórico](e2e/VALIDATION-18.5.md); no acredita las ampliaciones posteriores.
 
 ### Implementación actual y alcance pendiente
 
-Actualizado en la tarea 19.9 (30 de septiembre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 20.10 (1 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
 
 - Implementado: autenticación y roles, carrito de visitante o cliente, checkout, órdenes, inventario, facturas y PDF; administración de usuarios, productos, categorías y etiquetas; wishlist, perfil empresarial con logo y snapshots, autocompletes y catálogo completo separado (20.8).
 - Implementado en 19.1–19.8: identidades comerciales y administrativas separadas, cuatro temas, selector accesible y persistencia independiente; dashboard por rol y `GET /api/v1/dashboard/summary`, con pruebas de contraste, teclado y regresión visual.
-- Pendiente: ampliación del seed y gestión de múltiples imágenes/galería (20), destacados y composición editorial agregada de la landing (21). Los requisitos de estas capacidades se conservan en este documento como objetivos, no como funcionalidades disponibles.
+- Implementado en fase 20: seed explícito de 20 productos y 60 imágenes, cuentas demo, imágenes ordenadas con portada única y endpoints administrativos, contratos `coverImage`/`images`, nueve recientes sin filtros/paginador, catálogo completo y galería manual accesible.
+- Implementado en 21.1–21.3: modelo editorial, mutaciones REST autorizadas y composición pública `GET /api/v1/catalog/landing`. Pendiente en 21.4–21.8: controles editoriales del backoffice, seed de destacados/categorías importantes, secciones visuales de destacados/categorías en la landing y consolidación de esa fase. La landing actual solo muestra recientes.
+- Evidencia de fase 20: [validación consolidada](e2e/VALIDATION-20.10.md), [seed de catálogo](docs/development-catalog-seed.md), [usuarios demo](docs/development-user-seed.md), [contratos de imágenes](docs/catalog-image-contract.md), [recientes](docs/landing-latest-products.md) y [galería](docs/product-gallery.md).
 - Verificación del alcance completado: [accesibilidad 18.2](e2e/ACCESSIBILITY.md) y [validación 18.3](e2e/VALIDATION-18.3.md), con lint, tipos, 498 pruebas de las suites principales y pruebas de navegador. Esto no acredita las funcionalidades pendientes.
 - Verificación de fase 19: [contrato del dashboard](docs/dashboard-summary.md), [interfaz del dashboard](docs/backoffice-dashboard.md), [cobertura de componentes](docs/theme-component-coverage.md) y [regresión de temas](docs/theme-regression-testing.md). En 19.8 pasaron 57 pruebas de frontend y siete de tokens; las 16 referencias visuales se verificaron sin actualizarlas.
 
@@ -85,7 +87,7 @@ Change 'build-technology-ecommerce-platform' is valid
 
 ## Reglas fundamentales
 
-Estas decisiones son invariantes del proyecto; la galería y composición editorial siguen siendo objetivos de las fases pendientes indicadas arriba. Los temas y el dashboard ya están implementados:
+Estas decisiones son invariantes del proyecto. Temas, dashboard y galería están implementados; la composición editorial visual completa sigue pendiente de 21.7:
 
 1. El frontend consume exclusivamente la API REST.
 2. Next.js no usa Server Actions ni Route Handlers para lógica de negocio o acceso a datos.
@@ -284,7 +286,7 @@ Incluye:
 
 Especificación: [`product-catalog/spec.md`](openspec/changes/build-technology-ecommerce-platform/specs/product-catalog/spec.md)
 
-Esta sección conserva el alcance completo. El catálogo, taxonomía, slug y filtros ya existen; múltiples imágenes, galería, destaques y categorías editoriales pertenecen a 20–21 pendientes.
+Esta sección conserva el alcance completo. Catálogo, taxonomía, slug, filtros, imágenes y galería están implementados. El API editorial también existe; sus controles de backoffice y secciones visuales siguen pendientes.
 
 Cada producto tendrá al menos:
 
@@ -340,9 +342,9 @@ El back office permitirá exclusivamente a `ADMIN`:
 
 ### 3. Datos demostrativos
 
-El seed ejecutable actual crea tres productos de desarrollo (dos activos y uno inactivo), una imagen Picsum por producto, inventario de apertura, cuentas `ADMIN`, `BILLING` y `CUSTOMER`, y perfil empresarial ficticio. Se ejecuta explícitamente con `db:seed`, no al iniciar la API, y rechaza producción. Las imágenes no se garantizan como fotografías del producto real. La ampliación siguiente sigue pendiente en 20–21.
+El seed ejecutable actual administra 20 SKU de desarrollo (18 activos y 2 inactivos), 60 imágenes Picsum ordenadas, cuatro categorías, dos etiquetas, inventario de apertura, cuentas `ADMIN`, `BILLING` y `CUSTOMER`, y perfil empresarial ficticio. Se ejecuta explícitamente con `db:seed`, no al iniciar la API, exige entorno no productivo y credenciales privadas configuradas, y rechaza producción. Las imágenes son ilustrativas, no fotografías garantizadas del producto. Conserva datos ajenos, IDs y stock ya consumido al reejecutarse. No configura aún destaques ni categorías importantes: eso corresponde a 21.6.
 
-Los entornos de desarrollo y pruebas podrán cargar de forma idempotente:
+Los entornos de desarrollo y pruebas pueden cargar de forma idempotente (los dos últimos puntos son pendientes de 21.6):
 
 - Exactamente 20 productos tecnológicos con categorías, etiquetas, slugs, precios y estados válidos.
 - Al menos 3 imágenes por producto: una portada y dos imágenes adicionales, para un mínimo de 60 referencias deterministas.
@@ -705,7 +707,7 @@ Las dos aplicaciones comparten primitivas visuales desde `packages/ui`, pero con
 StorefrontShell
   Header / Navbar: logo SVG, tienda, inicio, cuenta, login/logout, carrito
   Hero: fondo tecnológico semitransparente y búsqueda
-  Main: catálogo con filtros izquierdos colapsables
+  Main: recientes sin filtros en /; catálogo con filtros izquierdos en /products
   Footer
 
 BackofficeShell
@@ -759,7 +761,7 @@ El API devuelve variantes estrictas por `role`, `updatedAt` y `metrics`; ADMIN r
 
 ## API REST y contrato OpenAPI
 
-Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 45 paths para salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial, medios y dashboard. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia. Los endpoints siguientes están implementados salvo las subsecciones explícitamente pendientes.
+Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 48 paths, con composición de landing e imágenes de producto además de salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial, medios y dashboard. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia.
 
 ### Salud y autenticación
 
@@ -793,9 +795,9 @@ Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`ap
 - `GET|POST /tags`
 - `GET|PATCH|DELETE /tags/:tagId`
 
-Actualmente las respuestas de productos usan `image`; `coverImage` e `images` ordenadas son la ampliación pendiente 20.6. Las consultas aceptan búsqueda, categoría, etiquetas, disponibilidad, rango de precio, orden y paginación. El listado administrativo también admite `createdFrom` y `createdTo` como fechas ISO `YYYY-MM-DD`, distintas de las fechas-hora ISO de órdenes y facturas. El formulario permite etiquetas por nombre y slug opcional; las categorías se crean aparte y se seleccionan.
+Las respuestas conservan `image` por compatibilidad y devuelven `coverImage` para tarjetas; el detalle agrega `images` ordenadas con metadatos y texto alternativo. Las consultas aceptan búsqueda, categoría, etiquetas, disponibilidad, rango de precio, orden y paginación. El listado administrativo también admite `createdFrom` y `createdTo` como fechas ISO `YYYY-MM-DD`, distintas de las fechas-hora ISO de órdenes y facturas. El formulario permite etiquetas por nombre y slug opcional; las categorías se crean aparte y se seleccionan.
 
-Pendiente en 20–21: `POST /products/:productId/images`, `PATCH|DELETE /products/:productId/images/:imageId` y `GET /catalog/landing`. Este último devolverá `featuredProducts`, `latestProducts` y `highlightedCategories` en una respuesta pública. Los `PATCH` existentes se ampliarán para `isFeatured`, `featuredAt`, `showOnLanding` y `landingOrder` con autorización `ADMIN`; esos campos no forman parte del contrato actual.
+Implementados: `POST /products/:productId/images` (bytes de imagen y metadatos), `PATCH|DELETE /products/:productId/images/:imageId` (solo `ADMIN`) y `GET /catalog/landing` público, sin filtros/paginación. Este último devuelve `featuredProducts`, `latestProducts` y `highlightedCategories` en una respuesta coherente acotada 3/9/3. Las mutaciones existentes admiten `isFeatured` en productos y `showOnLanding`/`landingOrder` en categorías; `featuredAt` lo calcula el servidor. Solo `ADMIN` modifica la selección editorial, con auditoría y rechazo de una cuarta categoría importante. La UI editorial sigue pendiente.
 
 ### Wishlist, carrito y checkout
 
@@ -861,7 +863,7 @@ Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con 
 
 ## Convenciones de frontend
 
-Las convenciones de temas ya están implementadas. La galería y composición editorial de landing expresan requisitos futuros de 20–21; no deben confundirse con las capacidades actuales indicadas arriba.
+Las convenciones de temas y galería están implementadas. La sección de recientes consume la composición REST; las secciones visuales de destacados y categorías siguen pendientes de 21.7.
 
 - Código exclusivamente TypeScript en `.ts` y `.tsx`.
 - Componentes pequeños y con una sola responsabilidad.
@@ -963,7 +965,7 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 
 Cada una de las 145 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-Fase 19 completada: 19.1 tokens, 19.2 infraestructura de temas, 19.3 storefront, 19.4 backoffice, 19.5 endpoint de resumen, 19.6 dashboard, 19.7 cobertura de componentes, 19.8 contraste/regresión y 19.9 documentación. La siguiente tarea es 20.1 (modelo y restricciones de imágenes múltiples); 20.8 ya se completó. No se ha implementado por ello la galería ni la composición editorial de la fase 21.
+Fases 19 y 20 completadas. Las dependencias 21.1–21.3 también están implementadas. La siguiente tarea es 21.4 (controles administrativos de destaque); quedan 21.4–21.8. El API compone todas las secciones, pero la landing muestra únicamente los recientes hasta implementar 21.7.
 
 ## Fuera del alcance inicial
 

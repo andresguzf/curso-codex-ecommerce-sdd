@@ -92,6 +92,20 @@
       "when": 1790782884472,
       "tag": "0012_orange_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790862920486,
+      "tag": "0013_lucky_the_watchers",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790868647781,
+      "tag": "0014_catalog_editorial_fields",
+      "breakpoints": true
     }
   ]
 }

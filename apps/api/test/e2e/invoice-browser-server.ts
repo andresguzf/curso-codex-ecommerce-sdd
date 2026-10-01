@@ -1,5 +1,6 @@
 /** Real REST server for Playwright; all writes target a disposable database. */
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -55,8 +56,7 @@ async function start() {
     const label = String(index).padStart(2, "0");
     const [customer] = await database.insert(schema.users).values({ email: `demo${label}@invoice.example.test`, displayName: `Cliente Demo ${label}`, passwordHash }).returning();
     await database.insert(schema.roleAssignments).values({ userId: customer!.id, role: "CUSTOMER" });
-    const [product] = await database.insert(schema.products).values({ sku: `E2E-KEY-${label}`, name: `Teclado Demo ${label}`, description: "Teclado para pruebas de facturación", price: "89.50", status: "ACTIVE" }).returning();
-    await database.insert(schema.productImages).values({ productId: product!.id, storageKey: `e2e/keyboard-${label}`, url: "/images/product-placeholder.svg" });
+    await insertProductFixtures(database, { sku: `E2E-KEY-${label}`, name: `Teclado Demo ${label}`, description: "Teclado para pruebas de facturación", price: "89.50", status: "ACTIVE" }, () => ({ storageKey: `e2e/keyboard-${label}`, url: "/images/product-placeholder.svg" }));
   }
   await database.insert(schema.storeProfiles).values({ tradeName: "E2E DEMO", legalName: "E2E DEMO Company", taxIdentifier: "DEMO-NOT-VALID", addressLine1: "Demo Street", addressCity: "Demo City", addressCountryCode: "US" });
   await fixturePool.end();

@@ -528,6 +528,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/products/{productId}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a product image; append by default, first image becomes cover */
+        post: operations["addProductImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{productId}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an image, preserving the cover of active products */
+        delete: operations["deleteProductImage"];
+        options?: never;
+        head?: never;
+        /** Edit alt text, move to a zero-based position or select the cover atomically */
+        patch: operations["updateProductImage"];
+        trace?: never;
+    };
+    "/api/v1/catalog/landing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the fixed public landing composition
+         * @description Up to three featured products, nine latest products excluding the displayed featured IDs, and three ordered non-empty categories with up to three products each. No query parameters are accepted. All sections share one database snapshot; no administrative editorial fields are exposed.
+         */
+        get: operations["getCatalogLanding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cart": {
         parameters: {
             query?: never;
@@ -1207,6 +1262,9 @@ export interface components {
             url: string;
         };
         AdministrativeProductResponseDto: {
+            isFeatured: boolean;
+            /** Format: date-time */
+            featuredAt: string | null;
             /** Format: uuid */
             id: string;
             sku: string;
@@ -1240,6 +1298,8 @@ export interface components {
             deletedAt: string | null;
         };
         UpdateProductRequestDto: {
+            /** @description Activate or withdraw editorial destaque; timestamp is assigned by the server */
+            isFeatured?: boolean;
             sku?: string;
             slug?: string;
             /** Format: uuid */
@@ -1261,6 +1321,13 @@ export interface components {
             url: string;
         };
         ProductListItemDto: {
+            /** @description ADMIN view only */
+            isFeatured?: boolean;
+            /**
+             * Format: date-time
+             * @description ADMIN view only
+             */
+            featuredAt?: string | null;
             /** Format: uuid */
             id: string;
             sku: string;
@@ -1283,7 +1350,13 @@ export interface components {
              * @enum {string}
              */
             currency: "USD";
+            /**
+             * @deprecated
+             * @description Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.
+             */
             image: components["schemas"]["ProductListImageDto"];
+            /** @description Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails. */
+            coverImage: components["schemas"]["CatalogImageDto"] | (never | null);
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
             stockAvailable: number;
@@ -1299,7 +1372,26 @@ export interface components {
             totalItems: number;
             totalPages: number;
         };
+        CatalogImageDto: {
+            /** Format: uuid */
+            id: string;
+            storageKey: string;
+            url: string;
+            altText: string;
+            isPrimary: boolean;
+            sortOrder: number;
+            width: number | null;
+            height: number | null;
+            mimeType: string | null;
+        };
         ProductDetailResponseDto: {
+            /** @description ADMIN view only */
+            isFeatured?: boolean;
+            /**
+             * Format: date-time
+             * @description ADMIN view only
+             */
+            featuredAt?: string | null;
             /** Format: uuid */
             id: string;
             sku: string;
@@ -1322,7 +1414,13 @@ export interface components {
              * @enum {string}
              */
             currency: "USD";
+            /**
+             * @deprecated
+             * @description Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.
+             */
             image: components["schemas"]["ProductListImageDto"];
+            /** @description Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails. */
+            coverImage: components["schemas"]["CatalogImageDto"] | (never | null);
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
             stockAvailable: number;
@@ -1330,6 +1428,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description Full gallery ordered by sortOrder, without autoplay semantics */
+            images: components["schemas"]["CatalogImageDto"][];
             /** @enum {string} */
             availability: "IN_STOCK" | "OUT_OF_STOCK";
         };
@@ -1346,6 +1446,10 @@ export interface components {
             updatedAt: string;
             /** Format: date-time */
             deletedAt: string | null;
+            /** @description ADMIN view and mutation responses only */
+            showOnLanding?: boolean;
+            /** @description ADMIN view and mutation responses only */
+            landingOrder?: number | null;
             description: string;
         };
         CategoryPageDto: {
@@ -1363,6 +1467,9 @@ export interface components {
             status?: "ACTIVE" | "INACTIVE";
         };
         UpdateCategoryDto: {
+            showOnLanding?: boolean;
+            /** @description Swap positions when both categories are already selected */
+            landingOrder?: number | null;
             name?: string;
             slug?: string;
             description?: string;
@@ -1448,6 +1555,79 @@ export interface components {
             productId: string;
             /** @description False when the product was already saved */
             added: boolean;
+        };
+        ProductGalleryImageDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            storageKey: string;
+            url: string;
+            altText: string;
+            isPrimary: boolean;
+            sortOrder: number;
+            width: number | null;
+            height: number | null;
+            mimeType: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        LandingProductDto: {
+            /** Format: uuid */
+            id: string;
+            sku: string;
+            slug: string | null;
+            category: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+                slug?: string;
+                /** @enum {string} */
+                status?: "ACTIVE" | "INACTIVE";
+            } | null;
+            tags: components["schemas"]["ProductClassificationDto"][];
+            name: string;
+            description: string;
+            /** @example 1299990.00 */
+            price: string;
+            /**
+             * @example USD
+             * @enum {string}
+             */
+            currency: "USD";
+            /**
+             * @deprecated
+             * @description Compatibility reference; use coverImage for new consumers. Local placeholder when a draft has no cover.
+             */
+            image: components["schemas"]["ProductListImageDto"];
+            /** @description Primary image only; null when an administrative draft has no cover. Render the local placeholder when absent or loading fails. */
+            coverImage: components["schemas"]["CatalogImageDto"] | (never | null);
+            /** @enum {string} */
+            status: "ACTIVE";
+            stockAvailable: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        LandingCategoryDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+            /** @enum {string} */
+            status: "ACTIVE";
+        };
+        HighlightedCategoryDto: {
+            category: components["schemas"]["LandingCategoryDto"];
+            products: components["schemas"]["LandingProductDto"][];
+        };
+        CatalogLandingDto: {
+            featuredProducts: components["schemas"]["LandingProductDto"][];
+            latestProducts: components["schemas"]["LandingProductDto"][];
+            highlightedCategories: components["schemas"]["HighlightedCategoryDto"][];
         };
         CartImageDto: {
             storageKey: string;
@@ -3692,6 +3872,228 @@ export interface operations {
             };
             /** @description Wishlist item not found for this customer */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addProductImage: {
+        parameters: {
+            query: {
+                sortOrder?: number;
+                isPrimary?: boolean;
+                altText: string;
+            };
+            header: {
+                "content-type": string;
+            };
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/png": string;
+                "image/jpeg": string;
+                "image/webp": string;
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGalleryImageDto"];
+                };
+            };
+            /** @description Invalid image, metadata or position */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product or image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An active product must retain its cover */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Image exceeds the configured upload limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image reference removed; remaining positions normalized */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid image, metadata or position */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product or image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An active product must retain its cover */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    altText?: string;
+                    isPrimary?: boolean;
+                    sortOrder?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductGalleryImageDto"];
+                };
+            };
+            /** @description Invalid image, metadata or position */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Product or image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An active product must retain its cover */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCatalogLanding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogLandingDto"];
+                };
+            };
+            /** @description Query parameters are not supported; use GET /products for search, filters and pagination */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

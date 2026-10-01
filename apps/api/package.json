@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:migrate:deploy": "node dist/database/migrate.js",
     "db:seed": "tsx src/database/seed/cli.ts",
+    "seed:images:check": "tsx src/database/seed/verify-image-manifest.ts",
     "lint": "eslint . --max-warnings=0",
     "openapi:generate": "nest build && node dist/openapi/generate.js",
     "start": "node dist/main.js",

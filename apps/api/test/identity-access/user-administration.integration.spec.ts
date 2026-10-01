@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -19,8 +20,6 @@ import {
   auditEntries,
   roleAssignments,
   users,
-  products,
-  productImages,
 } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
@@ -231,14 +230,11 @@ describe("administrative user lifecycle", () => {
         deletedAt: index === 27 ? new Date() : null,
       }).returning({ id: users.id });
       await database.insert(roleAssignments).values({ userId: customer!.id, role: "CUSTOMER" });
-      const [product] = await database.insert(products).values({
+      await insertProductFixtures(database, {
         sku: `LOOKUP-${index}`, name: `Lookup keyboard ${index}`, description: "Demo keyboard",
         price: "10.00", status: index < 25 ? "ACTIVE" : "INACTIVE",
         deletedAt: index === 27 ? new Date() : null,
-      }).returning({ id: products.id });
-      await database.insert(productImages).values({
-        productId: product!.id, storageKey: `lookup/${index}`, url: "https://picsum.photos/seed/keyboard/640/480",
-      });
+      }, () => ({ storageKey: `lookup/${index}`, url: "https://picsum.photos/seed/keyboard/640/480" }));
     }
     for (const resource of ["users", "products"]) {
       const url = `/api/v1/${resource}?purpose=autocomplete&search=lookup`;

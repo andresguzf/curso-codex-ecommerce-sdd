@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -82,10 +83,10 @@ describe("wishlist persistence and ownership", () => {
       { userId: customerB, role: "CUSTOMER" },
     ]);
 
-    const productRows = await database.insert(products).values([
+    const productRows = await insertProductFixtures(database, [
       { sku: "WISHLIST-ACTIVE", name: "Keyboard", description: "Mechanical keyboard", price: "99.00", status: "ACTIVE" },
       { sku: "WISHLIST-LATER-INACTIVE", name: "Monitor", description: "Display", price: "299.00", status: "ACTIVE" },
-    ]).returning({ id: products.id });
+    ]);
     if (!productRows[0] || !productRows[1]) throw new Error("Product fixtures were not created");
     activeProduct = productRows[0].id;
     laterInactiveProduct = productRows[1].id;

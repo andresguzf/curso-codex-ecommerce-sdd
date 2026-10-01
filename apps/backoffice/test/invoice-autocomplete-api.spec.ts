@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const customer = { id: "3296f1d5-5a1d-4b94-9caa-b26878f447e4", displayName: "Cliente demo", email: "client@example.com", role: "CUSTOMER", status: "ACTIVE", deletedAt: null, createdAt: "2026-09-09T12:00:00Z", updatedAt: "2026-09-09T12:00:00Z" };
-const product = { id: customer.id, name: "Teclado", description: "Mecánico", sku: "NOVA", slug: "teclado", category: null, tags: [], currency: "USD", price: "89.50", stockAvailable: 0, status: "ACTIVE", image: { storageKey: "nova", url: "/placeholder.svg" }, createdAt: customer.createdAt, updatedAt: customer.updatedAt };
+const product = { id: customer.id, name: "Teclado", description: "Mecánico", sku: "NOVA", slug: "teclado", category: null, tags: [], currency: "USD", price: "89.50", stockAvailable: 0, status: "ACTIVE", image: { storageKey: "nova", url: "/placeholder.svg" }, coverImage: { id: customer.id, storageKey: "nova", url: "/placeholder.svg", altText: "Portada del teclado", isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null }, createdAt: customer.createdAt, updatedAt: customer.updatedAt };
 const page = (item: unknown) => ({ items: [item], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 });
 
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });

@@ -1,11 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const fixtureCoverImage = {
+  ...{ storageKey: "products/keyboard", url: "https://picsum.photos/id/96/800/600" },
+  id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", altText: "Portada de producto de ejemplo",
+  isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null,
+};
+
 const product = {
   createdAt: "2026-09-04T12:00:00.000Z",
   currency: "USD",
   deletedAt: null,
   description: "Teclado mecánico RGB",
   id: "4dff7cda-b8e6-459d-b187-dc6fb8f2582c",
+  coverImage: fixtureCoverImage,
   image: { storageKey: "products/keyboard", url: "https://picsum.photos/id/96/800/600" },
   name: "Teclado Nova 75",
   slug: "teclado-nova-75",

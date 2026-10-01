@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
@@ -13,7 +14,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { configureApplication } from "../../src/application";
 import { DatabaseService } from "../../src/database/database.service";
-import { inventoryBalances, invoices, orders, payments, products, roleAssignments, sessions, users } from "../../src/database/schema";
+import { inventoryBalances, invoices, orders, payments, roleAssignments, sessions, users } from "../../src/database/schema";
 import { AuthTokenService } from "../../src/identity-access/auth-token.service";
 import type { AuthRole, AuthenticatedUser } from "../../src/identity-access/auth.types";
 import { IdentitySummaryReader } from "../../src/identity-access/identity-summary.reader";
@@ -44,9 +45,9 @@ const now = new Date();
 const daysAgo = (days: number) => new Date(now.getTime() - days * 86_400_000);
 
 async function insertProduct(sku: string, status: "ACTIVE" | "INACTIVE", quantity?: number, deletedAt?: Date) {
-  const [product] = await database.insert(products).values({
+  const [product] = await insertProductFixtures(database, {
     sku, name: sku, description: "Dashboard fixture", price: "10.00", status, deletedAt,
-  }).returning();
+  });
   if (quantity !== undefined) await database.insert(inventoryBalances).values({ productId: product!.id, availableQuantity: quantity });
 }
 async function insertInvoice(status: "DRAFT" | "PENDING_PAYMENT" | "PAID" | "VOID", paidDaysAgo?: number, orderId?: string) {

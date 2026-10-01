@@ -150,6 +150,7 @@ export class ProductAdministrationService {
 
   private normalizeUpdate(input: UpdateAdministrativeProduct): UpdateAdministrativeProduct {
     return {
+      ...(input.isFeatured === undefined ? {} : { isFeatured: input.isFeatured }),
       ...(input.description === undefined
         ? {}
         : { description: input.description.trim() }),

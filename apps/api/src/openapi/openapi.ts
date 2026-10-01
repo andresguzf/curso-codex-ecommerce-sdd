@@ -44,6 +44,7 @@ function createOpenApiConfig() {
     .addTag("health", "API and PostgreSQL readiness")
     .addTag("catalog-media", "Binary catalog image delivery")
     .addTag("products", "Administrative and public product catalog")
+    .addTag("catalog", "Fixed public editorial catalog compositions")
     .addTag("inventory", "Inventory balances and auditable movements")
     .addTag("cart", "Persistent customer or anonymous shopping cart")
     .addTag("checkout", "Transactional purchase confirmation")

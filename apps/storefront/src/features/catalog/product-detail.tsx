@@ -8,7 +8,7 @@ import { useAddToCart } from "../cart/use-add-to-cart";
 import { getPublicProduct, PublicProductNotFoundError } from "./catalog-api";
 import { formatProductPrice } from "./catalog-format";
 import { ProductClassifications } from "./product-classifications";
-import { ProductImage } from "./product-image";
+import { ProductGallery } from "./product-gallery";
 import { WishlistButton } from "../wishlist/wishlist-button";
 
 export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
@@ -66,16 +66,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
           ← Volver al catálogo
         </Link>
         <article data-slot="product-detail" className="mt-7 grid overflow-hidden rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[var(--ds-elevation)] lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
-          <div className="relative min-h-[22rem] bg-[var(--ds-surface-subtle)] sm:min-h-[32rem] lg:min-h-[40rem]">
-            <ProductImage
-              alt={product.name}
-              className="object-cover"
-              fill
-              priority
-              sizes="(min-width: 1024px) 56vw, 100vw"
-              src={product.image.url}
-            />
-          </div>
+          <ProductGallery images={product.images} key={`${product.id}:${product.images.map((image) => image.id).join(":")}`} productName={product.name} />
           <div className="flex flex-col p-7 sm:p-10 lg:p-12">
             <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">{product.sku}</p>
             <h1 className="mb-0 mt-4 text-balance text-4xl font-black leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-5xl">

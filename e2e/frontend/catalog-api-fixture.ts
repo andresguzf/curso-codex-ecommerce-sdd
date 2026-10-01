@@ -45,6 +45,7 @@ function productPage(page: number, pageSize: number) {
       description: "Monitor de prueba para validar los criterios del catálogo.",
       id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
       image: { storageKey: "defaults/products/monitor.svg", url: "/images/product-placeholder.svg" },
+      coverImage: { id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", storageKey: "defaults/products/monitor.svg", url: "/images/product-placeholder.svg", altText: "Portada del monitor", isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null },
       name: page === 2 ? "Monitor Nova 27 — página 2" : "Monitor Nova 27",
       price: "299.90",
       sku: "MON-NOVA-27",
@@ -61,8 +62,14 @@ function productPage(page: number, pageSize: number) {
   };
 }
 
-export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS") {
+export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string } = {}) {
   const productRequests: URL[] = [];
+  const landingRequests: URL[] = [];
+  const completedLandingRequests: URL[] = [];
+  page.on("requestfinished", (request) => {
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === "/api/v1/catalog/landing") completedLandingRequests.push(url);
+  });
   let cartHasItem = true;
   let productDeleteFails = false;
   const emptyClassificationPage = {
@@ -186,7 +193,12 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
 
     if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421" && request.method() === "GET") {
       await route.fulfill({
-        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK" }),
+        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK", images: Array.from({ length: options.galleryImageCount ?? 1 }, (_, index) => ({
+          ...productPage(1, 12).items[0]!.coverImage,
+          id: index === 0 ? productPage(1, 12).items[0]!.coverImage.id : `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+          altText: `Vista ${index + 1} del monitor`, isPrimary: index === 0, sortOrder: index,
+          url: options.galleryImageUrl ?? productPage(1, 12).items[0]!.coverImage.url,
+        })) }),
         contentType: "application/json",
         headers,
       });
@@ -205,6 +217,23 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
+    if (request.method() === "GET" && url.pathname === "/api/v1/catalog/landing") {
+      landingRequests.push(url);
+      const product = productPage(1, 9).items[0]!;
+      const count = options.landingProductCount ?? 1;
+      const latestProducts = Array.from({ length: count }, (_, index) => ({
+        ...product,
+        ...(count === 1 ? {} : { id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: `Equipo reciente ${index + 1}`, sku: `RECENT-${index + 1}`, slug: `equipo-reciente-${index + 1}` }),
+        createdAt: new Date(Date.parse(product.createdAt) - index * 86_400_000).toISOString(),
+      }));
+      await route.fulfill({
+        body: JSON.stringify({ featuredProducts: [{ ...product, id: "99999999-0000-4000-8000-000000000000", name: "Destacado de prueba" }], latestProducts, highlightedCategories: [] }),
+        contentType: "application/json",
+        headers,
+      });
+      return;
+    }
+
     await route.fulfill({
       body: JSON.stringify({ code: "TEST_ROUTE_NOT_FOUND", correlationId: "playwright", message: "Unexpected API request" }),
       contentType: "application/json",
@@ -213,7 +242,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     });
   });
 
-  return { productRequests, failProductDeletion: () => { productDeleteFails = true; } };
+  return { productRequests, landingRequests, completedLandingRequests, failProductDeletion: () => { productDeleteFails = true; } };
 }
 
 export async function waitForProductQuery(

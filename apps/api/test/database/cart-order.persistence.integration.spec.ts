@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -63,17 +64,14 @@ async function insertUser(email: string, displayName = "Test customer") {
 }
 
 async function insertProduct(sku: string, name = `Product ${sku}`) {
-  const [createdProduct] = await database
-    .insert(products)
-    .values({
+  const [createdProduct] = await insertProductFixtures(database, {
       sku,
       name,
       description: `Technology product identified by ${sku}`,
       price: "100.00",
       currency: "USD",
       status: "ACTIVE",
-    })
-    .returning({ id: products.id });
+    });
 
   if (!createdProduct) {
     throw new Error("PostgreSQL did not return the inserted product");
