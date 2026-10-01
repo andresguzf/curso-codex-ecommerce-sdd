@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { StorefrontNavLink as Link } from "../layout/storefront-nav-link";
 
 import { useCart } from "./use-cart";
 

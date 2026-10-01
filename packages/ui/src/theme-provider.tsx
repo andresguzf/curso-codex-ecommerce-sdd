@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { create } from "zustand";
 
+import { ThemeIcon } from "./theme-icon";
 import { themeStorageKey, type Theme, type ThemeApplication } from "./theme-bootstrap";
 
 function isTheme(value: unknown): value is Theme {
@@ -80,11 +81,12 @@ export function ThemeProvider({ application, children }: Readonly<{ application:
       aria-label="Tema oscuro"
       aria-pressed={theme === "dark"}
       disabled={!ready}
-      className="fixed bottom-5 right-5 z-40 min-h-11 rounded-[var(--ds-radius-control)] border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-2 text-sm font-semibold text-[var(--ds-text)] shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ds-focus)]"
+      className="fixed bottom-5 right-5 z-40 inline-flex size-11 items-center justify-center rounded-full border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--ds-text)] shadow-lg transition-transform hover:scale-110 motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ds-focus)]"
+      style={{ backgroundImage: "radial-gradient(circle at 30% 20%, var(--ds-accent-soft), var(--ds-surface) 75%)", boxShadow: "inset 0 1px 2px var(--ds-surface), var(--ds-elevation)" }}
       data-slot="theme-toggle"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
       type="button"
-    >{theme === "dark" ? "Tema oscuro" : "Tema claro"}</button>
+    ><span data-theme-icon={theme === "dark" ? "sun" : "moon"}><ThemeIcon sun={theme === "dark"} /></span></button>
   </>;
 }

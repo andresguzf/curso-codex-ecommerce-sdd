@@ -41,6 +41,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(application === "backoffice" ? '[data-slot="dashboard"] dd' : '[data-slot="product-card"]')).not.toHaveCount(0);
       const toggle = page.getByRole("button", { name: "Tema oscuro", exact: true });
       await expect(toggle).toBeEnabled();
+      await expect(toggle.locator(`[data-theme-icon="${theme === "dark" ? "sun" : "moon"}"] svg`)).toBeVisible();
+      await expect(toggle).toHaveText("");
       await expect(page.locator("html")).toHaveAttribute("data-first-body-theme", theme);
       await expectAccessible(page);
       await expectNoPageOverflow(page);
@@ -60,6 +62,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(toggle).toBeEnabled();
       await expect(page.locator("html")).toHaveAttribute("data-first-body-theme", theme);
       await expect(toggle).toHaveAttribute("aria-pressed", String(theme === "dark"));
+      await expect(toggle.locator(`[data-theme-icon="${theme === "dark" ? "sun" : "moon"}"] svg`)).toBeVisible();
       await page.emulateMedia({ colorScheme: theme });
       await page.emulateMedia({ colorScheme: opposite });
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);

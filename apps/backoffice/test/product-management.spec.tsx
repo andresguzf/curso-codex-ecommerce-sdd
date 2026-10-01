@@ -85,12 +85,16 @@ describe("product administration", () => {
     api.listAdministrativeProducts.mockImplementation(async () => ({ items: [{ ...activeProduct, isFeatured: featured }], page: 1, pageSize: 10, totalItems: 1, totalPages: 1 }));
     api.updateProduct.mockImplementation(async (_token, _id, input) => { featured = input.isFeatured; return { ...activeProduct, isFeatured: featured }; });
     const { invalidate } = renderManagement();
-    fireEvent.click(await screen.findByRole("button", { name: "Destacar" }));
+    const unselectedStar = await screen.findByRole("button", { name: "Destacar" });
+    expect(unselectedStar).not.toHaveClass("text-[var(--ds-featured)]");
+    fireEvent.click(unselectedStar);
     expect(await screen.findByText("Producto destacado correctamente.")).toBeInTheDocument();
     expect(await screen.findByText("Destacado", { exact: true })).toBeInTheDocument();
     expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, { isFeatured: true });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["catalog", "public", "landing"] });
-    fireEvent.click(await screen.findByRole("button", { name: "Retirar destaque" }));
+    const selectedStar = await screen.findByRole("button", { name: "Retirar destaque" });
+    expect(selectedStar).toHaveClass("text-[var(--ds-featured)]", "[&_svg]:fill-current");
+    fireEvent.click(selectedStar);
     expect(await screen.findByText("Destaque retirado correctamente.")).toBeInTheDocument();
     expect(api.updateProduct).toHaveBeenLastCalledWith("admin-token", activeProduct.id, { isFeatured: false });
   });

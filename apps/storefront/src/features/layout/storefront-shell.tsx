@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import { SessionControls } from "../auth/session-controls";
 import { CartShortcut } from "../cart/cart-shortcut";
+import { StorefrontHeader } from "./storefront-header";
+import { StorefrontNavLink } from "./storefront-nav-link";
 
 export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -14,7 +16,7 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
         Saltar al contenido
       </a>
 
-      <header data-tone-region="inverse" className="sticky top-0 z-40 border-b border-blue-300/20 bg-[#041326]/98 text-white shadow-lg shadow-blue-950/45 backdrop-blur-xl supports-[backdrop-filter]:bg-[#041326]/95">
+      <StorefrontHeader>
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-10">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <Link
@@ -30,13 +32,13 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
             </Link>
 
             <nav aria-label="Navegación principal" className="flex items-center">
-              <Link
+              <StorefrontNavLink
                 className="rounded-full px-4 py-2 text-sm font-bold text-slate-100 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
                 href="/"
               >
                 Inicio
-              </Link>
-              <Link className="rounded-full px-4 py-2 text-sm font-bold text-slate-100 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200" href="/products">Productos</Link>
+              </StorefrontNavLink>
+              <StorefrontNavLink descendants className="rounded-full px-4 py-2 text-sm font-bold text-slate-100 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200" href="/products">Productos</StorefrontNavLink>
             </nav>
           </div>
 
@@ -45,7 +47,7 @@ export function StorefrontShell({ children }: Readonly<{ children: ReactNode }>)
             <CartShortcut />
           </div>
         </div>
-      </header>
+      </StorefrontHeader>
 
       <div className="min-w-0 flex-1 scroll-mt-80 md:scroll-mt-40" id="main-content" tabIndex={-1}>
         {children}

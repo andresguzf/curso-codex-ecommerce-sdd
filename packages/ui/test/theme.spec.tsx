@@ -83,9 +83,14 @@ describe("independent visual themes", () => {
     render(<ThemeProvider application="storefront"><p>Catálogo</p></ThemeProvider>);
     const toggle = screen.getByRole("button", { name: "Tema oscuro" });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveTextContent("");
+    expect(toggle.querySelector('[data-theme-icon="moon"] svg')).not.toBeNull();
+    expect(toggle).toHaveAttribute("title", "Cambiar a tema oscuro");
     await user.tab();
     await user.keyboard(" ");
     expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle.querySelector('[data-theme-icon="sun"] svg')).not.toBeNull();
+    expect(toggle).toHaveAttribute("title", "Cambiar a tema claro");
     expect(localStorage.getItem(themeStorageKey("storefront"))).toBe("dark");
     expect(localStorage.getItem(themeStorageKey("backoffice"))).toBeNull();
   });

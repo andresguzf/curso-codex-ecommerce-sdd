@@ -24,6 +24,7 @@
   --ds-inverse-accent-hover: #b2cdff;
   --ds-inverse-accent-text: #0e1421;
   --ds-overlay: #040810;
+  --ds-featured: #ca8a04;
 }
 
 [data-design-system="backoffice"][data-theme="light"] {

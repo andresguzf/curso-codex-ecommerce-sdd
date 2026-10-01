@@ -203,7 +203,7 @@ export function ProductManagement() {
         <div>
           <p className="m-0 font-bold text-slate-950">{product.name}</p>
           <p className="m-0 mt-1 font-mono text-xs text-slate-500">{product.sku}</p>
-          {product.isFeatured ? <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-[var(--ds-border)] bg-[var(--ds-accent-soft)] px-2 py-1 text-xs font-bold text-[var(--ds-text)]"><Icon name="star" />Destacado</span> : <span className="mt-2 block text-xs text-[var(--ds-text-muted)]">No destacado</span>}
+          {product.isFeatured ? <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-[var(--ds-border)] bg-[var(--ds-accent-soft)] px-2 py-1 text-xs font-bold text-[var(--ds-text)]"><span className="text-[var(--ds-featured)] [&_svg]:fill-current"><Icon name="star" /></span>Destacado</span> : <span className="mt-2 block text-xs text-[var(--ds-text-muted)]">No destacado</span>}
         </div>
       ),
       header: "Producto",
@@ -223,7 +223,7 @@ export function ProductManagement() {
     {
       cell: (product) => (
         <div className="flex min-w-64 flex-wrap gap-2">
-          <IconButton className="border-[var(--ds-border)] text-[var(--ds-accent)] hover:bg-[var(--ds-accent-soft)]" disabled={featuredMutation.isPending || saveMutation.isPending || statusMutation.isPending || deleteMutation.isPending || (product.status !== "ACTIVE" && !product.isFeatured)} icon="star" label={product.isFeatured ? "Retirar destaque" : "Destacar"} onClick={() => { if (!featuredMutation.isPending) featuredMutation.mutate(product); }} />
+          <IconButton className={`border-[var(--ds-border)] hover:bg-[var(--ds-accent-soft)] ${product.isFeatured ? "text-[var(--ds-featured)] [&_svg]:fill-current" : "text-[var(--ds-accent)]"}`} disabled={featuredMutation.isPending || saveMutation.isPending || statusMutation.isPending || deleteMutation.isPending || (product.status !== "ACTIVE" && !product.isFeatured)} icon="star" label={product.isFeatured ? "Retirar destaque" : "Destacar"} onClick={() => { if (!featuredMutation.isPending) featuredMutation.mutate(product); }} />
           <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setForm({ mode: "edit", product }); }} />
           {product.status === "ACTIVE" ? (
             <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50 focus-visible:ring-amber-700" icon="power" label="Desactivar" onClick={() => setConfirmation({ action: "deactivate", product })} />

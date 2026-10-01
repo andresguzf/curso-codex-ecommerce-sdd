@@ -10,6 +10,7 @@ import { authClient, storefrontDestinationFor, useSessionStore } from "../src/fe
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname,
   useRouter: () => navigation,
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));

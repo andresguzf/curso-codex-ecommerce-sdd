@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { StorefrontNavLink as Link } from "../layout/storefront-nav-link";
 import { useRouter } from "next/navigation";
 import { AuthApiError } from "@technology-ecommerce/api-client";
 import { useFlashStore } from "@technology-ecommerce/ui";
@@ -50,12 +50,14 @@ export function SessionControls() {
                 <Link
                   className="rounded-full px-3 py-2 text-sm font-bold text-cyan-100 underline decoration-cyan-300/70 underline-offset-4 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200"
                   href="/account/orders"
+                  descendants
                 >
                   Mis compras
                 </Link>
                 <Link
                   className="rounded-full px-3 py-2 text-sm font-bold text-cyan-100 underline decoration-cyan-300/70 underline-offset-4 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200"
                   href="/account/invoices"
+                  descendants
                 >
                   Mis facturas
                 </Link>

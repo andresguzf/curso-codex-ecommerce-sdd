@@ -10,7 +10,7 @@ import { OrdersApiError } from "../src/features/orders/orders-api";
 import { SessionControls } from "../src/features/auth/session-controls";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), download: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "" }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }), useSearchParams: () => new URLSearchParams(mocks.search) }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/account/orders", useRouter: () => ({ push: mocks.push, replace: mocks.replace }), useSearchParams: () => new URLSearchParams(mocks.search) }));
 vi.mock("../src/features/orders/orders-api", async (original) => ({ ...await original<object>(), getMyOrders: mocks.list, getMyOrder: mocks.detail, downloadMyOrderPdf: mocks.download }));
 
 const session: AuthSession = {

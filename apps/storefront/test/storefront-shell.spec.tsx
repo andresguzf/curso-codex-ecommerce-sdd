@@ -1,8 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StorefrontShell } from "../src/features/layout/storefront-shell";
+
+const navigation = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
+beforeEach(() => { navigation.pathname = "/"; });
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
@@ -19,6 +23,16 @@ vi.mock("../src/features/cart/cart-shortcut", () => ({
 }));
 
 describe("StorefrontShell", () => {
+  it.each([["/", "Inicio"], ["/products", "Productos"], ["/products/notebook", "Productos"], ["/products-other", null], ["/login", null]])("marca únicamente el enlace de la ruta %s", (pathname, active) => {
+    navigation.pathname = pathname as string;
+    render(<StorefrontShell><main>Contenido</main></StorefrontShell>);
+    const nav = screen.getByRole("navigation", { name: "Navegación principal" });
+    for (const name of ["Inicio", "Productos"]) {
+      const link = within(nav).getByRole("link", { name });
+      if (name === active) expect(link).toHaveAttribute("aria-current", "page");
+      else expect(link).not.toHaveAttribute("aria-current");
+    }
+  });
   it("mantiene header, navegación, contenido y footer alrededor de sus páginas", () => {
     const { rerender } = render(
       <StorefrontShell>
@@ -29,7 +43,8 @@ describe("StorefrontShell", () => {
     const header = screen.getByRole("banner");
     const main = screen.getByRole("main");
 
-    expect(header).toHaveClass("sticky", "top-0", "bg-[#041326]/98", "backdrop-blur-xl");
+    expect(header).toHaveClass("sticky", "top-0", "backdrop-blur-xl");
+    expect(header).toHaveAttribute("data-scrolled", "false");
     expect(within(header).getByRole("link", { name: "Technology Store, inicio" })).toHaveAttribute("href", "/");
     expect(within(header).getByRole("navigation", { name: "Navegación principal" })).toHaveTextContent("Inicio");
     expect(within(header).getByRole("link", { name: "Productos" })).toHaveAttribute("href", "/products");
@@ -59,8 +74,22 @@ describe("StorefrontShell", () => {
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(container.querySelector("#main-content")).toHaveAttribute("tabIndex", "-1");
     expect(container.querySelector("header > div")?.className).toContain("md:flex-row");
-    expect(container.querySelector("header")?.className).toContain("supports-[backdrop-filter]:bg-[#041326]/95");
+    expect(container.querySelector("header")).toHaveAttribute("data-slot", "storefront-header");
     expect(container.querySelector("footer > div")?.className).toContain("sm:flex-row");
     expect(container.querySelector("svg[aria-hidden='true']")).toBeInTheDocument();
+  });
+
+  it("actualiza la transparencia al desplazar y restaura el estado al volver arriba", () => {
+    const scroll = vi.spyOn(window, "scrollY", "get").mockReturnValue(0);
+    const { unmount } = render(<StorefrontShell><main>Contenido</main></StorefrontShell>);
+    const header = screen.getByRole("banner");
+    scroll.mockReturnValue(100);
+    fireEvent.scroll(window);
+    expect(header).toHaveAttribute("data-scrolled", "true");
+    scroll.mockReturnValue(0);
+    fireEvent.scroll(window);
+    expect(header).toHaveAttribute("data-scrolled", "false");
+    unmount();
+    scroll.mockRestore();
   });
 });

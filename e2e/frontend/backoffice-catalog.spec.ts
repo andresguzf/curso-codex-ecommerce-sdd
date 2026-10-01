@@ -16,6 +16,9 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("Enter");
       await expect(page.getByText("Producto destacado correctamente.")).toBeVisible();
       await expect(page.getByText("Destacado", { exact: true })).toBeVisible();
+      const selectedStar = page.getByRole("button", { name: "Retirar destaque", exact: true }).locator("svg");
+      await expect(selectedStar).toHaveCSS("color", "rgb(202, 138, 4)");
+      await expect(selectedStar).toHaveCSS("fill", "rgb(202, 138, 4)");
       expect(editorialRequests[0]).toEqual({ isFeatured: true });
       await page.getByRole("button", { name: "Editar", exact: true }).click();
       const checkbox = page.getByRole("checkbox", { name: "Destacar producto" });
