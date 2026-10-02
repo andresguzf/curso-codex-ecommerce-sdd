@@ -34,6 +34,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Separar la landing del catálogo completo: la landing mostrará una composición editorial de productos destacados, productos recientes y categorías importantes, sin filtros ni paginación; el buscador del hero dirigirá al catálogo completo, que ofrecerá búsqueda, filtros, ordenamiento y paginación backend.
 - Ampliar la landing con una primera sección de hasta tres productos destacados recientemente, seguida de hasta nueve productos recientes no repetidos y de dos o tres secciones de categorías importantes con hasta tres productos recientes por categoría.
 - Permitir que `ADMIN` destaque productos y seleccione, ordene o retire hasta tres categorías importantes para la landing.
+- Incorporar en el formulario de productos del backoffice un gestor de galería exclusivo de `ADMIN`: subir archivos JPEG, PNG o WebP con vista previa, editar texto alternativo, elegir portada, ordenar mediante arrastre o teclado y eliminar con confirmación. Cada producto admitirá como máximo cuatro imágenes en total: una portada y hasta tres adicionales. El límite se aplicará también en el backend ante solicitudes concurrentes; compresión y ajustes de calidad quedan fuera de esta revisión.
 
 ## Capabilities
 
@@ -55,6 +56,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `product-catalog`: identidades visuales diferenciadas, dashboard administrativo por rol y selección persistente de tema claro u oscuro.
 - `product-catalog`: seed de veinte productos, múltiples imágenes con portada, galería accesible y separación entre productos recientes de la landing y catálogo completo paginado.
 - `product-catalog`: productos destacados, categorías importantes configurables y composición agregada y ordenada de las secciones comerciales de la landing.
+- `product-catalog`: gestor visual administrativo de imágenes y límite transaccional de cuatro imágenes por producto, reutilizando los endpoints REST existentes.
 - `shopping-cart-checkout`: identificación segura y expiración del carrito anónimo, fusión con el carrito del cliente, indicador de cantidad para visitantes y clientes, mensajes flash y confirmación al retirar líneas.
 - `order-management`: búsqueda y paginación administrativa, gestión de estados por `ADMIN` y `BILLING` y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
@@ -82,3 +84,4 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - Ampliación de los filtros administrativos de productos con rango de precio, categoría principal, selección de etiquetas y rango inclusivo de fecha de creación, aplicados por backend y persistidos en la URL.
 - Persistencia PostgreSQL de carritos anónimos mediante identificadores opacos almacenados en cookie segura, sin exigir una cuenta hasta el checkout, además de reglas de expiración, aislamiento y fusión al autenticarse.
 - Moneda global única `USD` para catálogo, carrito, checkout, órdenes, pagos, facturas y documentos; los contratos y snapshots conservarán el código técnico de moneda fijo para hacer explícitos los importes, pero ninguna interfaz permitirá elegirlo por producto u operación.
+- Fase 22 adicional sobre la implementación existente: validación del límite de imágenes en todos los caminos de escritura del catálogo, documentación del error en OpenAPI, adaptadores HTTP del backoffice, gestor accesible y pruebas. No incorpora endpoints paralelos ni cambia inventario, órdenes, facturas o snapshots; no elimina automáticamente imágenes existentes para ajustar el límite.

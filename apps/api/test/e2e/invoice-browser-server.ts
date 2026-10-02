@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { insertProductFixtures } from "../product-fixtures";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
@@ -28,12 +30,14 @@ let created = false;
 let fixturePool: Pool | undefined;
 let app: NestFastifyApplication | undefined;
 let stopping = false;
+let imageRoot: string | undefined;
 
 async function stop() {
   if (stopping) return;
   stopping = true;
   await app?.close();
   await fixturePool?.end();
+  if (imageRoot) await rm(imageRoot, { recursive: true, force: true });
   if (created) {
     await maintenance.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()", [databaseName]);
     await maintenance.query(`drop database "${databaseName}"`);
@@ -66,7 +70,10 @@ async function start() {
   process.env.NODE_ENV = "test";
   process.env.AUTH_ACCESS_TOKEN_SECRET = "invoice-browser-test-secret-at-least-32-characters";
   process.env.AUTH_COOKIE_SECURE = "false";
-  process.env.CORS_ALLOWED_ORIGINS = "http://localhost:3102";
+  process.env.CORS_ALLOWED_ORIGINS = "http://localhost:3102,http://localhost:3100";
+  imageRoot = await mkdtemp(resolve(tmpdir(), "ecommerce-browser-images-"));
+  process.env.IMAGE_STORAGE_LOCAL_ROOT = imageRoot;
+  process.env.IMAGE_STORAGE_PUBLIC_BASE_URL = "http://localhost:3001/api/v1/media/images";
   const { AppModule } = loadCompiled("../../dist/app.module");
   const { configureApplication } = loadCompiled("../../dist/application");
   app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });

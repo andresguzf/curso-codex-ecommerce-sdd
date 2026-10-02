@@ -1,4 +1,5 @@
 import { expect, type Page, type Request } from "@playwright/test";
+import type { CatalogImage } from "@technology-ecommerce/api-schemas";
 
 const apiBaseUrl = "http://localhost:3001";
 const csrfToken = "playwright-csrf-token-012345678901234567890123";
@@ -75,6 +76,15 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
   let isFeatured = false;
   let featuredAt: string | null = null;
   const editorialRequests: Record<string, unknown>[] = [];
+  const imageUploadRequests: Request[] = [];
+  const imageEditRequests: { imageId: string; input: Record<string, unknown> }[] = [];
+  const imageDeleteRequests: string[] = [];
+  let galleryImages: CatalogImage[] = Array.from({ length: options.galleryImageCount ?? 1 }, (_, index) => ({
+    ...productPage(1, 12).items[0]!.coverImage,
+    id: index === 0 ? productPage(1, 12).items[0]!.coverImage.id : `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    altText: `Vista ${index + 1} del monitor`, isPrimary: index === 0, sortOrder: index,
+    url: options.galleryImageUrl ?? productPage(1, 12).items[0]!.coverImage.url,
+  }));
   const categoryEditorialRequests: { id: string; input: Record<string, unknown> }[] = [];
   let editorialCategories = ["Portátiles", "Monitores", "Periféricos", "Audio", "Legado"].map((name, index) => ({
     id: `30000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name, slug: `categoria-${index}`,
@@ -146,7 +156,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
-    if (request.method() === "DELETE" && url.pathname.startsWith("/api/v1/products/")) {
+    if (request.method() === "DELETE" && /^\/api\/v1\/products\/[\w-]+$/.test(url.pathname)) {
       await route.fulfill(productDeleteFails
         ? { status: 500, headers, contentType: "application/json", body: JSON.stringify({ code: "INTERNAL_ERROR", message: "Error interno", correlationId: "playwright" }) }
         : { status: 204, headers });
@@ -228,14 +238,54 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       return;
     }
 
+    if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421/images" && request.method() === "POST") {
+      imageUploadRequests.push(request);
+      const image = {
+        id: `20000000-0000-4000-8000-${String(100 + imageUploadRequests.length).padStart(12, "0")}`,
+        productId: "10184fd0-3dcb-47cf-af70-a8be4c765421", storageKey: "uploads/monitor.png",
+        url: "/images/product-placeholder.svg", altText: url.searchParams.get("altText") ?? "Imagen subida",
+        isPrimary: galleryImages.length === 0, sortOrder: galleryImages.length,
+        width: 1, height: 1, mimeType: request.headers()["content-type"],
+        createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z",
+      };
+      const { productId: _productId, createdAt: _createdAt, updatedAt: _updatedAt, ...publicImage } = image;
+      galleryImages = [...galleryImages, publicImage];
+      await route.fulfill({ status: 201, headers, json: image });
+      return;
+    }
+
+    if (/^\/api\/v1\/products\/10184fd0-3dcb-47cf-af70-a8be4c765421\/images\/[\w-]+$/.test(url.pathname) && request.method() === "DELETE") {
+      const imageId = url.pathname.split("/").at(-1)!;
+      imageDeleteRequests.push(imageId);
+      const current = galleryImages.find((image) => image.id === imageId);
+      if (!current || current.isPrimary) {
+        await route.fulfill({ status: current ? 409 : 404, headers, json: { code: current ? "PRODUCT_PRIMARY_IMAGE_REQUIRED" : "PRODUCT_IMAGE_NOT_FOUND", message: "Image cannot be removed" } });
+        return;
+      }
+      galleryImages = galleryImages.filter((image) => image.id !== imageId).map((image, index) => ({ ...image, sortOrder: index }));
+      await route.fulfill({ status: 204, headers });
+      return;
+    }
+
+    if (/^\/api\/v1\/products\/10184fd0-3dcb-47cf-af70-a8be4c765421\/images\/[\w-]+$/.test(url.pathname) && request.method() === "PATCH") {
+      const imageId = url.pathname.split("/").at(-1)!;
+      const input = request.postDataJSON() as Record<string, unknown>;
+      imageEditRequests.push({ imageId, input });
+      const current = galleryImages.find((image) => image.id === imageId)!;
+      const changed = { ...current, ...(typeof input.altText === "string" ? { altText: input.altText } : {}), ...(input.isPrimary === true ? { isPrimary: true } : {}) };
+      galleryImages = galleryImages.map((image) => image.id === imageId ? changed : input.isPrimary === true ? { ...image, isPrimary: false } : image);
+      if (typeof input.sortOrder === "number") {
+        galleryImages = galleryImages.filter((image) => image.id !== imageId);
+        galleryImages.splice(input.sortOrder, 0, changed);
+      }
+      galleryImages = galleryImages.map((image, index) => ({ ...image, sortOrder: index }));
+      await route.fulfill({ headers, json: { ...galleryImages.find((image) => image.id === imageId), productId: "10184fd0-3dcb-47cf-af70-a8be4c765421", createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z" } });
+      return;
+    }
+
     if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421" && request.method() === "GET") {
       await route.fulfill({
-        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK", images: Array.from({ length: options.galleryImageCount ?? 1 }, (_, index) => ({
-          ...productPage(1, 12).items[0]!.coverImage,
-          id: index === 0 ? productPage(1, 12).items[0]!.coverImage.id : `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-          altText: `Vista ${index + 1} del monitor`, isPrimary: index === 0, sortOrder: index,
-          url: options.galleryImageUrl ?? productPage(1, 12).items[0]!.coverImage.url,
-        })) }),
+        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK", coverImage: galleryImages.find((image) => image.isPrimary) ?? null, images: galleryImages }),
         contentType: "application/json",
         headers,
       });
@@ -307,7 +357,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
     });
   });
 
-  return { productRequests, landingRequests, completedLandingRequests, editorialRequests, categoryEditorialRequests, failProductDeletion: () => { productDeleteFails = true; } };
+  return { productRequests, landingRequests, completedLandingRequests, editorialRequests, imageUploadRequests, imageEditRequests, imageDeleteRequests, categoryEditorialRequests, failProductDeletion: () => { productDeleteFails = true; } };
 }
 
 export async function waitForProductQuery(

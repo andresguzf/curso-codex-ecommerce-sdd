@@ -244,6 +244,32 @@ describe("administrative product lifecycle", () => {
   }
   type GalleryImage = { id: string; isPrimary: boolean; sortOrder: number; storageKey: string; width: number; height: number; altText: string };
 
+  it("persists a full gallery lifecycle through REST and keeps public cover/order coherent", async () => {
+    const product = await imageProduct(true);
+    const slug = `gallery-${product.id}`;
+    await database.update(products).set({ slug }).where(eq(products.id, product.id));
+    const initialStock = await database.select().from(inventoryBalances).where(eq(inventoryBalances.productId, product.id));
+    const added: GalleryImage[] = [];
+    for (let index = 1; index <= 3; index++) {
+      const response = await uploadImage(product.id, `altText=View${index}`);
+      expect(response.statusCode).toBe(201); added.push(response.json());
+    }
+    expect((await uploadImage(product.id)).statusCode).toBe(409);
+    const patch = (imageId: string, payload: Record<string, unknown>) => server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${imageId}`, headers: authorization(tokens.admin), payload });
+    expect((await patch(added[0]!.id, { isPrimary: true, altText: "Cover changed" })).statusCode).toBe(200);
+    expect((await patch(added[2]!.id, { sortOrder: 0 })).statusCode).toBe(200);
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${added[1]!.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    const detail = await server.inject({ method: "GET", url: `/api/v1/products/${product.id}` });
+    expect(detail.statusCode).toBe(200);
+    const result = detail.json();
+    expect(result.images).toHaveLength(3);
+    expect(result.images.map((image: GalleryImage) => image.sortOrder)).toEqual([0, 1, 2]);
+    expect(result.images[0].id).toBe(added[2]!.id);
+    expect(result.coverImage).toMatchObject({ id: added[0]!.id, altText: "Cover changed" });
+    expect((await server.inject({ method: "GET", url: `/api/v1/products/slug/${slug}` })).json().images).toEqual(result.images);
+    expect(await database.select().from(inventoryBalances).where(eq(inventoryBalances.productId, product.id))).toEqual(initialStock);
+  });
+
   async function editorialCategory() {
     const [category] = await database.insert(categories).values({ name: `Editorial ${randomUUID()}`, slug: `editorial-${randomUUID()}` }).returning();
     imageCategoryIds.push(category!.id);
@@ -528,6 +554,61 @@ describe("administrative product lifecycle", () => {
     const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
     expect(gallery.map((row) => row.id)).toEqual([first.id, middle.id, second.id]);
     expect(gallery.map((row) => row.sortOrder)).toEqual([0, 1, 2]);
+  });
+
+  it("allows the fourth image, rejects a fifth and cleans rejected uploads without changing the gallery", async () => {
+    const product = await imageProduct(true);
+    for (let index = 0; index < 3; index++) expect((await uploadImage(product.id)).statusCode).toBe(201);
+    const before = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    const files = (await readdir(imageRoot)).sort();
+    const rejected = await uploadImage(product.id, "altText=Quinta&isPrimary=true&sortOrder=0");
+    expect(rejected.statusCode).toBe(409);
+    expect(rejected.json()).toMatchObject({ code: "PRODUCT_IMAGE_LIMIT_REACHED" });
+    expect(await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder))).toEqual(before);
+    expect((await readdir(imageRoot)).sort()).toEqual(files);
+    // The compatibility URL replaces the existing cover; it cannot add a fifth.
+    const edited = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { image: { storageKey: `legacy/${product.id}`, url: "https://example.com/replacement.png" } } });
+    expect(edited.statusCode).toBe(200);
+    const after = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect(after).toHaveLength(4);
+    expect(after.filter((image) => image.isPrimary)).toHaveLength(1);
+  });
+
+  it("serializes uploads competing for the fourth slot and removes the rejected file", async () => {
+    const product = await imageProduct(true);
+    for (let index = 0; index < 2; index++) expect((await uploadImage(product.id)).statusCode).toBe(201);
+    const beforeFiles = (await readdir(imageRoot)).length;
+    const responses = await Promise.all([uploadImage(product.id), uploadImage(product.id)]);
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([201, 409]);
+    expect(responses.find((response) => response.statusCode === 409)!.json()).toMatchObject({ code: "PRODUCT_IMAGE_LIMIT_REACHED" });
+    const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    expect(gallery.map((image) => image.sortOrder)).toEqual([0, 1, 2, 3]);
+    expect(gallery.filter((image) => image.isPrimary)).toHaveLength(1);
+    expect((await readdir(imageRoot)).length).toBe(beforeFiles + 1);
+  });
+
+  it("preserves oversized legacy galleries and allows correction, ordering and cover changes", async () => {
+    const product = await imageProduct(true);
+    // Fixture represents data created before the new limit, not a supported API write.
+    await database.insert(productImages).values(Array.from({ length: 4 }, (_, index) => ({
+      productId: product.id, storageKey: `legacy/${product.id}/${index}`, url: "https://example.com/legacy.webp",
+      altText: "Legacy", isPrimary: false, sortOrder: index + 1,
+    })));
+    const before = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect((await uploadImage(product.id)).statusCode).toBe(409);
+    expect(await database.select().from(productImages).where(eq(productImages.productId, product.id))).toEqual(before);
+    const candidate = before.find((image) => !image.isPrimary)!;
+    const edit = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${candidate.id}`, headers: authorization(tokens.admin), payload: { altText: "Nueva portada", isPrimary: true, sortOrder: 0 } });
+    expect(edit.statusCode).toBe(200);
+    const previousCover = before.find((image) => image.isPrimary)!;
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${previousCover.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    expect((await uploadImage(product.id)).statusCode).toBe(409);
+    const extra = before.find((image) => image.id !== previousCover.id && image.id !== candidate.id)!;
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${extra.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+    const gallery = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect(gallery).toHaveLength(4);
+    expect(gallery.filter((image) => image.isPrimary).map((image) => image.id)).toEqual([candidate.id]);
   });
 
   it("serializes concurrent cover selections without duplicate covers or positions", async () => {

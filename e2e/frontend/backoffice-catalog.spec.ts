@@ -5,6 +5,130 @@ import { expectAccessible, expectNoPageOverflow, expectVisibleKeyboardFocus } fr
 
 for (const theme of ["light", "dark"] as const) {
   for (const width of [375, 1440]) {
+    test(`administrative image deletion: ${theme}, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript((value) => localStorage.setItem("technology-ecommerce:backoffice:theme", value), theme);
+      const { imageDeleteRequests, editorialRequests } = await installCatalogApiFixture(page, "ADMIN", { galleryImageCount: 4 });
+      await page.goto("/products");
+      await page.getByRole("button", { name: "Editar", exact: true }).click();
+      const gallery = page.getByRole("region", { name: "Galería de imágenes" });
+      await expect(gallery.getByLabel("4 de 4 imágenes")).toBeVisible();
+      await page.getByLabel("Nombre", { exact: true }).fill("Borrador conservado");
+      await expect(gallery.getByRole("button", { name: "Eliminar Vista 1 del monitor" })).toBeDisabled();
+      const trigger = gallery.getByRole("button", { name: "Eliminar Vista 2 del monitor" });
+      await trigger.click();
+      const dialog = page.getByRole("dialog", { name: "Eliminar imagen del producto" });
+      await expect(dialog.getByRole("button", { name: "Cancelar" })).toBeFocused();
+      await expectAccessible(page); await expectNoPageOverflow(page);
+      await dialog.screenshot({ path: `test-results/frontends/product-image-deletion-${theme}-${width}.png` });
+      await dialog.getByRole("button", { name: "Cancelar" }).click();
+      await expect(trigger).toBeFocused(); expect(imageDeleteRequests).toHaveLength(0);
+      await trigger.click(); await dialog.getByRole("button", { name: "Eliminar imagen", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(gallery.getByLabel("3 de 4 imágenes")).toBeVisible();
+      await expect(gallery.getByRole("button", { name: "Arrastrar Vista 3 del monitor para ordenar" })).toBeFocused();
+      await expect(page.getByText("Imagen eliminada correctamente.")).toBeVisible();
+      await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Borrador conservado");
+      expect(imageDeleteRequests).toHaveLength(1); expect(editorialRequests).toHaveLength(0);
+      await expect(gallery.getByLabel("Archivo de imagen")).toBeEnabled();
+      await expectAccessible(page); await expectNoPageOverflow(page);
+    });
+
+    test(`administrative image editing: ${theme}, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript((value) => localStorage.setItem("technology-ecommerce:backoffice:theme", value), theme);
+      const { imageEditRequests, editorialRequests } = await installCatalogApiFixture(page, "ADMIN", { galleryImageCount: 3 });
+      await page.goto("/products");
+      await page.getByRole("button", { name: "Editar", exact: true }).click();
+      const gallery = page.getByRole("region", { name: "Galería de imágenes" });
+      const cards = gallery.getByRole("listitem");
+      await expect(cards).toHaveCount(3);
+      await page.getByLabel("Nombre", { exact: true }).fill("Borrador comercial");
+      await gallery.getByRole("button", { name: "Editar descripción de Vista 2 del monitor" }).click();
+      const alt = gallery.getByLabel("Texto alternativo", { exact: true });
+      await expect(alt).toBeFocused();
+      await alt.fill("Vista lateral del monitor"); await alt.press("Enter");
+      await expect(gallery.getByRole("button", { name: "Editar descripción de Vista lateral del monitor" })).toBeVisible();
+      await gallery.getByRole("button", { name: "Usar Vista lateral del monitor como portada" }).click();
+      await expect(gallery.getByRole("button", { name: "Vista lateral del monitor es portada" })).toBeDisabled();
+      await expect(gallery.getByText("Portada", { exact: true })).toHaveCount(1);
+      const move = gallery.getByRole("button", { name: "Subir Vista 3 del monitor" });
+      await move.focus(); await move.press("Enter");
+      await expect(cards.nth(1)).toContainText("Vista 3 del monitor");
+      const handle = gallery.getByRole("button", { name: "Arrastrar Vista 3 del monitor para ordenar" });
+      await expect(handle).toBeFocused();
+      if (width === 375) {
+        // Mobile users have the same operation through compact touch/keyboard
+        // controls, without dragging a card across a tall scrolling gallery.
+        await gallery.getByRole("button", { name: "Subir Vista 3 del monitor" }).click();
+      } else await handle.dragTo(cards.first());
+      await expect(cards.first()).toContainText("Vista 3 del monitor");
+      await expectAccessible(page); await expectNoPageOverflow(page);
+      await gallery.screenshot({ path: `test-results/frontends/product-image-editing-${theme}-${width}.png` });
+      expect(imageEditRequests.map((request) => request.input)).toEqual([{ altText: "Vista lateral del monitor" }, { isPrimary: true }, { sortOrder: 1 }, { sortOrder: 0 }]);
+      await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Borrador comercial");
+      await expect(page.getByLabel("URL de imagen", { exact: true })).toHaveCount(0);
+      await page.getByRole("button", { name: "Guardar cambios" }).click();
+      await expect(page.getByText("Producto actualizado correctamente.")).toBeVisible();
+      expect(editorialRequests).toHaveLength(1); expect(editorialRequests[0]).not.toHaveProperty("image");
+      await page.reload(); await page.getByRole("button", { name: "Editar", exact: true }).click();
+      await expect(cards.first()).toContainText("Vista 3 del monitor");
+      await expect(gallery.getByRole("button", { name: "Vista lateral del monitor es portada" })).toBeDisabled();
+    });
+  }
+  for (const width of [375, 1440]) {
+    test(`administrative image upload: ${theme}, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript((value) => localStorage.setItem("technology-ecommerce:backoffice:theme", value), theme);
+      const { editorialRequests, imageUploadRequests } = await installCatalogApiFixture(page, "ADMIN");
+      await page.goto("/products");
+      await page.getByRole("button", { name: "Editar", exact: true }).click();
+      const gallery = page.getByRole("region", { name: "Galería de imágenes" });
+      await expect(gallery.getByLabel("1 de 4 imágenes")).toBeVisible();
+      await page.getByLabel("Nombre", { exact: true }).fill("Borrador de producto");
+      await page.getByLabel("Archivo de imagen").setInputFiles({ name: "monitor.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aY1kAAAAASUVORK5CYII=", "base64") });
+      await expect(page.getByLabel("Archivo de imagen")).toHaveValue(/monitor\.png$/);
+      await expect(gallery.getByRole("img", { name: "Vista previa de la imagen seleccionada" })).toBeVisible();
+      await page.getByLabel("Texto alternativo de la nueva imagen").fill("Monitor visto de lado");
+      await expectAccessible(page);
+      await expectNoPageOverflow(page);
+      await gallery.screenshot({ path: `test-results/frontends/product-image-upload-${theme}-${width}.png` });
+      await gallery.getByRole("button", { name: "Subir imagen", exact: true }).click();
+      await expect(page.getByText("Imagen subida correctamente.")).toBeVisible();
+      await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Borrador de producto");
+      await expect(gallery.getByRole("img", { name: "Vista previa de la imagen seleccionada" })).toHaveCount(0);
+      await expect(gallery.getByLabel("2 de 4 imágenes")).toBeVisible();
+      expect(imageUploadRequests).toHaveLength(1);
+      expect(imageUploadRequests[0]!.headers()["content-type"]).toBe("image/png");
+      expect(imageUploadRequests[0]!.postDataBuffer()?.length).toBeGreaterThan(0);
+      expect(new URL(imageUploadRequests[0]!.url()).searchParams.get("altText")).toBe("Monitor visto de lado");
+      expect(editorialRequests).toHaveLength(0);
+    });
+  }
+  for (const width of [375, 1440]) {
+    test(`administrative gallery panel: ${theme}, ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript((value) => localStorage.setItem("technology-ecommerce:backoffice:theme", value), theme);
+      await installCatalogApiFixture(page, "ADMIN", { galleryImageCount: 4 });
+      await page.goto("/products");
+      await page.getByRole("button", { name: "Editar", exact: true }).click();
+      const gallery = page.getByRole("region", { name: "Galería de imágenes" });
+      await expect(gallery.getByLabel("4 de 4 imágenes")).toBeVisible();
+      await expect(gallery.getByRole("listitem")).toHaveCount(4);
+      await expect(gallery.getByText("Portada", { exact: true })).toHaveCount(1);
+      await expect(gallery.getByText("Posición 4", { exact: true })).toBeVisible();
+      const name = page.getByLabel("Nombre", { exact: true });
+      await name.fill("Borrador conservado");
+      await expect(name).toHaveValue("Borrador conservado");
+      await expectAccessible(page);
+      await expectNoPageOverflow(page);
+      await gallery.screenshot({ path: `test-results/frontends/product-gallery-panel-${theme}-${width}.png` });
+    });
+  }
+}
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [375, 1440]) {
     test(`backoffice destaque list and form work with keyboard in ${theme} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript((value) => localStorage.setItem("technology-ecommerce:backoffice:theme", value), theme);

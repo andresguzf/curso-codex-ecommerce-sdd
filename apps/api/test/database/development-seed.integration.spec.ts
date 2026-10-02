@@ -539,6 +539,35 @@ describe("development database seed", () => {
     expect(images[3]?.storageKey).toBe("custom/laptop/image");
   }, 30_000);
 
+  it("preserves oversized legacy seed galleries but rolls back additions that would exceed four", async () => {
+    const [product] = await database.select().from(products).where(eq(products.sku, "DEV-PHONE-002"));
+    const originalImages = await database.select().from(productImages).where(eq(productImages.productId, product!.id));
+    const custom = await database.insert(productImages).values([3, 4].map((sortOrder) => ({
+      productId: product!.id, storageKey: `legacy-limit/${product!.id}/${sortOrder}`, url: "https://example.com/legacy.webp",
+      altText: "Legacy custom image", isPrimary: false, sortOrder,
+    }))).returning();
+    const options = { accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" as const };
+    try {
+      await runDevelopmentSeed(options);
+      const preserved = await database.select().from(productImages).where(eq(productImages.productId, product!.id));
+      expect(preserved).toHaveLength(5);
+      expect(preserved.map((image) => image.id).sort()).toEqual([...originalImages, ...custom].map((image) => image.id).sort());
+      // Four existing images, with one missing seed-owned reference: restoring
+      // it would create a fifth, so the entire explicit seed must roll back.
+      await database.delete(productImages).where(eq(productImages.id, originalImages.find((image) => !image.isPrimary)!.id));
+      const beforeImages = await database.select().from(productImages).orderBy(asc(productImages.id));
+      const beforeProducts = await database.select().from(products).orderBy(asc(products.id));
+      const beforeCounts = await readSeedCounts();
+      await expect(runDevelopmentSeed(options)).rejects.toThrow("A product can have at most four images");
+      expect(await database.select().from(productImages).orderBy(asc(productImages.id))).toEqual(beforeImages);
+      expect(await database.select().from(products).orderBy(asc(products.id))).toEqual(beforeProducts);
+      expect(await readSeedCounts()).toEqual(beforeCounts);
+    } finally {
+      for (const image of custom) await database.delete(productImages).where(eq(productImages.id, image.id));
+      await runDevelopmentSeed(options);
+    }
+  }, 30_000);
+
   it("rolls back the entire seed when an image write fails", async () => {
     const beforeCategories = await database.select().from(categories).orderBy(asc(categories.id));
     const beforeProducts = await database.select().from(products).orderBy(asc(products.id));

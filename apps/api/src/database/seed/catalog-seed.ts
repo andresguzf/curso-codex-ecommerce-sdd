@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import * as schema from "../schema";
+import { assertProductImageCapacity } from "../../product-catalog/product-image-limit";
 import { getDevelopmentProductImageManifest } from "./product-image-manifest";
 
 type Transaction = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
@@ -92,6 +93,11 @@ export async function seedCatalog(
     // Keep any additional images uploaded by administrators; never delete their assets.
     const existingImages = await transaction.select().from(schema.productImages)
       .where(eq(schema.productImages.productId, product.id)).orderBy(schema.productImages.sortOrder);
+    // The existing product is locked above (new products are private to this
+    // transaction). Preserve custom/legacy images; never make room by deletion.
+    const existingKeys = new Set(existingImages.map((image) => image.storageKey));
+    const additions = new Set(entry.images.filter((image) => !existingKeys.has(image.storageKey)).map((image) => image.storageKey)).size;
+    assertProductImageCapacity(existingImages.length, additions);
     const offset = Math.max(0, ...existingImages.map((image) => image.sortOrder)) + 61;
     await transaction.update(schema.productImages).set({ isPrimary: false })
       .where(eq(schema.productImages.productId, product.id));

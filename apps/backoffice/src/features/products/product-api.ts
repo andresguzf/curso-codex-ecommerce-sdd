@@ -6,6 +6,7 @@ import {
   type AdministrativeProduct,
   type CreateProductRequest,
   type ProductPage,
+  type ProductDetail,
   type UpdateProductRequest,
   type UpdateProductStatusRequest,
 } from "@technology-ecommerce/api-schemas";
@@ -77,9 +78,11 @@ export async function listAdministrativeProducts(
 export async function getAdministrativeProduct(
   accessToken: string,
   productId: string,
-) {
+  signal?: AbortSignal,
+): Promise<ProductDetail> {
   const result = await client.GET("/api/v1/products/{productId}", {
     headers: authorization(accessToken),
+    signal,
     params: { path: { productId }, query: { view: "administrative" } },
   });
   if (!result.data) throw productFailure(result);

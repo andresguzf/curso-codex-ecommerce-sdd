@@ -3940,7 +3940,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description An active product must retain its cover */
+            /** @description PRODUCT_IMAGE_LIMIT_REACHED: at most four images per product including the cover; concurrent uploads are serialized. Existing oversized galleries are preserved but cannot grow. */
             409: {
                 headers: {
                     [name: string]: unknown;

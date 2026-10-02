@@ -4,5 +4,5 @@ import nextjsConfig from "@technology-ecommerce/config-eslint/nextjs";
 
 export default defineConfig([
   ...nextjsConfig,
-  globalIgnores([".next/**", "out/**", "dist/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".next-gallery-e2e/**", "out/**", "dist/**", "next-env.d.ts"]),
 ]);

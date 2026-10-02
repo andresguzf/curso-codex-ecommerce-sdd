@@ -2,18 +2,22 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: planificación e implementación del alcance aprobado completas: 145/145 tareas OpenSpec. Storefront, backoffice y API incluyen la composición editorial, controles administrativos, seed y galería. Esto no equivale a una certificación de preparación para producción.
+> Estado actual: 152/152 tareas OpenSpec completas. Fases 1–22 finalizadas, incluido el gestor visual administrativo de galería. Storefront, backoffice y API incluyen la composición editorial, controles administrativos, seed y galería pública. Esto no equivale a una certificación de preparación para producción.
 
-La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), completada y todavía sin archivar. La evidencia final de la fase 21 está en [VALIDATION-21.8](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
+La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación e implementación completas, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
 
 ### Implementación actual y alcance verificado
 
-Actualizado en la tarea 21.8 (1 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 22.7 (1 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+
+La fase 22 está cerrada: `pnpm test:e2e:gallery` verifica cinco escenarios con API REST y PostgreSQL reales, en una base temporal, con móvil/escritorio y ambos temas administrativos. Comprueba carga, máximo de cuatro, portada, texto alternativo, orden, eliminación, recarga y coherencia pública; rechaza mutaciones anónimas, de Billing y Customer. No ejecuta el seed local. Las imágenes del proveedor localhost se optimizan únicamente en desarrollo; producción mantiene el bloqueo de IP privadas. El alcance y el transporte aislado de imágenes se detallan en el informe, sin certificar CDN/optimización productiva.
+
+- Implementado en 22.1: máximo backend de cuatro imágenes totales (una portada y hasta tres adicionales), conflicto `409 PRODUCT_IMAGE_LIMIT_REACHED`, protección concurrente y del seed, sin truncar galerías antiguas. Implementado en 22.2: adaptadores REST del backoffice para detalle y mutaciones de galería, con Zod, cancelación y errores seguros, sin reintentos automáticos de cargas. Implementado en 22.3: panel de galería exclusivo de `ADMIN`, con miniaturas, portada, orden, contador y recuperación de errores; crear un producto mantiene abierto el formulario con su ID sin perder borradores. Implementado en 22.4: subida JPEG/PNG/WebP con vista previa temporal, texto alternativo, flash, límite de cuatro, bloqueo de duplicados y recuperación del detalle antes de un reintento manual. Implementado en 22.5: edición de texto alternativo, portada y orden por arrastre o botones accesibles, con mutaciones serializadas, estado autoritativo y conservación del borrador comercial. Implementado en 22.6: eliminación con icono, modal accesible, cancelación sin solicitud, protección de portada activa, mensajes flash y actualización del contador/caché; permite regularizar galerías anteriores y vaciar las de productos inactivos. Implementado en 22.7: validación integral con API real y permisos negativos; la fase está completada. Compresión y ajustes de calidad quedan fuera de esta revisión.
 
 - Implementado: autenticación y roles, carrito de visitante o cliente, checkout, órdenes, inventario, facturas y PDF; administración de usuarios, productos, categorías y etiquetas; wishlist, perfil empresarial con logo y snapshots, autocompletes y catálogo completo separado (20.8).
 - Implementado en 19.1–19.8: identidades comerciales y administrativas separadas, cuatro temas, selector accesible y persistencia independiente; dashboard por rol y `GET /api/v1/dashboard/summary`, con pruebas de contraste, teclado y regresión visual.
 - Implementado en fase 20: seed explícito de 20 productos y 60 imágenes, cuentas demo, imágenes ordenadas con portada única y endpoints administrativos, contratos `coverImage`/`images`, nueve recientes sin filtros/paginador, catálogo completo y galería manual accesible.
-- Límite de la interfaz administrativa: las operaciones de galería existen en la API, pero el formulario de productos del backoffice solo edita una referencia URL; no incluye todavía un panel para subir archivos, ordenar imágenes, elegir portada o ajustar calidad. La galería implementada es la de consulta en el detalle público. El cierre del checklist no acredita ese panel administrativo adicional.
+- Interfaz administrativa: permite subir archivos, editar texto alternativo, elegir portada, ordenar y eliminar imágenes con confirmación, sin recrear el producto ni perder el borrador comercial. Mientras se completa una mutación de galería se bloquean otras mutaciones, el guardado y la cancelación del formulario. Los campos URL/clave quedan únicamente en creación; guardar datos comerciales de un producto existente nunca envía `image` ni sobrescribe su portada. Para eliminar la portada de un producto activo primero debe seleccionarse otra; un producto inactivo puede quedar sin imágenes. Calidad/compresión no están incluidas en esta fase. La galería interactiva pública sigue disponible en el detalle del producto.
 - Implementado en 21.1–21.8: modelo editorial, mutaciones REST autorizadas, composición pública agregada, [controles de destacados](docs/backoffice-featured-products.md), [categorías importantes](docs/backoffice-landing-categories.md), seed editorial y [landing completa](docs/landing-editorial.md) con destacados, recientes deduplicados y categorías ordenadas.
 - Evidencia de fase 20: [validación consolidada](e2e/VALIDATION-20.10.md), [seed de catálogo](docs/development-catalog-seed.md), [usuarios demo](docs/development-user-seed.md), [contratos de imágenes](docs/catalog-image-contract.md), [recientes](docs/landing-latest-products.md) y [galería](docs/product-gallery.md).
 - Evidencia histórica: [accesibilidad 18.2](e2e/ACCESSIBILITY.md) y [validación 18.3](e2e/VALIDATION-18.3.md). Sus resultados no sustituyen la validación final de 21.8 ni una auditoría manual completa de accesibilidad.
@@ -76,7 +80,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Plan completo; implementación parcial | 145 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Plan completo; implementación parcial | 152 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -964,9 +968,9 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 20. Seed demostrativo, imágenes y navegación del catálogo.
 21. Productos destacados y categorías importantes.
 
-Cada una de las 145 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+Cada una de las 152 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-Fases 1–21 completadas: 145/145 tareas. No hay una siguiente tarea pendiente en este cambio. La landing y el backoffice presentan la selección editorial completa; la evidencia y sus límites están en [VALIDATION-21.8](e2e/VALIDATION-21.8.md).
+Fases 1–22 completadas: 152 tareas. No quedan tareas pendientes en este cambio y todavía no está archivado. La evidencia y límites de la última fase están en [VALIDATION-22.7](e2e/VALIDATION-22.7.md), y la composición editorial conserva su [informe de fase 21](e2e/VALIDATION-21.8.md).
 
 ## Fuera del alcance inicial
 

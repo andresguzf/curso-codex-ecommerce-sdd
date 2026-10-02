@@ -48,6 +48,7 @@ export class ProductImagesController {
 
   @Post()
   @ApiOperation({ operationId: "addProductImage", summary: "Upload a product image; append by default, first image becomes cover" })
+  @ApiConflictResponse({ description: "PRODUCT_IMAGE_LIMIT_REACHED: at most four images per product including the cover; concurrent uploads are serialized. Existing oversized galleries are preserved but cannot grow." })
   @ApiConsumes("image/png", "image/jpeg", "image/webp")
   @ApiBody({ schema: { type: "string", format: "binary" } })
   @ApiQuery({ name: "altText", required: true, type: String, minLength: 1, maxLength: 500 })

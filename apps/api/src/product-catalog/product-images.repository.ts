@@ -4,6 +4,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService, type DatabaseTransaction } from "../database/database.service";
 import { auditEntries, productImages, products, type ProductImage } from "../database/schema";
+import { assertProductImageCapacity } from "./product-image-limit";
 
 export type ImagePatch = { altText?: string; isPrimary?: boolean; sortOrder?: number };
 export type ImageAsset = { storageKey: string; url: string; mimeType: string; width: number; height: number };
@@ -20,6 +21,7 @@ export class ProductImagesRepository {
       const [product] = await tx.select().from(products).where(and(eq(products.id, productId), isNull(products.deletedAt))).for("update");
       if (!product) throw new NotFoundException({ code: "PRODUCT_NOT_FOUND", message: "The product does not exist" });
       const before = await tx.select().from(productImages).where(eq(productImages.productId, productId)).orderBy(asc(productImages.sortOrder));
+      if (operation.kind === "add") assertProductImageCapacity(before.length);
       const current = operation.kind === "add" ? undefined : before.find((image) => image.id === operation.imageId);
       if (operation.kind !== "add" && !current) throw new NotFoundException({ code: "PRODUCT_IMAGE_NOT_FOUND", message: "The product image does not exist" });
       const patch = operation.kind === "delete" ? {} : operation.patch;

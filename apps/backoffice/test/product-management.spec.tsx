@@ -21,6 +21,11 @@ const api = vi.hoisted(() => ({
   updateProductStatus: vi.fn(),
 }));
 const classifications = vi.hoisted(() => ({ listAllAdministrativeClassifications: vi.fn() }));
+const galleryApi = vi.hoisted(() => ({ getAdministrativeProductGallery: vi.fn(), uploadProductImage: vi.fn(), updateProductImage: vi.fn() }));
+
+vi.mock("../src/features/products/product-image-api", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../src/features/products/product-image-api")>(), ...galleryApi,
+}));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/products",
@@ -151,6 +156,9 @@ describe("product administration", () => {
       totalPages: 1,
     });
     api.createProduct.mockResolvedValue(activeProduct);
+    galleryApi.getAdministrativeProductGallery.mockResolvedValue({ ...activeProduct, images: [fixtureCoverImage] });
+    galleryApi.uploadProductImage.mockResolvedValue({ ...fixtureCoverImage, productId: activeProduct.id, createdAt: activeProduct.createdAt, updatedAt: activeProduct.updatedAt });
+    galleryApi.updateProductImage.mockResolvedValue({ ...fixtureCoverImage, productId: activeProduct.id, createdAt: activeProduct.createdAt, updatedAt: activeProduct.updatedAt });
     api.updateProduct.mockResolvedValue(activeProduct);
     api.updateProductStatus.mockResolvedValue(activeProduct);
     api.deleteProduct.mockResolvedValue(undefined);
@@ -334,6 +342,88 @@ describe("product administration", () => {
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.objectContaining({ name: "Teclado Nova 75 Pro" })));
     expect(await screen.findByText("Producto actualizado correctamente.")).toBeInTheDocument();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["backoffice", "products"] });
+  });
+
+  it("saves a new product once, keeps pending drafts and loads its gallery using the returned ID", async () => {
+    let resolveCreate!: (product: typeof activeProduct) => void;
+    api.createProduct.mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve; }));
+    renderManagement();
+    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo producto" }));
+    expect(screen.getByText(/Guarda primero el producto/)).toBeInTheDocument();
+    expect(galleryApi.getAdministrativeProductGallery).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("SKU"), { target: { value: "NEW-01" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Nombre guardado" } });
+    fireEvent.change(screen.getByLabelText("Descripción"), { target: { value: "Descripción" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "89.00" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear producto" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Crear producto" }));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "+ Nuevo producto" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Borrador durante el guardado" } });
+    resolveCreate(activeProduct);
+    expect(await screen.findByRole("button", { name: "Guardar cambios" })).toBeEnabled();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Borrador durante el guardado");
+    await waitFor(() => expect(galleryApi.getAdministrativeProductGallery).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.any(AbortSignal)));
+    expect(await screen.findByLabelText("1 de 4 imágenes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.objectContaining({ name: "Borrador durante el guardado" })));
+    expect(api.createProduct).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps commercial drafts while retrying a failed gallery query", async () => {
+    galleryApi.getAdministrativeProductGallery.mockRejectedValueOnce(new Error("private server details"));
+    renderManagement();
+    fireEvent.click(within((await screen.findByText(activeProduct.name)).closest("tr")!).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Borrador conservado" } });
+    expect(await screen.findByText("No se pudo cargar la galería")).toBeInTheDocument();
+    expect(screen.queryByText("private server details")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar galería" }));
+    expect(await screen.findByLabelText("1 de 4 imágenes")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Borrador conservado");
+    expect(api.createProduct).not.toHaveBeenCalled();
+  });
+
+  it("uploads independently of the commercial form, blocks overlapping saves and keeps drafts", async () => {
+    let rejectUpload!: (reason: Error) => void;
+    galleryApi.uploadProductImage.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectUpload = reject; }));
+    renderManagement();
+    fireEvent.click(within((await screen.findByText(activeProduct.name)).closest("tr")!).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Borrador independiente" } });
+    fireEvent.change(await screen.findByLabelText("Archivo de imagen"), { target: { files: [new File(["bytes"], "keyboard.png", { type: "image/png" })] } });
+    const alt = screen.getByLabelText("Texto alternativo de la nueva imagen");
+    fireEvent.change(alt, { target: { value: "Teclado" } });
+    fireEvent.keyDown(alt, { key: "Enter" });
+    await waitFor(() => expect(galleryApi.uploadProductImage).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    expect(api.createProduct).not.toHaveBeenCalled();
+    expect(api.updateProduct).not.toHaveBeenCalled();
+    rejectUpload(new Error("private server detail"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Borrador independiente");
+    expect(screen.getByRole("heading", { name: "Editar Teclado Nova 75" })).toBeInTheDocument();
+    expect(api.createProduct).not.toHaveBeenCalled();
+    expect(screen.queryByText("private server detail")).not.toBeInTheDocument();
+  });
+
+  it("keeps commercial drafts and never PATCHes the obsolete cover URL after selecting another cover", async () => {
+    const alternate = { ...fixtureCoverImage, id: "20000000-0000-4000-8000-000000000002", altText: "Vista lateral", isPrimary: false, sortOrder: 1 };
+    galleryApi.getAdministrativeProductGallery.mockResolvedValueOnce({ ...activeProduct, images: [fixtureCoverImage, alternate] })
+      .mockResolvedValue({ ...activeProduct, coverImage: { ...alternate, isPrimary: true }, images: [{ ...fixtureCoverImage, isPrimary: false }, { ...alternate, isPrimary: true }] });
+    renderManagement();
+    fireEvent.click(within((await screen.findByText(activeProduct.name)).closest("tr")!).getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Nombre sin guardar" } });
+    fireEvent.change(screen.getByLabelText("Precio (USD)"), { target: { value: "120.00" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Usar Vista lateral como portada" }));
+    expect(await screen.findByRole("button", { name: "Vista lateral es portada" })).toBeDisabled();
+    expect(screen.queryByLabelText("URL de imagen")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Nombre sin guardar");
+    expect(screen.getByLabelText("Precio (USD)")).toHaveValue("120.00");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith("admin-token", activeProduct.id, expect.objectContaining({ name: "Nombre sin guardar", price: "120.00" })));
+    expect(api.updateProduct.mock.calls[0]?.[2]).not.toHaveProperty("image");
+    expect(api.createProduct).not.toHaveBeenCalled();
   });
 
   it("sends selected category and tags when creating a product", async () => {

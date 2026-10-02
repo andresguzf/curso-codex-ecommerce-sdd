@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { getActiveCategories, getActiveTags } from "@technology-ecommerce/api-client";
@@ -76,12 +76,16 @@ function normalizeImage(
 }
 
 export function ProductForm({
+  gallery,
   isPending,
+  isGalleryPending = false,
   onCancel,
   onSubmit,
   product,
 }: Readonly<{
+  gallery?: ReactNode;
   isPending: boolean;
+  isGalleryPending?: boolean;
   onCancel: () => void;
   onSubmit: (input: CreateProductRequest & { image: ProductImageReference; isFeatured?: boolean }) => void;
   product?: ProductListItem;
@@ -275,7 +279,7 @@ export function ProductForm({
         <p className="mb-0 mt-2 text-sm text-[var(--ds-text-muted)]" id="product-featured-hint">Solo los productos activos pueden destacarse. La fecha la asigna el servidor al destacar; guardar otros cambios no la renueva.</p>
       </fieldset> : null}
 
-      <TextField
+      {!product ? <><TextField
         error={formState.errors.image?.url?.message}
         hint="Opcional. Si se deja vacío, se usa una portada genérica. No se valida el formato de la URL."
         id="product-image-url"
@@ -289,11 +293,13 @@ export function ProductForm({
         id="product-storage-key"
         label="Clave de almacenamiento"
         {...register("image.storageKey")}
-      />
+      /></> : <p className="m-0 text-sm text-[var(--ds-text-muted)]">La portada se administra en la galería; guardar datos del producto no modifica sus imágenes.</p>}
+
+      {gallery}
 
       <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-5">
-        <IconButton className="border-slate-300 text-slate-800 hover:bg-slate-100 focus-visible:ring-blue-700" disabled={isPending} icon="x" label="Cancelar" onClick={onCancel} />
-        <IconButton className="border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={isPending || !categoriesQuery.data} icon="check" label={isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"} type="submit" />
+        <IconButton className="border-slate-300 text-slate-800 hover:bg-slate-100 focus-visible:ring-blue-700" disabled={isPending || isGalleryPending} icon="x" label="Cancelar" onClick={onCancel} />
+        <IconButton className="border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={isPending || isGalleryPending || !categoriesQuery.data} icon="check" label={isPending ? "Guardando…" : product ? "Guardar cambios" : "Crear producto"} type="submit" />
       </div>
     </form>
   );

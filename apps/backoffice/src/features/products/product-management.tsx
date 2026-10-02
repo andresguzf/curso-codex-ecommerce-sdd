@@ -33,12 +33,13 @@ import {
   ProductApiError,
 } from "./product-api";
 import { ProductForm } from "./product-form";
+import { ProductGalleryPanel } from "./product-gallery-panel";
 import { parseProductAdminFilters, productAdminFiltersToParams, type ProductAdminFilters } from "./product-query";
 import { listAllAdministrativeClassifications } from "../classifications/classification-api";
 
 const productQueryKey = ["backoffice", "products"] as const;
 
-type FormState = Readonly<{ mode: "create" }> | Readonly<{ mode: "edit"; product: ProductListItem }>;
+type FormState = Readonly<{ mode: "create" }> | Readonly<{ mode: "edit"; product: ProductListItem; created?: true }>;
 type ConfirmationState = Readonly<{
   action: "deactivate" | "delete";
   product: ProductListItem;
@@ -56,6 +57,8 @@ export function ProductManagement() {
   const { session, status } = useSessionStore();
   const [confirmation, setConfirmation] = useState<ConfirmationState>();
   const [form, setForm] = useState<FormState>();
+  const [formInstance, setFormInstance] = useState(0);
+  const [galleryPending, setGalleryPending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const showFlash = useFlashStore((state) => state.showFlash);
   const accessToken = session?.accessToken ?? "";
@@ -133,7 +136,6 @@ export function ProductManagement() {
         const changes: UpdateProductRequest = {
           ...(input.categoryId !== (form.product.category?.id ?? null) ? { categoryId: input.categoryId } : {}),
           description: input.description,
-          image: input.image,
           name: input.name,
           price: input.price,
           sku: input.sku,
@@ -146,9 +148,13 @@ export function ProductManagement() {
       return createProduct(accessToken, input);
     },
     onError: (error: Error) => showFlash("error", error instanceof ProductApiError ? error.message : "No pudimos guardar el producto. Inténtalo nuevamente."),
-    onSuccess: () => {
+    onSuccess: (savedProduct) => {
       const action = form?.mode === "edit" ? "actualizado" : "creado";
-      setForm(undefined);
+      if (form?.mode === "create") {
+        // Keep the same form key: RHF retains changes typed while saving.
+        // Further saves now update the returned ID instead of creating again.
+        setForm({ mode: "edit", created: true, product: { ...savedProduct, stockAvailable: 0, coverImage: null } });
+      } else setForm(undefined);
       showFlash("success", `Producto ${action} correctamente.`);
       void queryClient.invalidateQueries({ queryKey: productQueryKey });
       void queryClient.invalidateQueries({ queryKey: ["catalog", "public", "landing"] });
@@ -224,7 +230,7 @@ export function ProductManagement() {
       cell: (product) => (
         <div className="flex min-w-64 flex-wrap gap-2">
           <IconButton className={`border-[var(--ds-border)] hover:bg-[var(--ds-accent-soft)] ${product.isFeatured ? "text-[var(--ds-featured)] [&_svg]:fill-current" : "text-[var(--ds-accent)]"}`} disabled={featuredMutation.isPending || saveMutation.isPending || statusMutation.isPending || deleteMutation.isPending || (product.status !== "ACTIVE" && !product.isFeatured)} icon="star" label={product.isFeatured ? "Retirar destaque" : "Destacar"} onClick={() => { if (!featuredMutation.isPending) featuredMutation.mutate(product); }} />
-          <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setForm({ mode: "edit", product }); }} />
+          <IconButton className="border-slate-300 text-slate-700 hover:bg-slate-100" disabled={saveMutation.isPending || galleryPending} icon="edit" label="Editar" onClick={() => { saveMutation.reset(); setForm({ mode: "edit", product }); }} />
           {product.status === "ACTIVE" ? (
             <IconButton className="border-amber-300 text-amber-900 hover:bg-amber-50 focus-visible:ring-amber-700" icon="power" label="Desactivar" onClick={() => setConfirmation({ action: "deactivate", product })} />
           ) : (
@@ -263,7 +269,7 @@ export function ProductManagement() {
             <h1 className="mb-0 mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Productos</h1>
             <p className="mb-0 mt-2 text-slate-600">Gestiona los datos comerciales; el stock se ajusta por separado.</p>
           </div>
-          <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" icon="plus" label="+ Nuevo producto" onClick={() => { saveMutation.reset(); setForm({ mode: "create" }); }} />
+          <IconButton className="size-11 rounded-lg border-[#15345b] bg-[#15345b] text-white hover:bg-blue-800 focus-visible:ring-blue-700" disabled={saveMutation.isPending || galleryPending} icon="plus" label="+ Nuevo producto" onClick={() => { saveMutation.reset(); setFormInstance((current) => current + 1); setForm({ mode: "create" }); }} />
         </header>
 
         {form ? (
@@ -272,7 +278,7 @@ export function ProductManagement() {
               <p className="m-0 text-xs font-bold uppercase tracking-[.16em] text-blue-800">{form.mode === "edit" ? "Edición" : "Alta"}</p>
               <h2 className="mb-0 mt-2 text-2xl font-bold" id="product-form-title">{form.mode === "edit" ? `Editar ${form.product.name}` : "Crear producto"}</h2>
             </div>
-            <ProductForm key={form.mode === "edit" ? form.product.id : "create"} isPending={saveMutation.isPending} onCancel={() => setForm(undefined)} onSubmit={(input) => saveMutation.mutate(input)} product={form.mode === "edit" ? form.product : undefined} />
+            <ProductForm gallery={<ProductGalleryPanel disabled={saveMutation.isPending} onPendingChange={setGalleryPending} productId={form.mode === "edit" ? form.product.id : undefined} />} key={`${formInstance}:${form.mode === "edit" && !form.created ? form.product.id : "create"}`} isGalleryPending={galleryPending} isPending={saveMutation.isPending} onCancel={() => setForm(undefined)} onSubmit={(input) => { if (!saveMutation.isPending && !galleryPending) saveMutation.mutate(input); }} product={form.mode === "edit" ? form.product : undefined} />
           </section>
         ) : null}
 

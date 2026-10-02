@@ -245,7 +245,7 @@ Ambos temas MUST mantener contraste equivalente al nivel AA, foco visible, legib
 - **THEN** la primera presentación visible usa ese tema sin mostrar primero de forma perceptible el tema contrario
 
 ### Requirement: Imágenes múltiples y portada de producto
-El sistema SHALL permitir múltiples imágenes ordenadas por producto, MUST mantener exactamente una imagen principal entre las imágenes de un producto publicable y SHALL conservar texto alternativo descriptivo para cada imagen.
+El sistema SHALL permitir hasta cuatro imágenes ordenadas por producto en total, incluyendo una portada y hasta tres imágenes adicionales, MUST mantener exactamente una imagen principal entre las imágenes de un producto publicable y SHALL conservar texto alternativo descriptivo para cada imagen. Cuatro es un máximo, no una cantidad obligatoria.
 
 #### Scenario: Producto con galería válida
 - **WHEN** un administrador guarda un producto con una portada y varias imágenes adicionales válidas
@@ -258,6 +258,70 @@ El sistema SHALL permitir múltiples imágenes ordenadas por producto, MUST mant
 #### Scenario: Producto sin portada
 - **WHEN** se intenta activar o publicar un producto con imágenes pero sin una portada válida
 - **THEN** el sistema rechaza la operación e identifica el requisito de imagen principal
+
+#### Scenario: Intento de quinta imagen
+- **WHEN** una operación intenta agregar una imagen a un producto que ya tiene cuatro imágenes
+- **THEN** el backend responde con un conflicto y código estable `PRODUCT_IMAGE_LIMIT_REACHED`, conserva las imágenes y portada anteriores y no deja un archivo nuevo huérfano
+
+#### Scenario: Cargas concurrentes para el último espacio
+- **WHEN** dos cargas compiten por el cuarto espacio de un producto con tres imágenes
+- **THEN** como máximo una agrega una imagen y la otra recibe el conflicto de límite, sin superar cuatro imágenes ni duplicar portadas
+
+#### Scenario: Datos anteriores con más de cuatro imágenes
+- **WHEN** se encuentra un producto existente con más de cuatro imágenes al aplicar la revisión
+- **THEN** el sistema conserva todas sus imágenes sin truncarlas ni eliminarlas automáticamente, informa el exceso al administrador y bloquea nuevas altas hasta que haya menos de cuatro; permite corregirlo mediante eliminación confirmada y conserva la gestión de portada, texto alternativo y orden
+
+### Requirement: Gestor administrativo de galería en productos
+El backoffice SHALL ofrecer exclusivamente a `ADMIN` un gestor de imágenes dentro del flujo de creación y edición de productos, consumiendo el detalle administrativo y las mutaciones REST existentes. SHALL mostrar miniaturas, portada, orden, texto alternativo y contador de imágenes respecto del máximo de cuatro, con estados accesibles de carga, vacío, error y reintento en ambos temas.
+
+#### Scenario: Edición de galería existente
+- **WHEN** un administrador abre la edición de un producto
+- **THEN** el gestor consulta sus imágenes desde el detalle administrativo y muestra la colección completa ordenada, sin inferirla únicamente de la portada del listado
+
+#### Scenario: Creación previa a la carga
+- **WHEN** un administrador crea un producto y quiere agregar imágenes
+- **THEN** primero se guarda el producto para obtener su identificador y después se habilitan las cargas; si una carga falla se conserva el producto creado y se reintenta la imagen sin crear otro producto
+
+#### Scenario: Rol sin permiso de catálogo
+- **WHEN** un usuario `BILLING` o `CUSTOMER` intenta acceder al gestor o modificar imágenes mediante REST
+- **THEN** la interfaz no ofrece controles administrativos y el API deniega las mutaciones independientemente de la interfaz
+
+### Requirement: Subida de imágenes con vista previa
+El gestor SHALL permitir agregar archivos JPEG, PNG o WebP con vista previa local y texto alternativo descriptivo, enviando los bytes y metadatos al endpoint existente. El backend MUST validar formato, firma y tamaño conforme a la configuración del adaptador. La interfaz SHALL bloquear nuevas cargas al alcanzar cuatro imágenes y MUST NOT representar la vista previa como una imagen ya persistida. Esta revisión SHALL NOT incorporar compresión, recorte ni controles de calidad.
+
+#### Scenario: Archivo válido
+- **WHEN** un administrador selecciona un archivo admitido, proporciona texto alternativo y confirma la carga con espacio disponible
+- **THEN** la interfaz muestra el estado pendiente, envía una sola operación, presenta la imagen devuelta por el API y confirma el éxito mediante mensaje flash
+
+#### Scenario: Archivo rechazado o límite actualizado
+- **WHEN** el servidor rechaza el archivo o informa que otra carga completó los cuatro espacios
+- **THEN** la interfaz muestra un error seguro sin anunciar éxito, permite corregir la selección o actualizar la galería y libera las referencias temporales de vista previa cuando dejan de usarse
+
+### Requirement: Edición y orden administrativo de imágenes
+El gestor SHALL permitir editar texto alternativo, seleccionar otra portada y reordenar imágenes mediante arrastre y controles equivalentes de teclado. Las mutaciones SHALL respetar los permisos, la portada única y el orden autoritativo del API, sin modificar inventario ni snapshots comerciales.
+
+#### Scenario: Cambio de portada desde el formulario
+- **WHEN** un administrador confirma otra imagen como portada
+- **THEN** el gestor refleja la única portada devuelta por el servidor y actualiza las consultas administrativas afectadas; las siguientes lecturas públicas usan esa portada
+
+#### Scenario: Orden por teclado y error de mutación
+- **WHEN** un administrador mueve una imagen con controles de teclado y una operación es rechazada
+- **THEN** la interfaz conserva o recupera el orden autoritativo, anuncia el error y mantiene foco utilizable sin confirmar un orden no persistido
+
+### Requirement: Eliminación confirmada de imágenes
+El gestor MUST solicitar confirmación accesible antes de eliminar una imagen y MUST respetar la prohibición del backend de dejar un producto activo sin portada. Las operaciones pendientes SHALL bloquear envíos duplicados y las respuestas exitosas SHALL actualizar la galería y consultas administrativas afectadas sin descartar campos del formulario no guardados.
+
+#### Scenario: Cancelar eliminación de imagen
+- **WHEN** un administrador cancela el modal de eliminación
+- **THEN** no se envía la solicitud y la galería permanece intacta
+
+#### Scenario: Eliminar última portada de producto activo
+- **WHEN** un administrador intenta eliminar la única imagen de un producto activo
+- **THEN** el sistema impide la eliminación e informa que debe conservar una portada; un producto inactivo puede quedar sin imágenes conforme a las reglas existentes
+
+#### Scenario: Error o pérdida de sesión durante una operación
+- **WHEN** una mutación falla o la sesión deja de estar autorizada
+- **THEN** la interfaz no confirma éxito ni conserva datos privados para otra cuenta, presenta un mensaje seguro y permite recuperar el estado autorizado sin duplicar la operación automáticamente
 
 ### Requirement: Uso de portada en tarjetas de catálogo
 Las tarjetas de producto de la landing, catálogo, wishlist y back office SHALL usar la imagen principal como portada y SHALL mostrar un fallback accesible cuando la imagen no pueda cargarse.
