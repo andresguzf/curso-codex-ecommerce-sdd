@@ -7,7 +7,10 @@ import { DocumentExportService } from "./document-export.service";
 import { SimplePdfAdapter } from "./simple-pdf.adapter";
 import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate";
 import type { OrderSnapshot } from "../order-management/order.aggregate";
-import type { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
+import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
+import type { ImageStorage } from "../product-catalog/image-storage/image-storage.port";
+import type { ImageReferenceLookup } from "../product-catalog/image-storage/image-reference.repository";
+import { CatalogImageStorageRouter } from "../product-catalog/image-storage/catalog-image-storage-router";
 import { ImageStorageNotFoundError } from "../product-catalog/image-storage/image-storage.port";
 
 const order: OrderSnapshot = {
@@ -133,6 +136,37 @@ describe("document export", () => {
       storageKey: "broken.png", sha256: createHash("sha256").update(unreadable).digest("hex"),
     } } })).rejects.toMatchObject({ response: { code: "DOCUMENT_LOGO_UNREADABLE" } });
     read.mockReset();
+  });
+
+  it("preserves historical order/invoice snapshots and local logo PDFs through catalog provider switches", async () => {
+    const data = await sharp({ create: { width: 32, height: 16, channels: 3, background: "navy" } }).png().toBuffer();
+    const local = { upload: vi.fn(), read: vi.fn().mockResolvedValue({ data, mimeType: "image/png" }), delete: vi.fn() } as unknown as ImageStorage;
+    const cloud = { upload: vi.fn(), read: vi.fn(), delete: vi.fn() } as unknown as ImageStorage;
+    const enterprise = new ImageStorageService(local, { isReferenced: vi.fn() } as unknown as ImageReferenceLookup);
+    const documents = new DocumentExportService(new SimplePdfAdapter(), enterprise);
+    const issuer = { tradeName: "Historical company", legalName: "Historical legal name", taxIdentifier: "HIST-001",
+      address: { line1: "Historical street", line2: null, city: "Santiago", region: null, postalCode: null, countryCode: "CL" },
+      contact: { email: null, phone: null }, logo: { storageKey: "f8c6ad19-ff10-4231-88fc-6f28897d6418.png", url: "https://unused.example/logo.png", sha256: createHash("sha256").update(data).digest("hex") } };
+    const historicOrder = { ...order, issuerSnapshot: issuer };
+    const historicInvoice = { ...invoice, issuerSnapshot: issuer };
+    const originals = structuredClone({ historicOrder, historicInvoice });
+    const firstOrder = await documents.renderOrder(historicOrder);
+    const firstInvoice = await documents.renderInvoice(historicInvoice);
+    for (const provider of ["cloudinary", "local", "cloudinary"] as const) {
+      // Reconstruct the catalog's router as on deployment/restart. Enterprise
+      // storage remains a separate local instance, never this catalog router.
+      const catalog = new CatalogImageStorageRouter(local, cloud, provider);
+      expect(catalog).not.toBe(enterprise);
+      expect((await documents.renderOrder(historicOrder)).equals(firstOrder)).toBe(true);
+      expect((await documents.renderInvoice(historicInvoice)).equals(firstInvoice)).toBe(true);
+    }
+    expect({ historicOrder, historicInvoice }).toEqual(originals);
+    expect(local.read).toHaveBeenCalledWith(issuer.logo.storageKey);
+    expect(cloud.read).not.toHaveBeenCalled();
+    expect(cloud.upload).not.toHaveBeenCalled();
+    expect(cloud.delete).not.toHaveBeenCalled();
+    expect(firstOrder.toString("latin1")).toContain("/Logo Do");
+    expect(firstInvoice.toString("latin1")).toContain("/Logo Do");
   });
 
   it("regenerates identical bytes after the current profile and logo change", async () => {

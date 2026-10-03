@@ -16,12 +16,12 @@ export default defineConfig({
   projects: [
     {
       name: "storefront",
-      testMatch: [/storefront-(catalog|gallery|accessibility|theme|design)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
+      testMatch: [/storefront-(catalog|gallery|cloudinary|accessibility|theme|design)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
       use: { baseURL: "http://localhost:3000" },
     },
     {
       name: "backoffice",
-      testMatch: [/backoffice-(catalog|accessibility|theme|design|dashboard)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
+      testMatch: [/backoffice-(catalog|cloudinary|accessibility|theme|design|dashboard)\.spec\.ts/, /theme-components\.spec\.ts/, /theme-regression\.spec\.ts/],
       use: { baseURL: "http://localhost:3002" },
     },
   ],

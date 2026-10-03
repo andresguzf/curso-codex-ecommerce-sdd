@@ -2,13 +2,13 @@
 
 Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado revisado en la tarea 22.7, el 1 de octubre de 2026:
+Estado revisado en la tarea 23.8, el 2 de octubre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 152 tareas verificables.
+- Existen propuesta, diseño, siete especificaciones y 160 tareas verificables.
 - Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
-- Fases 1–22 completadas: 152/152 tareas, incluidos controles editoriales administrativos, seed determinista, landing completa y gestor administrativo de imágenes. No quedan tareas pendientes en este cambio. La evidencia final de galería está en `e2e/VALIDATION-22.7.md`. El cambio sigue sin archivar. No infieras autorización para archivar, ejecutar el seed local, hacer commit/push o ampliar alcance.
+- Fases 1–23 completadas: 160/160 tareas, incluidos controles editoriales, seed, landing, gestor de imágenes y adaptador Cloudinary con recuperación durable. No quedan tareas de implementación pendientes. Tras autorización posterior a 23.8, Cloudinary está seleccionado en `.env` local con modo dynamic y migraciones aplicadas; no se ejecutó seed ni migración de imágenes. Evidencia: `e2e/VALIDATION-22.7.md`, `docs/VALIDATION-23.7.md` y `docs/VALIDATION-23.8.md`. El cambio sigue sin archivar. Esta autorización no habilita operaciones futuras de seed, nuevos smoke reales, archivo o ampliaciones de alcance.
 - La revisión 18.5 y los informes de fases 18–20 son evidencia histórica. La consolidación final está en `e2e/VALIDATION-21.8.md`; los controles y la composición editorial se documentan en `docs/backoffice-featured-products.md`, `docs/backoffice-landing-categories.md` y `docs/landing-editorial.md`. Las pruebas automatizadas no equivalen a certificación de producción ni a auditoría manual completa de accesibilidad.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
@@ -221,6 +221,18 @@ Temas, dashboard, imágenes múltiples, seed, galería, API editorial, controles
 - `Product` incorpora `isFeatured` y `featuredAt`; `Category` incorpora `showOnLanding` y `landingOrder` del 1 al 3.
 
 # Domain modules
+
+## Almacenamiento de catálogo — fase 23
+
+- Consulta `docs/catalog-cloudinary-storage.md` y `docs/catalog-image-recovery.md` antes de operar. `IMAGE_STORAGE_CATALOG_PROVIDER=local|cloudinary` afecta solo nuevas cargas, con `local` por defecto; no edites `.env` ni actives el proveedor sin autorización específica.
+- Las variables `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER_MODE=dynamic|fixed` son privadas del API. No uses `NEXT_PUBLIC_*`, secretos versionados, cargas directas del navegador ni fallback silencioso. La cuenta de pruebas se verificó como dynamic en 23.7, pero el modo debe configurarse explícitamente y confirmarse si cambia la cuenta.
+- Destino fijo `codex-storefront`: dynamic usa `asset_folder`, fixed usa `folder`; cada operación tiene UUID propio, sin sobrescritura. El mismo POST REST recibe bytes JPEG/PNG/WebP, valida contenido/tamaño y autoriza ADMIN antes de subir. No cambia el formulario, inventario ni contratos comerciales.
+- La migración aditiva `0015_worried_triathlon.sql` crea `catalog_image_operations`. Identidad durable antes de subir; referencia, portada/orden, auditoría y confirmación atómicos. Worker cada 30 segundos, hasta 20 trabajos por pasada, dos minutos de gracia y ocho intentos con backoff; mutex advisory sin mantener transacciones/bloqueos de filas durante red. No reintenta uploads automáticamente.
+- La reconciliación puede eliminar assets: requiere autorización operativa. Reencola solo una operación revisada por UUID; nunca borres carpetas ni assets ajenos/referenciados. `BLOCKED` exige revisar la causa, no forzar estados SQL. Los errores remotos usan 502/503/504 seguros y correlation ID.
+- Volver a local no reescribe ni descarga referencias Cloudinary; conserva credenciales/modo para su gestión y recuperación. Picsum/archivos actuales quedan intactos. Logos empresariales siguen locales y PDFs conservan snapshots. Calidad/compresión, migración masiva y sustitución de Picsum para producción quedan fuera de esta fase.
+- Next.js admite entrega HTTPS versionada de `res.cloudinary.com` únicamente bajo `codex-storefront`; no amplíes hosts ni IP privadas en producción. `pnpm test:e2e:cloudinary` usa REST/PostgreSQL reales y SDK controlado; no equivale a certificación del optimizador productivo. Cada nuevo smoke real requiere autorización propia en cuenta no productiva y limpieza exclusiva de su asset temporal; la autorización de 23.7 no habilita ejecuciones futuras.
+
+## Módulos funcionales
 
 - `identity-access`: usuarios, sesiones, roles, propiedad y autorización.
 - `product-catalog`: productos, imágenes, categorías, etiquetas, slugs, wishlist, búsqueda, filtros, detalle y paginación.
@@ -560,7 +572,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 152 tareas distribuidas en 22 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial. La fase 22 añade gestión visual administrativa de galería y límite de cuatro imágenes; no asumas completado su frontend por existir endpoints REST.
+- El plan contiene 160 tareas distribuidas en 23 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial. La fase 22 añade galería administrativa y límite de cuatro; la 23, Cloudinary para nuevas cargas y recuperación durable. Verifica siempre el estado real y no infieras implementación ni activación por existir endpoints o credenciales.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.

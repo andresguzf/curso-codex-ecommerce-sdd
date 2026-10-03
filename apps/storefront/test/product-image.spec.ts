@@ -6,6 +6,13 @@ import {
 } from "../src/features/catalog/product-image-url";
 
 describe("product image resolver", () => {
+  it("preserves catalog Cloudinary delivery URLs without accepting arbitrary remote resources", () => {
+    const url = "https://res.cloudinary.com/demo/image/upload/v123/codex-storefront/cover.webp";
+    expect(resolveProductImageUrl(url)).toBe(url);
+    for (const invalid of [url.replace("codex-storefront", "private"), url.replace("/image/", "/video/"), `${url}?signature=secret`, `${url}#token`, url.replace("https://", "https://user:password@"), url.replace(".com/", ".com:8443/"), url.replace("https:", "http:")]) {
+      expect(resolveProductImageUrl(invalid)).toBe(DEFAULT_PRODUCT_IMAGE_URL);
+    }
+  });
   it("uses the local placeholder for empty, malformed or unconfigured sources", () => {
     expect(resolveProductImageUrl(undefined)).toBe(DEFAULT_PRODUCT_IMAGE_URL);
     expect(resolveProductImageUrl(" ")).toBe(DEFAULT_PRODUCT_IMAGE_URL);

@@ -456,3 +456,93 @@ El seed de desarrollo y pruebas SHALL marcar al menos tres productos activos com
 #### Scenario: Seed de composición comercial
 - **WHEN** se ejecuta el seed demostrativo en un entorno permitido
 - **THEN** la respuesta agregada de landing contiene tres destacados, nueve recientes no repetidos y tres categorías importantes configuradas de forma reproducible
+
+### Requirement: Nuevas cargas de catálogo en Cloudinary
+El API SHALL permitir seleccionar Cloudinary como proveedor de nuevas cargas del catálogo y MUST almacenar esos assets exclusivamente en la carpeta `codex-storefront`. SHALL conservar el formulario, la UI, el gestor de galería, las mutaciones REST y la autorización exclusiva de `ADMIN`. El navegador MUST enviar los bytes al API, no directamente a Cloudinary. Las cargas MUST NOT modificar inventario, órdenes, facturas o snapshots.
+
+#### Scenario: Carga válida en Cloudinary
+- **WHEN** un administrador carga una imagen válida con espacio disponible y Cloudinary es el proveedor seleccionado
+- **THEN** el backend almacena el asset en `codex-storefront`, confirma su referencia y metadatos y devuelve una URL HTTPS para la misma UI, sin guardar una copia local de los bytes
+
+#### Scenario: Carpeta dinámica o fija
+- **WHEN** se configura explícitamente el modo de carpetas como `dynamic` o `fixed` y se carga una imagen
+- **THEN** el adaptador usa los parámetros correspondientes para colocar el asset en `codex-storefront`, sin confundir public ID con carpeta ni aceptar destinos enviados por el cliente
+
+#### Scenario: Carga no autorizada
+- **WHEN** un visitante, `CUSTOMER` o `BILLING` intenta subir o modificar imágenes
+- **THEN** el API rechaza la operación antes de enviar bytes al proveedor y conserva la galería
+
+### Requirement: Configuración privada de almacenamiento de catálogo
+La selección `local|cloudinary` SHALL afectar únicamente nuevas cargas del catálogo y SHALL conservar `local` por defecto hasta activación explícita. Las credenciales MUST residir exclusivamente en el backend y MUST NOT aparecer en código versionado, bundles frontend, respuestas o logs. Seleccionar Cloudinary con configuración incompleta MUST impedir el arranque y los fallos remotos MUST NOT causar fallback silencioso a local.
+
+#### Scenario: Preparación sin activación
+- **WHEN** se agregan credenciales al entorno del backend pero el proveedor sigue siendo `local`
+- **THEN** las cargas continúan siendo locales y la presencia de credenciales no origina uploads Cloudinary
+
+#### Scenario: Configuración incompleta
+- **WHEN** se selecciona Cloudinary sin cloud name, API key, API secret o modo de carpetas válido
+- **THEN** el backend rechaza su configuración con diagnóstico seguro sin revelar secretos ni seleccionar otro proveedor
+
+#### Scenario: Preservación de logos empresariales
+- **WHEN** se activa Cloudinary para catálogo, se carga un logo o se regenera un PDF histórico
+- **THEN** las operaciones empresariales conservan almacenamiento, bytes y huellas previos sin subir logos a `codex-storefront` ni depender del proveedor de catálogo
+
+### Requirement: Compatibilidad de imágenes anteriores
+El sistema MUST conservar sin migración automática las referencias locales y de Picsum existentes, portada, orden y texto alternativo. SHALL resolver operaciones según la identidad y origen del asset, independientemente del proveedor seleccionado para nuevas cargas. La activación MUST NOT ejecutar el seed ni descargar o reemplazar imágenes previas. El requisito anterior de sustituir imágenes demo antes de producción sigue vigente como preparación separada.
+
+#### Scenario: Galería mixta
+- **WHEN** se agrega una imagen Cloudinary a un producto con imágenes locales o de Picsum
+- **THEN** la galería conserva las anteriores y presenta todos los orígenes en el orden persistido, con portada única y el límite existente de cuatro imágenes
+
+#### Scenario: Volver al proveedor local
+- **WHEN** se selecciona nuevamente `local` para nuevas cargas
+- **THEN** las imágenes Cloudinary previas conservan sus URLs y referencias sin sobrescritura o descarga; su gestión remota usa su origen y requiere conservar su configuración
+
+### Requirement: Confirmación segura de assets remotos
+El API MUST validar firma, MIME, formato, tamaño, dimensiones y metadatos antes de enviar bytes, usar identidades únicas sin sobrescritura y validar identidad, tipo de recurso y URL HTTPS retornados antes de confirmar. El máximo de cuatro y la portada única MUST comprobarse transaccionalmente bajo bloqueo de producto, sin mantener bloqueos SQL durante llamadas externas. Los errores de proveedor SHALL usar el envelope REST existente con códigos estables y mensajes seguros.
+
+#### Scenario: Archivo inválido
+- **WHEN** se intenta subir un archivo inválido o sobredimensionado
+- **THEN** el API devuelve el error correspondiente sin upload ni referencia nueva de galería
+
+#### Scenario: Competencia por el cuarto espacio
+- **WHEN** dos cargas remotas compiten por el último espacio
+- **THEN** solo una confirma su referencia, la otra recibe `409 PRODUCT_IMAGE_LIMIT_REACHED` y su asset se elimina por compensación o queda registrado para limpieza recuperable, sin superar cuatro imágenes ni duplicar portadas
+
+#### Scenario: Indisponibilidad o respuesta inválida
+- **WHEN** Cloudinary falla, agota el tiempo o devuelve identidad o URL inválida
+- **THEN** el API responde con `503 IMAGE_STORAGE_UNAVAILABLE`, `504 IMAGE_STORAGE_TIMEOUT` o `502 IMAGE_STORAGE_UPSTREAM_ERROR` según corresponda, sin anunciar éxito ni cambiar a local, y conserva seguimiento de resultados remotos inciertos
+
+### Requirement: Compensación y eliminación remota recuperables
+El sistema MUST registrar duraderamente la identidad prevista antes del upload y SHALL reconciliar assets propios no confirmados tras errores o reinicios. La retirada autorizada de una referencia y su trabajo de limpieza MUST confirmarse en una misma transacción. La eliminación física SHALL comprobar propiedad, carpeta y ausencia de referencias con coordinación que impida carreras con cargas en confirmación. Los reintentos SHALL ser acotados y seguros, con reconciliación operativa. El sistema MUST NOT eliminar logos, assets ajenos, referencias externas Picsum ni carpetas completas.
+
+#### Scenario: Upload aceptado y persistencia fallida
+- **WHEN** Cloudinary almacena el archivo pero falla PostgreSQL o el API se reinicia antes de confirmar
+- **THEN** la galería no adquiere una referencia no confirmada y el seguimiento permite identificar y limpiar el asset propio no referenciado, incluso si se perdió la respuesta
+
+#### Scenario: Limpieza temporalmente fallida
+- **WHEN** se confirma una eliminación y falla la limpieza física
+- **THEN** la referencia permanece retirada y la limpieza queda pendiente para reintento tras reinicio sin duplicar la eliminación lógica ni borrar assets referenciados
+
+#### Scenario: Asset referenciado o ajeno
+- **WHEN** una limpieza encuentra un asset referenciado, ajeno o fuera de la carpeta autorizada
+- **THEN** no lo elimina y registra un resultado seguro para revisión sin ejecutar borrados masivos
+
+#### Scenario: Repetición de limpieza
+- **WHEN** se repite la limpieza de un asset propio ya ausente
+- **THEN** concluye de manera segura sin volver a cargar bytes ni afectar otros assets
+
+### Requirement: Misma experiencia de galería y pruebas aisladas
+Las tarjetas y galerías SHALL presentar URLs Cloudinary conservando accesibilidad, fallbacks, temas, borradores, foco y controles actuales. Esta fase MUST NOT agregar transformación, recorte o controles de calidad. Las pruebas normales SHALL aislar base y almacenamiento sin credenciales reales; cualquier prueba real SHALL ser opt-in con autorización específica en cuenta no productiva y limpieza limitada a su asset temporal.
+
+#### Scenario: Renderizado sin rediseño
+- **WHEN** se consulta una portada o galería con imágenes Cloudinary
+- **THEN** ambas aplicaciones presentan las imágenes con la UI existente y los cuatro temas, sin hosts arbitrarios ni credenciales expuestas
+
+#### Scenario: Respuesta de carga incierta
+- **WHEN** la interfaz pierde la respuesta o recibe timeout de una carga
+- **THEN** no reintenta automáticamente ni confirma éxito, conserva borradores y permite recuperar el detalle autoritativo mientras el backend reconcilia
+
+#### Scenario: Prueba real autorizada
+- **WHEN** se autoriza expresamente una prueba Cloudinary de desarrollo
+- **THEN** se carga un asset temporal identificado en `codex-storefront`, se verifica carpeta y visualización y se elimina únicamente ese asset, sin modificar productos o datos de desarrollo ni activar el proveedor automáticamente

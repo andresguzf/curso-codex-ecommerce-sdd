@@ -125,6 +125,8 @@ Se configuran en `apps/api/.env` a partir de `apps/api/.env.example`.
 
 `DATABASE_MIGRATIONS_PATH` es una opción operativa avanzada del ejecutable compilado de migraciones. El contenedor del API la configura internamente; en desarrollo se usa la ruta de migraciones del código fuente.
 
+Para nuevas imágenes del catálogo, `IMAGE_STORAGE_CATALOG_PROVIDER` admite `local` (por defecto) o `cloudinary`. El adaptador está implementado, pero su activación requiere autorización y migraciones aplicadas, incluida 0015. Las variables privadas `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER_MODE=dynamic|fixed` pertenecen solo al backend; nunca a `NEXT_PUBLIC_*`. Consulta [configuración, recuperación y rollback](catalog-cloudinary-storage.md). No cambia el seed Picsum ni los logos locales; tener credenciales no activa uploads remotos.
+
 ### Datos seed
 
 Estas variables son obligatorias solo al ejecutar `db:seed`:

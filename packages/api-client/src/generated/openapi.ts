@@ -3954,6 +3954,27 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description IMAGE_STORAGE_UPSTREAM_ERROR: invalid image storage response; recover the gallery before retrying */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description IMAGE_STORAGE_UNAVAILABLE: image storage temporarily unavailable; no automatic upload retries or local fallback */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description IMAGE_STORAGE_TIMEOUT: remote result may be uncertain; recover the gallery before retrying */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     deleteProductImage: {

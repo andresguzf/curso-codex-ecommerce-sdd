@@ -1,11 +1,67 @@
 import { describe, expect, it } from "vitest";
 
-import { validateEnvironment } from "../../src/config/environment";
+import { CATALOG_IMAGE_FOLDER, validateEnvironment } from "../../src/config/environment";
 
 const databaseUrl = "postgresql://postgres:password@localhost:5432/ecommerce";
 const productionSecret = "production-test-secret-at-least-32-characters";
 
 describe("HTTP security environment", () => {
+  it("keeps catalog local by default and fixes the Cloudinary destination", () => {
+    const environment = validateEnvironment({ DATABASE_URL: databaseUrl });
+    expect(environment.IMAGE_STORAGE_CATALOG_PROVIDER).toBe("local");
+    expect(CATALOG_IMAGE_FOLDER).toBe("codex-storefront");
+    expect(environment.CLOUDINARY_FOLDER_MODE).toBeUndefined();
+  });
+
+  it("allows private preparation without activating Cloudinary", () => {
+    const environment = validateEnvironment({
+      DATABASE_URL: databaseUrl,
+      CLOUDINARY_CLOUD_NAME: "development-cloud",
+      CLOUDINARY_API_KEY: "test-key-not-real",
+      CLOUDINARY_API_SECRET: "test-secret-not-real",
+      CLOUDINARY_FOLDER_MODE: "",
+    });
+    expect(environment.IMAGE_STORAGE_CATALOG_PROVIDER).toBe("local");
+    expect(environment.CLOUDINARY_FOLDER_MODE).toBeUndefined();
+    expect(() => validateEnvironment({
+      DATABASE_URL: databaseUrl,
+      CLOUDINARY_CLOUD_NAME: "", CLOUDINARY_API_KEY: "", CLOUDINARY_API_SECRET: "",
+    })).not.toThrow();
+  });
+
+  it.each(["dynamic", "fixed"])("accepts explicit %s mode with complete private configuration", (mode) => {
+    expect(validateEnvironment({
+      DATABASE_URL: databaseUrl,
+      IMAGE_STORAGE_CATALOG_PROVIDER: "cloudinary",
+      CLOUDINARY_CLOUD_NAME: "development-cloud",
+      CLOUDINARY_API_KEY: "test-key-not-real",
+      CLOUDINARY_API_SECRET: "test-secret-not-real",
+      CLOUDINARY_FOLDER_MODE: mode,
+    }).CLOUDINARY_FOLDER_MODE).toBe(mode);
+  });
+
+  it.each(["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_FOLDER_MODE"])("requires %s when Cloudinary is selected without leaking values", (missing) => {
+    const config = {
+      DATABASE_URL: databaseUrl,
+      IMAGE_STORAGE_CATALOG_PROVIDER: "cloudinary",
+      CLOUDINARY_CLOUD_NAME: "development-cloud",
+      CLOUDINARY_API_KEY: "private-key-sentinel",
+      CLOUDINARY_API_SECRET: "private-secret-sentinel",
+      CLOUDINARY_FOLDER_MODE: "dynamic",
+      [missing]: " ",
+    };
+    let message = "";
+    try { validateEnvironment(config); } catch (error) { message = (error as Error).message; }
+    expect(message).toContain(missing);
+    expect(message).not.toContain("private-key-sentinel");
+    expect(message).not.toContain("private-secret-sentinel");
+  });
+
+  it("rejects unsupported providers and folder modes", () => {
+    expect(() => validateEnvironment({ DATABASE_URL: databaseUrl, IMAGE_STORAGE_CATALOG_PROVIDER: "other" })).toThrow("IMAGE_STORAGE_CATALOG_PROVIDER");
+    expect(() => validateEnvironment({ DATABASE_URL: databaseUrl, CLOUDINARY_FOLDER_MODE: "guess" })).toThrow("CLOUDINARY_FOLDER_MODE");
+  });
+
   it("uses explicit local origins and non-secure cookies in development", () => {
     const environment = validateEnvironment({ DATABASE_URL: databaseUrl });
 

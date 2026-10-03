@@ -428,6 +428,50 @@ Las acciones incluyen subir un archivo por operación, editar texto alternativo,
 
 Después de éxito se actualizan o invalidan las consultas del backoffice de detalle y listado; las siguientes consultas REST del storefront reflejan portada y orden. No se promete invalidación instantánea de cachés entre aplicaciones independientes. Los mensajes flash nacen de handlers/callbacks de mutación. Se conservan tokens claro/oscuro, foco visible, nombres accesibles para iconos, miniaturas con fallback y controles utilizables en móvil. Las acciones no alteran stock, publicación del producto ni documentos históricos.
 
+### 24. Nuevas cargas de catálogo en Cloudinary (fase 23)
+
+Esta fase amplía las fases 1–22 ya implementadas; la numeración de decisiones de este documento es independiente de la numeración de tareas. Solo cambia el destino de las nuevas cargas de archivos del catálogo. El formulario, el gestor administrativo de galería, los temas, los controles de portada/orden/texto alternativo, el máximo de cuatro imágenes y los endpoints REST conservan su comportamiento. No se migrarán imágenes locales o de Picsum, no se ejecutará el seed ni se cambiarán productos existentes durante la activación.
+
+#### Configuración y frontera de seguridad
+
+`apps/api` usará el SDK oficial de Cloudinary con cargas autenticadas desde el servidor. El navegador continuará enviando bytes JPEG/PNG/WebP y metadatos al `POST /api/v1/products/:productId/images` existente; no se introducirán uploads directos, presets unsigned, Server Actions, multipart en ese contrato ni endpoints paralelos.
+
+La configuración propuesta es `IMAGE_STORAGE_CATALOG_PROVIDER=local|cloudinary`, con `local` por defecto, y las variables privadas `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET`. `CLOUDINARY_FOLDER_MODE=dynamic|fixed` se configurará explícitamente al seleccionar Cloudinary. Las cargas usarán siempre la carpeta de assets `codex-storefront`, sin aceptar un destino enviado por el cliente. En modo dinámico se usará `asset_folder`; en modo fijo se usará `folder`, teniendo en cuenta que el public ID y la carpeta no son conceptos equivalentes en modo dinámico. No se inferirá el modo solo por ver una carpeta en la consola.
+
+Los ejemplos de entorno incluirán placeholders, nunca secretos. Ninguna credencial se expondrá mediante `NEXT_PUBLIC_*`, OpenAPI, respuestas, logs o bundles frontend. Seleccionar Cloudinary con configuración incompleta o inválida impedirá el arranque; un fallo del servicio remoto no cambiará silenciosamente el destino a local. La preparación de configuración no equivale a activar el proveedor. Las credenciales se solicitarán al iniciar la tarea de configuración para que el usuario las coloque privadamente en `apps/api/.env`, no en el chat.
+
+El almacenamiento de logos empresariales se separará explícitamente del proveedor seleccionable de catálogo, manteniendo sus lecturas locales, huellas y referencias inmutables. Ni los logos ni la regeneración de PDFs dependerán de Cloudinary por esta fase.
+
+#### Adaptador y referencias compatibles
+
+Antes de una carga remota se validarán permisos, producto, metadatos, firma, MIME, tamaño y dimensiones; la comprobación inicial de capacidad no sustituye el bloqueo transaccional final. Se conservará el límite configurable existente de bytes. Se generará una identidad única por operación y se deshabilitará sobrescritura. El adaptador validará la identidad, el tipo de recurso imagen y la URL HTTPS retornados; persistirá solo referencias y metadatos, no los bytes en PostgreSQL ni una copia local de nuevas cargas Cloudinary.
+
+La clave interna deberá identificar inequívocamente el proveedor y la identidad remota necesaria para su gestión (public ID y asset ID cuando corresponda). Se mantendrá el shape público existente de `ProductImage`, `coverImage` e `images`; cualquier persistencia adicional será interna y aditiva. Las claves locales anteriores conservarán su resolución sin requerir backfill destructivo. Las referencias externas de Picsum seguirán siendo referencias de lectura, no assets propios eliminables. No se decidirá el proveedor de eliminación solo a partir del hostname de una URL.
+
+El router de almacenamiento resolverá lectura y eliminación según el origen del asset, independientemente del proveedor seleccionado para nuevas cargas. Volver a `local` no reescribirá referencias Cloudinary existentes ni las convertirá en archivos locales; su visualización continuará mediante la URL guardada y su gestión remota requerirá conservar la configuración necesaria. No se implementará descarga de URLs arbitrarias, migración automática ni transformación de imágenes.
+
+#### Consistencia y recuperación
+
+Una llamada HTTP externa no forma parte de una transacción PostgreSQL. Se registrará duraderamente la operación y su identidad prevista antes del upload, se subirán los bytes fuera de bloqueos SQL y se confirmarán referencia, orden, portada y auditoría en una transacción corta bajo el bloqueo de producto existente. Si dos uploads compiten por el último espacio, solo uno confirmará su referencia; el otro conservará `409 PRODUCT_IMAGE_LIMIT_REACHED` y compensará su asset remoto.
+
+Un registro persistente de operaciones permitirá resolver cargas aceptadas por Cloudinary pero no confirmadas en PostgreSQL, respuestas perdidas, errores de validación de la respuesta y reinicios del API. La limpieza tendrá reintentos acotados, backoff, exclusión entre ejecutores y una vía operativa de reconciliación documentada. Antes de borrar se comprobarán identidad propia, carpeta y ausencia de referencias, evitando carreras entre la confirmación del upload y la limpieza; solo las operaciones terminales o reconciliadas serán elegibles. No se prometerá una transacción distribuida ni eliminación física instantánea durante una caída remota.
+
+La eliminación de galería confirmará primero la retirada autorizada de la referencia y un trabajo persistente de limpieza en la misma transacción, respetando la portada activa. Después se eliminará únicamente el asset propio no referenciado mediante el SDK, con invalidación de entrega cuando corresponda; no se borrarán carpetas ni colecciones completas. Una limpieza fallida no revertirá ni duplicará una eliminación lógica ya confirmada. Logos, Picsum y assets ajenos quedarán excluidos. Las tareas repetidas serán seguras ante assets ya ausentes y no volverán a subir bytes automáticamente.
+
+Los errores del proveedor se traducirán al envelope REST existente con códigos estables y mensajes seguros: `502 IMAGE_STORAGE_UPSTREAM_ERROR` para respuestas remotas inválidas, `503 IMAGE_STORAGE_UNAVAILABLE` para indisponibilidad y `504 IMAGE_STORAGE_TIMEOUT` para timeout. Se conservarán los errores existentes de validación, autorización, tamaño y límite. Una respuesta incierta no anunciará éxito ni causará reintentos automáticos de carga desde la UI; se recuperará el detalle autoritativo y se reconciliará el asset sin asumir que un timeout implica que Cloudinary no escribió.
+
+#### Visualización, verificación y entrega
+
+Las aplicaciones seguirán usando las URLs REST devueltas por el API. La configuración de imágenes Next.js admitirá únicamente los orígenes/rutas necesarios de entrega Cloudinary, manteniendo las restricciones actuales y fallbacks. No se habilitarán hosts arbitrarios, IP locales en producción ni URLs de API firmadas en el frontend. Se verificarán tarjetas, galería, temas y borradores sin rediseñar componentes ni añadir controles de calidad.
+
+Las pruebas normales usarán un proveedor controlado y PostgreSQL/almacenamiento temporal aislados; cubrirán carpeta dynamic/fixed, secretos, carga inválida, permisos negativos, límite concurrente, respuesta incierta, compensación, reinicio, limpieza repetida, referencias mixtas y preservación de logos/PDFs. Las pruebas end-to-end deberán consumir los contratos REST reales. Una prueba real Cloudinary será opt-in, con autorización específica, cuenta no productiva, asset temporal identificado en `codex-storefront` y limpieza de ese único asset, sin modificar la base de desarrollo ni productos del usuario.
+
+La entrega documentará configuración, migraciones aditivas, seguimiento/reconciliación, selección de proveedor y rollback operativo. No activará Cloudinary, ejecutará seed, hará commit/push ni certificará producción por completar pruebas automáticamente. El reemplazo de Picsum exigido antes de producción por requisitos anteriores sigue vigente, pero su migración queda fuera de esta fase.
+
+Referencias técnicas: [SDK Node.js](https://cloudinary.com/documentation/node_integration), [cargas Node.js](https://cloudinary.com/documentation/node_image_and_video_upload), [modos de carpeta](https://cloudinary.com/documentation/folder_modes) y [Upload API y destroy](https://cloudinary.com/documentation/image_upload_api_reference).
+
+Alternativas descartadas: sustituir globalmente el proveedor compartido con logos (arriesga documentos históricos), upload directo desde el navegador (cambia la frontera REST y la UI), migrar automáticamente imágenes demo (fuera del alcance confirmado), y mantener bloqueos SQL durante uploads (aumenta contención sin aportar atomicidad remota).
+
 ## Risks / Trade-offs
 
 - [El alcance inicial abarca varios dominios] → Implementar en incrementos verticales y mantener cada módulo utilizable antes de avanzar al siguiente.

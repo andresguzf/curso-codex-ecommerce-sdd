@@ -3,7 +3,6 @@ export const DEFAULT_PRODUCT_IMAGE_URL = "/images/product-placeholder.svg";
 const ALLOWED_REMOTE_IMAGE_HOSTS = new Set([
   "images.unsplash.com",
   "picsum.photos",
-  "res.cloudinary.com",
 ]);
 
 function isAllowedLocalMediaUrl(url: URL): boolean {
@@ -18,10 +17,9 @@ function isAllowedLocalMediaUrl(url: URL): boolean {
 /**
  * Keeps untrusted catalog data away from next/image.
  *
- * The API stores image references so they can later be replaced by managed
- * assets (for example, Cloudinary). Until then, an empty, malformed or
- * unconfigured URL resolves to a local placeholder instead of crashing the
- * Next.js image loader.
+ * Accepts existing local/demo references and unsigned, versioned Cloudinary
+ * catalog assets. Empty, malformed or unconfigured URLs use the existing
+ * placeholder instead of crashing the Next.js image loader.
  */
 export function resolveProductImageUrl(source: string | null | undefined): string {
   const value = source?.trim();
@@ -32,7 +30,12 @@ export function resolveProductImageUrl(source: string | null | undefined): strin
   try {
     const url = new URL(value);
     const isAllowedRemote =
-      url.protocol === "https:" && ALLOWED_REMOTE_IMAGE_HOSTS.has(url.hostname);
+      url.protocol === "https:" && !url.username && !url.password && !url.port && (
+        ALLOWED_REMOTE_IMAGE_HOSTS.has(url.hostname) || (
+          url.hostname === "res.cloudinary.com" && !url.search && !url.hash &&
+          /^\/[a-zA-Z0-9_-]+\/image\/upload\/v[0-9]+\/codex-storefront\/[^/]+$/.test(url.pathname)
+        )
+      );
 
     return isAllowedRemote || isAllowedLocalMediaUrl(url)
       ? url.toString()

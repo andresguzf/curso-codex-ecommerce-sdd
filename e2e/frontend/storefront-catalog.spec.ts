@@ -5,7 +5,7 @@ import { expectAccessible, expectNoPageOverflow, expectVisibleKeyboardFocus } fr
 
 for (const theme of ["light", "dark"] as const) {
   for (const width of [375, 1440]) {
-    test(`landing latest: nine products without filters or pagination, ${theme}, ${width}px`, async ({ page }, testInfo) => {
+    test(`landing latest: nine products without filters or pagination, ${theme}, ${width}px`, async ({ page, baseURL }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
       const { landingRequests, completedLandingRequests, productRequests } = await installCatalogApiFixture(page, "ANONYMOUS", { landingProductCount: 9 });
@@ -28,7 +28,7 @@ for (const theme of ["light", "dark"] as const) {
       await expectNoPageOverflow(page);
       await page.screenshot({ path: testInfo.outputPath(`latest-${theme}-${width}.png`), fullPage: true });
       await section.getByRole("link", { name: "Ver todos los productos" }).click();
-      await expect(page).toHaveURL("http://localhost:3000/products");
+      await expect(page).toHaveURL(new URL("/products", baseURL).toString());
       await waitForProductQuery(productRequests, { page: "1", pageSize: "12", view: "public" });
       await expect(page.getByText("Página 1 de 4").last()).toBeVisible();
     });

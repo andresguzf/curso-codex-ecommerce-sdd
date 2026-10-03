@@ -2,13 +2,15 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: 152/152 tareas OpenSpec completas. Fases 1–22 finalizadas, incluido el gestor visual administrativo de galería. Storefront, backoffice y API incluyen la composición editorial, controles administrativos, seed y galería pública. Esto no equivale a una certificación de preparación para producción.
+> Estado actual: 160/160 tareas OpenSpec completas. Fases 1–23 finalizadas, incluido el gestor administrativo de galería y almacenamiento Cloudinary para nuevas cargas. Cloudinary está seleccionado en el entorno local autorizado y sus migraciones están aplicadas; completar las pruebas no certifica preparación para producción.
 
 La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación e implementación completas, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
 
 ### Implementación actual y alcance verificado
 
-Actualizado en la tarea 22.7 (1 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 23.8 (2 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+
+- Implementado en 23.1–23.8: adaptador Cloudinary privado para nuevas imágenes en `codex-storefront`, misma UI y endpoints, compatibilidad local/Picsum, journal persistente, limpieza recuperable y entrega HTTPS restringida. La cuenta de pruebas se verificó como `dynamic` con un único asset temporal ya eliminado. Posteriormente el usuario autorizó activar Cloudinary en el entorno local; el selector y modo están en `.env` privado y las migraciones están aplicadas, sin seed ni migración de imágenes. Véanse la [guía operativa](docs/catalog-cloudinary-storage.md), la [recuperación](docs/catalog-image-recovery.md) y la [evidencia 23.7](docs/VALIDATION-23.7.md). Logos y PDFs quedan fuera; calidad/compresión y migración de Picsum no se incorporan en esta fase.
 
 La fase 22 está cerrada: `pnpm test:e2e:gallery` verifica cinco escenarios con API REST y PostgreSQL reales, en una base temporal, con móvil/escritorio y ambos temas administrativos. Comprueba carga, máximo de cuatro, portada, texto alternativo, orden, eliminación, recarga y coherencia pública; rechaza mutaciones anónimas, de Billing y Customer. No ejecuta el seed local. Las imágenes del proveedor localhost se optimizan únicamente en desarrollo; producción mantiene el bloqueo de IP privadas. El alcance y el transporte aislado de imágenes se detallan en el informe, sin certificar CDN/optimización productiva.
 
@@ -80,7 +82,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Plan completo; implementación parcial | 152 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Implementación completa | 160 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -944,7 +946,7 @@ El API emitirá logs estructurados, correlation IDs y métricas para autenticaci
 
 ## Hoja de ruta de implementación
 
-La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veintiuna etapas:
+La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veintitrés etapas:
 
 1. Fundaciones del monorepo y aplicaciones base.
 2. Persistencia, migraciones, contratos OpenAPI y límites de dependencias.
@@ -967,10 +969,12 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 19. Identidades visuales, temas y dashboard.
 20. Seed demostrativo, imágenes y navegación del catálogo.
 21. Productos destacados y categorías importantes.
+22. Gestor administrativo de galería y límite de cuatro imágenes.
+23. Nuevas cargas de catálogo en Cloudinary y recuperación durable.
 
-Cada una de las 152 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+Cada una de las 160 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-Fases 1–22 completadas: 152 tareas. No quedan tareas pendientes en este cambio y todavía no está archivado. La evidencia y límites de la última fase están en [VALIDATION-22.7](e2e/VALIDATION-22.7.md), y la composición editorial conserva su [informe de fase 21](e2e/VALIDATION-21.8.md).
+Fases 1–23 completadas: 160 tareas. No quedan tareas de implementación pendientes y el cambio sigue sin archivar. La evidencia reciente está en [VALIDATION-23.7](docs/VALIDATION-23.7.md) y la entrega documental en [VALIDATION-23.8](docs/VALIDATION-23.8.md); la galería local y composición editorial conservan sus informes anteriores. Activar Cloudinary, aplicar migraciones a la base de desarrollo, ejecutar seed, hacer commit/push o archivar requiere autorización específica; no se deduce de este estado.
 
 ## Fuera del alcance inicial
 

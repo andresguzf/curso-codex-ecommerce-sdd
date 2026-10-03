@@ -56,6 +56,9 @@ export class ProductImagesController {
   @ApiQuery({ name: "sortOrder", required: false, type: "integer", minimum: 0, maximum: 2_147_483_646 })
   @ApiCreatedResponse({ type: ProductGalleryImageDto })
   @ApiResponse({ status: 413, description: "Image exceeds the configured upload limit" })
+  @ApiResponse({ status: 502, description: "IMAGE_STORAGE_UPSTREAM_ERROR: invalid image storage response; recover the gallery before retrying" })
+  @ApiResponse({ status: 503, description: "IMAGE_STORAGE_UNAVAILABLE: image storage temporarily unavailable; no automatic upload retries or local fallback" })
+  @ApiResponse({ status: 504, description: "IMAGE_STORAGE_TIMEOUT: remote result may be uncertain; recover the gallery before retrying" })
   add(@Param("productId") productId: string, @CurrentUser() actor: AuthenticatedUser, @Body() data: unknown, @Query() query: unknown, @Headers("content-type") mimeType?: string) {
     return this.images.add(validate(z.string().uuid(), productId), actor.id, data, mimeType, validate(uploadSchema, query));
   }

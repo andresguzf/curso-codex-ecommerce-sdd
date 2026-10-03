@@ -54,7 +54,7 @@ Comprueba las 12 URLs diferentes y los endpoints oficiales `info`: ID, respuesta
 4. Conservar SKU, posición y condición de portada; mantener el texto alternativo si continúa describiendo la nueva imagen y corregirlo cuando cambie su contenido visual. Revisar cada sustitución.
 5. Verificar una portada por producto activo, tres imágenes ordenadas, carga/fallback accesibles y ausencia de referencias `picsum.photos`/`development/` en los datos que se publiquen.
 
-Este procedimiento documenta la transición; no instala Cloudinary ni ejecuta cargas o migraciones de assets en 20.3.
+Este procedimiento documenta la transición; no instala Cloudinary ni ejecuta cargas o migraciones de assets en 20.3. El adaptador para nuevas cargas se implementó posteriormente en fase 23 ([guía operativa](catalog-cloudinary-storage.md)), sin ejecutar esta migración del manifiesto. El reemplazo de Picsum antes de producción permanece como preparación separada y autorizada; no reutilizar las claves previstas como si ya fueran identidades gestionadas por el adaptador actual.
 
 ## Evidencia histórica de 20.3 (1 de octubre de 2026)
 

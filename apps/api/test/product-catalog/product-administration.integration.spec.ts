@@ -22,6 +22,19 @@ import { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ProductImagesRepository } from "../../src/product-catalog/product-images.repository";
 import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
+import { CatalogImageStorageService } from "../../src/product-catalog/image-storage/catalog-image-storage.service";
+import { CatalogImageRecoveryService } from "../../src/product-catalog/image-storage/catalog-image-recovery.service";
+import { DatabaseService } from "../../src/database/database.service";
+import { StoreLogoService } from "../../src/billing-invoicing/store-logo.service";
+import { catalogImageOperations } from "../../src/database/schema";
+import { storeLogoAssets } from "../../src/database/schema";
+import { enqueueCloudImageCleanup } from "../../src/product-catalog/image-storage/catalog-image-cleanup";
+import { CatalogImageStorageRouter } from "../../src/product-catalog/image-storage/catalog-image-storage-router";
+import { CATALOG_ASSET_TAG, CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
+import type { CloudinaryTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport";
+import { ImageReferenceLookup } from "../../src/product-catalog/image-storage/image-reference.repository";
+import { LocalImageStorage } from "../../src/product-catalog/image-storage/local-image-storage";
+import { type EnvironmentVariables, validateEnvironment } from "../../src/config/environment";
 
 import { configureApplication } from "../../src/application";
 import {
@@ -236,6 +249,8 @@ describe("administrative product lifecycle", () => {
     return product!;
   }
   afterEach(async () => {
+    vi.restoreAllMocks();
+    await database.delete(catalogImageOperations);
     if (imageProductIds.length) await database.delete(products).where(inArray(products.id, imageProductIds.splice(0)));
     if (imageCategoryIds.length) await database.delete(categories).where(inArray(categories.id, imageCategoryIds.splice(0)));
   });
@@ -243,6 +258,455 @@ describe("administrative product lifecycle", () => {
     return server.inject({ method: "POST", url: `/api/v1/products/${productId}/images?${query}`, headers: { ...authorization(token), "content-type": "image/png" }, payload: bytes });
   }
   type GalleryImage = { id: string; isPrimary: boolean; sortOrder: number; storageKey: string; width: number; height: number; altText: string };
+
+  function controlledCloudinary() {
+    const assets = new Map<string, Record<string, unknown>>();
+    const transport = {
+      upload: vi.fn<CloudinaryTransport["upload"]>().mockImplementation(async (data, options) => {
+        const asset = {
+          asset_id: randomUUID().replaceAll("-", ""), public_id: options.public_id,
+          resource_type: "image", type: "upload", asset_folder: "codex-storefront", tags: [CATALOG_ASSET_TAG],
+          secure_url: `https://res.cloudinary.com/rest-test/image/upload/v123/${options.public_id}.png`,
+          format: "png", bytes: data.length, width: 8, height: 6,
+        };
+        assets.set(String(options.public_id), asset);
+        return asset;
+      }),
+      resource: vi.fn<CloudinaryTransport["resource"]>().mockImplementation(async (publicId) => {
+        if (!assets.has(publicId)) throw { http_code: 404 };
+        return assets.get(publicId);
+      }),
+      deleteAsset: vi.fn<CloudinaryTransport["deleteAsset"]>().mockImplementation(async (assetId) => {
+        const asset = [...assets.values()].find((candidate) => candidate.asset_id === assetId);
+        if (asset) assets.delete(String(asset.public_id));
+        return { deleted: { [assetId]: asset ? "deleted" : "not_found" } };
+      }),
+      readBytes: vi.fn<CloudinaryTransport["readBytes"]>().mockResolvedValue(imageBytes),
+    };
+    const config = new ConfigService<EnvironmentVariables, true>(validateEnvironment({
+      DATABASE_URL: "postgresql://test:test@localhost/test", CLOUDINARY_CLOUD_NAME: "rest-test",
+      CLOUDINARY_API_KEY: "test-key-not-real", CLOUDINARY_API_SECRET: "test-secret-not-real", CLOUDINARY_FOLDER_MODE: "dynamic",
+    }));
+    // Real recovery journal and REST; only the remote transport is controlled.
+    const cloud = new CloudinaryImageStorage(config, transport);
+    const recovery = app.get(CatalogImageRecoveryService);
+    vi.spyOn(recovery, "cloud", "get").mockReturnValue(cloud);
+    vi.spyOn(recovery, "enabled", "get").mockReturnValue(true);
+    const storage = new CatalogImageStorageService(new CatalogImageStorageRouter(app.get(LocalImageStorage), new CloudinaryImageStorage(config, transport), "cloudinary"), app.get(ImageReferenceLookup));
+    const actual = app.get(CatalogImageStorageService);
+    vi.spyOn(actual, "upload").mockImplementation((input) => storage.upload(input));
+    vi.spyOn(actual, "deleteIfUnreferenced").mockImplementation((key) => storage.deleteIfUnreferenced(key));
+    return { transport, assets, recovery };
+  }
+
+  it("uses the Cloudinary adapter through unchanged binary REST, edit and delete contracts", async () => {
+    const { transport, assets, recovery } = controlledCloudinary();
+    const product = await imageProduct(true);
+    const beforeFiles = await readdir(imageRoot);
+    const added = await uploadImage(product.id);
+    expect(added.statusCode, added.body).toBe(201);
+    const image = added.json<GalleryImage>();
+    expect(image.storageKey).toMatch(/^cloudinary:v1:rest-test:/);
+    expect(image).toMatchObject({ width: 8, height: 6, altText: "Teclado", sortOrder: 1, isPrimary: false });
+    expect(await readdir(imageRoot)).toEqual(beforeFiles);
+    const edit = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true, sortOrder: 0, altText: "Cloud cover" } });
+    expect(edit.statusCode).toBe(200);
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(409);
+    // Return cover to the existing legacy image before removing the remote one.
+    const [old] = await database.select().from(productImages).where(and(eq(productImages.productId, product.id), eq(productImages.sortOrder, 1)));
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${old!.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true } })).statusCode).toBe(200);
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    await recovery.reconcile();
+    expect(transport.deleteAsset).toHaveBeenCalledOnce();
+    expect(assets.size).toBe(0);
+  });
+
+  it("rejects unauthorized, missing-product and invalid-metadata requests before remote upload", async () => {
+    const { transport } = controlledCloudinary();
+    const product = await imageProduct();
+    for (const role of ["billing", "customer"] as const) expect((await uploadImage(product.id, "altText=X", tokens[role])).statusCode).toBe(403);
+    const anonymous = await server.inject({ method: "POST", url: `/api/v1/products/${product.id}/images?altText=X`, headers: { "content-type": "image/png" }, payload: imageBytes });
+    expect(anonymous.statusCode).toBe(401);
+    expect((await uploadImage(randomUUID())).statusCode).toBe(404);
+    expect((await uploadImage(product.id, "altText=X&sortOrder=4")).statusCode).toBe(400);
+    expect((await uploadImage(product.id, "altText=X", tokens.admin, imageBytes.subarray(0, 8))).statusCode).toBe(400);
+    expect(transport.upload).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["unavailable", 503, "IMAGE_STORAGE_UNAVAILABLE"],
+    ["timeout", 504, "IMAGE_STORAGE_TIMEOUT"],
+    ["upstream", 502, "IMAGE_STORAGE_UPSTREAM_ERROR"],
+  ])("returns safe %s errors in the normal REST envelope", async (kind, status, code) => {
+    const { transport } = controlledCloudinary();
+    const product = await imageProduct();
+    if (kind === "upstream") transport.upload.mockResolvedValue({ private: "test-secret-not-real", secure_url: "https://attacker.invalid" });
+    else transport.upload.mockRejectedValue({ http_code: kind === "timeout" ? 499 : 500, message: "test-secret-not-real" });
+    const result = await uploadImage(product.id);
+    expect(result.statusCode).toBe(status);
+    expect(result.json()).toMatchObject({ code, correlationId: expect.any(String), message: expect.any(String) });
+    expect(result.body).not.toContain("test-secret-not-real");
+    expect(transport.upload).toHaveBeenCalledOnce();
+    expect(await database.select().from(productImages).where(eq(productImages.productId, product.id))).toHaveLength(1);
+  });
+
+  it("confirms only one concurrent fourth slot and compensates the rejected remote asset", async () => {
+    const { transport, assets, recovery } = controlledCloudinary();
+    const product = await imageProduct(true);
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+    const upload = transport.upload.getMockImplementation()!;
+    let arrived = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    transport.upload.mockImplementation(async (data, options) => {
+      const result = await upload(data, options);
+      if (++arrived === 2) release();
+      await barrier;
+      return result;
+    });
+    const responses = await Promise.all([uploadImage(product.id), uploadImage(product.id)]);
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([201, 409]);
+    expect(responses.find((response) => response.statusCode === 409)!.json().code).toBe("PRODUCT_IMAGE_LIMIT_REACHED");
+    await recovery.reconcile(new Date(Date.now() + 120_001));
+    expect(transport.deleteAsset).toHaveBeenCalledOnce();
+    expect(assets.size).toBe(3);
+    const images = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    expect(images).toHaveLength(4);
+    expect(images.filter((image) => image.isPrimary)).toHaveLength(1);
+    expect((await uploadImage(product.id)).statusCode).toBe(409);
+    expect(transport.upload).toHaveBeenCalledTimes(4);
+  });
+
+  it("persists upload identity first and confirms its association and audit atomically", async () => {
+    const { transport } = controlledCloudinary();
+    const product = await imageProduct();
+    const upload = transport.upload.getMockImplementation()!;
+    transport.upload.mockImplementation(async (data, options) => {
+      const id = String(options.public_id).split("/").at(-1)!;
+      const [row] = await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id));
+      expect(row).toMatchObject({ state: "UPLOADING", cloudName: "rest-test", storageKey: null });
+      return upload(data, options);
+    });
+    const result = await uploadImage(product.id);
+    expect(result.statusCode).toBe(201);
+    const [row] = await database.select().from(catalogImageOperations);
+    expect(row).toMatchObject({ state: "CONFIRMED", storageKey: result.json().storageKey });
+    const audits = await database.select().from(auditEntries).where(and(eq(auditEntries.entityId, product.id), eq(auditEntries.action, "PRODUCT_IMAGE_ADD")));
+    expect(audits).toHaveLength(1);
+  });
+
+  it("does not upload if the journal cannot be persisted", async () => {
+    const { transport } = controlledCloudinary();
+    const product = await imageProduct();
+    const client = app.get(DatabaseService).client;
+    const insert = client.insert.bind(client);
+    vi.spyOn(client, "insert").mockImplementation((table) => {
+      if (table === catalogImageOperations) throw new Error("Simulated journal outage");
+      return insert(table);
+    });
+    expect((await uploadImage(product.id)).statusCode).toBe(500);
+    expect(transport.upload).not.toHaveBeenCalled();
+  });
+
+  it("recovers an accepted upload with a lost response after a fresh recovery instance", async () => {
+    const { transport, recovery, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    const upload = transport.upload.getMockImplementation()!;
+    transport.upload.mockImplementation(async (data, options) => { await upload(data, options); throw { http_code: 499 }; });
+    expect((await uploadImage(product.id)).statusCode).toBe(504);
+    expect(assets.size).toBe(1);
+    const restarted = new CatalogImageRecoveryService(app.get(DatabaseService), new ConfigService<EnvironmentVariables, true>(validateEnvironment({ DATABASE_URL: isolatedDatabaseUrl.toString() })), app.get(ImageReferenceLookup));
+    vi.spyOn(restarted, "cloud", "get").mockReturnValue(recovery.cloud);
+    await restarted.reconcile(new Date(Date.now() + 120_001));
+    expect(assets.size).toBe(0);
+    expect(transport.upload).toHaveBeenCalledOnce();
+    expect((await database.select().from(catalogImageOperations))[0]!.state).toBe("DONE");
+  });
+
+  it("recovers an orphan after persistence failure without reuploading", async () => {
+    const { recovery, transport, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    vi.spyOn(app.get(ProductImagesRepository), "mutate").mockRejectedValueOnce(new Error("DB commit failed"));
+    expect((await uploadImage(product.id)).statusCode).toBe(500);
+    expect(assets.size).toBe(1);
+    await recovery.reconcile(new Date(Date.now() + 120_001));
+    expect(assets.size).toBe(0);
+    expect(transport.upload).toHaveBeenCalledOnce();
+  });
+
+  it("keeps committed deletion queued across cleanup failure and excludes parallel executors", async () => {
+    const { transport, recovery, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    const image = (await uploadImage(product.id)).json<GalleryImage>();
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    transport.deleteAsset.mockRejectedValueOnce({ http_code: 500 });
+    await recovery.reconcile();
+    const [pending] = await database.select().from(catalogImageOperations);
+    expect(pending).toMatchObject({ state: "PENDING", attempts: 1 });
+    expect(await database.select().from(productImages).where(eq(productImages.id, image.id))).toHaveLength(0);
+    const deletion = transport.deleteAsset.getMockImplementation()!;
+    let release!: () => void;
+    let started!: () => void;
+    const began = new Promise<void>((resolve) => { started = resolve; });
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    transport.deleteAsset.mockImplementation(async (id) => { started(); await barrier; return deletion(id); });
+    const now = new Date(pending!.nextAttemptAt.getTime() + 1);
+    const first = recovery.reconcile(now);
+    await began;
+    await recovery.reconcile(now);
+    expect(transport.deleteAsset).toHaveBeenCalledTimes(2);
+    release();
+    await first;
+    await recovery.reconcile(now);
+    expect(assets.size).toBe(0);
+    expect(transport.deleteAsset).toHaveBeenCalledTimes(2);
+  });
+
+  it("fences active uploads from cleanup even when their stale deadline passes", async () => {
+    const { transport, recovery } = controlledCloudinary();
+    const product = await imageProduct();
+    const upload = transport.upload.getMockImplementation()!;
+    transport.upload.mockImplementation(async (data, options) => {
+      const asset = await upload(data, options);
+      await recovery.reconcile(new Date(Date.now() + 600_000));
+      expect(transport.deleteAsset).not.toHaveBeenCalled();
+      return asset;
+    });
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+  });
+
+  it("blocks referenced or foreign assets and finishes repeated missing-asset reconciliation safely", async () => {
+    const { recovery, transport, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    const image = (await uploadImage(product.id)).json<GalleryImage>();
+    await database.update(catalogImageOperations).set({ state: "PENDING", nextAttemptAt: new Date(0) });
+    await recovery.reconcile();
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+    expect((await database.select().from(catalogImageOperations))[0]!.state).toBe("BLOCKED");
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { image: { storageKey: image.storageKey, url: "https://res.cloudinary.com/fake" } } })).statusCode).toBe(400);
+    const id = randomUUID();
+    const publicId = `codex-storefront/${id}`;
+    const source = [...assets.values()][0]!;
+    assets.set(publicId, { ...source, public_id: publicId, tags: ["unowned"], secure_url: `https://res.cloudinary.com/rest-test/image/upload/v123/${publicId}.png` });
+    await database.insert(catalogImageOperations).values({ id, cloudName: "rest-test", state: "PENDING", nextAttemptAt: new Date(0) });
+    await recovery.reconcile();
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+    expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id)))[0]!.state).toBe("BLOCKED");
+    const absent = randomUUID();
+    await database.insert(catalogImageOperations).values({ id: absent, cloudName: "rest-test", state: "UPLOADING", attempts: 7, nextAttemptAt: new Date(0) });
+    await recovery.reconcile();
+    await recovery.reconcile();
+    expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, absent)))[0]!.state).toBe("DONE");
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+  });
+
+  it("rolls back gallery removal if its durable cleanup cannot be enqueued", async () => {
+    const { recovery, assets, transport } = controlledCloudinary();
+    const product = await imageProduct();
+    const image = (await uploadImage(product.id)).json<GalleryImage>();
+    await database.execute(sql`alter table catalog_image_operations add constraint test_reject_pending check (state <> 'PENDING')`);
+    try {
+      expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(500);
+      expect(await database.select().from(productImages).where(eq(productImages.id, image.id))).toHaveLength(1);
+      expect((await database.select().from(catalogImageOperations))[0]!.state).toBe("CONFIRMED");
+      expect(await database.select().from(auditEntries).where(and(eq(auditEntries.entityId, product.id), eq(auditEntries.action, "PRODUCT_IMAGE_DELETE")))).toHaveLength(0);
+    } finally { await database.execute(sql`alter table catalog_image_operations drop constraint test_reject_pending`); }
+    await recovery.reconcile(new Date(Date.now() + 120_001));
+    expect(assets.size).toBe(1);
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+  });
+
+  it("recovers stale UPLOADING after a crash, bounds retries and supports targeted requeue", async () => {
+    const { recovery, transport, assets } = controlledCloudinary();
+    const cloud = recovery.cloud!;
+    const id = randomUUID();
+    await database.insert(catalogImageOperations).values({ id, cloudName: "rest-test", state: "UPLOADING", nextAttemptAt: new Date(0) });
+    const asset = await cloud.upload({ data: imageBytes, mimeType: "image/png" }, id);
+    transport.deleteAsset.mockRejectedValue({ http_code: 500 });
+    let now = new Date();
+    for (let count = 0; count < 8; count++) {
+      await recovery.reconcile(now);
+      const [row] = await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id));
+      expect(row!.attempts).toBe(count + 1);
+      now = new Date(row!.nextAttemptAt.getTime() + 1);
+    }
+    expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id)))[0]!.state).toBe("BLOCKED");
+    await recovery.reconcile(now);
+    expect(transport.deleteAsset).toHaveBeenCalledTimes(8);
+    expect(await recovery.requeue(id)).toBe(true);
+    // Provider accepted a previous deletion whose response was lost.
+    assets.delete(`codex-storefront/${id}`);
+    await recovery.reconcile();
+    expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id)))[0]).toMatchObject({ state: "DONE", storageKey: asset.storageKey });
+    expect(transport.deleteAsset).toHaveBeenCalledTimes(8);
+    expect(transport.upload).toHaveBeenCalledOnce();
+  });
+
+  it("never enqueues external/Picsum references or requeues confirmed uploads", async () => {
+    const { recovery, transport } = controlledCloudinary();
+    await database.transaction(async (tx) => {
+      await enqueueCloudImageCleanup(tx, "https://picsum.photos/id/1/800/600");
+      await enqueueCloudImageCleanup(tx, "products/demo/cover");
+      await enqueueCloudImageCleanup(tx, `${randomUUID()}.png`);
+    });
+    expect(await database.select().from(catalogImageOperations)).toHaveLength(0);
+    const product = await imageProduct();
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+    const [row] = await database.select().from(catalogImageOperations);
+    expect(await recovery.requeue(row!.id)).toBe(false);
+    await recovery.reconcile(new Date(Date.now() + 120_001));
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+  });
+
+  it("protects a logo reference and blocks an asset outside the authorized folder", async () => {
+    const { recovery, assets, transport } = controlledCloudinary();
+    const id = randomUUID();
+    const asset = await recovery.cloud!.upload({ data: imageBytes, mimeType: "image/png" }, id);
+    await database.insert(catalogImageOperations).values({ id, cloudName: "rest-test", storageKey: asset.storageKey, state: "PENDING", nextAttemptAt: new Date(0) });
+    await database.insert(storeLogoAssets).values({ storageKey: asset.storageKey, url: asset.url, mimeType: asset.mimeType, size: asset.size, sha256: "a".repeat(64) });
+    try {
+      await recovery.reconcile();
+      expect(transport.deleteAsset).not.toHaveBeenCalled();
+      expect(await recovery.requeue(id)).toBe(false);
+      expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, id)))[0]!.state).toBe("BLOCKED");
+    } finally { await database.delete(storeLogoAssets).where(eq(storeLogoAssets.storageKey, asset.storageKey)); }
+    const otherId = randomUUID();
+    const other = await recovery.cloud!.upload({ data: imageBytes, mimeType: "image/png" }, otherId);
+    const publicId = `codex-storefront/${otherId}`;
+    assets.set(publicId, { ...assets.get(publicId), asset_folder: "private-other-folder" });
+    await database.insert(catalogImageOperations).values({ id: otherId, cloudName: "rest-test", storageKey: other.storageKey, state: "PENDING", nextAttemptAt: new Date(0) });
+    await recovery.reconcile();
+    expect(transport.deleteAsset).not.toHaveBeenCalled();
+    expect((await database.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, otherId)))[0]!.state).toBe("BLOCKED");
+  });
+
+  it("fences a late gallery confirmation after cleanup takes ownership", async () => {
+    const { recovery } = controlledCloudinary();
+    const product = await imageProduct();
+    const id = randomUUID();
+    const asset = await recovery.cloud!.upload({ data: imageBytes, mimeType: "image/png" }, id);
+    await database.insert(catalogImageOperations).values({ id, cloudName: "rest-test", state: "UPLOADING", nextAttemptAt: new Date(0) });
+    await recovery.reconcile();
+    await expect(app.get(ProductImagesRepository).mutate(product.id, userIds.admin, { kind: "add", operationId: id,
+      asset: { storageKey: asset.storageKey, url: asset.url, mimeType: asset.mimeType, width: 8, height: 6 }, patch: { altText: "Too late" },
+    })).rejects.toMatchObject({ response: { code: "IMAGE_OPERATION_NOT_CONFIRMABLE" } });
+    expect(await database.select().from(productImages).where(eq(productImages.storageKey, asset.storageKey))).toHaveLength(0);
+  });
+
+  it("rolls back gallery and audit when the atomic CONFIRMED transition fails", async () => {
+    const { recovery, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    await database.execute(sql`alter table catalog_image_operations add constraint test_reject_confirmed check (state <> 'CONFIRMED')`);
+    try {
+      expect((await uploadImage(product.id)).statusCode).toBe(500);
+      expect(await database.select().from(productImages).where(eq(productImages.productId, product.id))).toHaveLength(1);
+      expect(await database.select().from(auditEntries).where(and(eq(auditEntries.entityId, product.id), eq(auditEntries.action, "PRODUCT_IMAGE_ADD")))).toHaveLength(0);
+      expect((await database.select().from(catalogImageOperations))[0]!.state).toBe("PENDING");
+    } finally { await database.execute(sql`alter table catalog_image_operations drop constraint test_reject_confirmed`); }
+    await recovery.reconcile(new Date(Date.now() + 120_001));
+    expect(assets.size).toBe(0);
+  });
+
+  it("enqueues cleanup when the compatibility product edit replaces a cloud cover", async () => {
+    const { recovery, assets } = controlledCloudinary();
+    const product = await imageProduct();
+    const image = (await uploadImage(product.id)).json<GalleryImage>();
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true } })).statusCode).toBe(200);
+    const result = await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}`, headers: authorization(tokens.admin), payload: { image: { storageKey: "demo/new-reference", url: "https://picsum.photos/id/1/800/600" } } });
+    expect(result.statusCode, result.body).toBe(200);
+    expect((await database.select().from(catalogImageOperations))[0]!.state).toBe("PENDING");
+    await recovery.reconcile();
+    expect(assets.size).toBe(0);
+  });
+
+  it("preserves a local/Picsum/cloud gallery when switching new uploads back to local", async () => {
+    const { recovery, transport, assets } = controlledCloudinary();
+    const product = await imageProduct(true);
+    const [legacy] = await database.select().from(productImages).where(eq(productImages.productId, product.id));
+    const picsumUrl = "https://picsum.photos/id/2/1200/900";
+    await database.update(productImages).set({ storageKey: "development/products/mixed/cover", url: picsumUrl, altText: "Original Picsum image" }).where(eq(productImages.id, legacy!.id));
+    const local = app.get(LocalImageStorage);
+    const storage = app.get(CatalogImageStorageService);
+    const enabled = vi.spyOn(recovery, "enabled", "get");
+    const upload = vi.spyOn(storage, "upload");
+    const download = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No automatic download allowed"));
+    enabled.mockReturnValue(false);
+    upload.mockImplementation((input) => local.upload(input));
+    const localImage = (await uploadImage(product.id, "altText=Local%20original")).json<GalleryImage>();
+    expect(localImage.storageKey).toMatch(/^[a-f0-9-]{36}\.png$/);
+    enabled.mockReturnValue(true);
+    const cloudResponse = await uploadImage(product.id, "altText=Cloud%20original");
+    expect(cloudResponse.statusCode).toBe(201);
+    const cloudImage = cloudResponse.json<GalleryImage>();
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${cloudImage.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true, sortOrder: 0 } })).statusCode).toBe(200);
+    const snapshot = () => database.select().from(productImages).where(eq(productImages.productId, product.id)).orderBy(asc(productImages.sortOrder));
+    const before = await snapshot();
+    const files = await readdir(imageRoot);
+    const journal = await database.select().from(catalogImageOperations);
+    // Switching changes only the destination of the next binary upload.
+    enabled.mockReturnValue(false);
+    expect(await snapshot()).toEqual(before);
+    expect(await readdir(imageRoot)).toEqual(files);
+    expect(await database.select().from(catalogImageOperations)).toEqual(journal);
+    const detail = await server.inject({ method: "GET", url: `/api/v1/products/${product.id}` });
+    expect(detail.statusCode).toBe(200);
+    const body = detail.json<{ coverImage: { id: string }; images: { id: string; url: string; altText: string; sortOrder: number; isPrimary: boolean }[] }>();
+    expect(body.coverImage.id).toBe(cloudImage.id);
+    expect(body.images).toEqual(before.map((image) => expect.objectContaining({ id: image.id, url: image.url, altText: image.altText, sortOrder: image.sortOrder, isPrimary: image.isPrimary })));
+    expect(body.images.find((image) => image.id === legacy!.id)!.url).toBe(picsumUrl);
+    const listing = await server.inject({ method: "GET", url: `/api/v1/products?search=${encodeURIComponent(product.sku)}` });
+    expect(listing.statusCode).toBe(200);
+    expect(listing.json().items.find((item: { id: string }) => item.id === product.id).coverImage.id).toBe(cloudImage.id);
+    const next = await uploadImage(product.id, "altText=Local%20after%20rollback");
+    expect(next.statusCode).toBe(201);
+    expect(next.json().storageKey).toMatch(/^[a-f0-9-]{36}\.png$/);
+    expect(transport.upload).toHaveBeenCalledOnce();
+    expect(transport.readBytes).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
+    // Even with catalog Cloudinary selected, enterprise uploads stay local.
+    enabled.mockReturnValue(true);
+    const logo = await app.get(StoreLogoService).upload({ id: userIds.admin, email: "products-admin@example.com", displayName: "Admin", role: "ADMIN" }, imageBytes, "image/png");
+    expect(logo.storageKey).toMatch(/^[a-f0-9-]{36}\.png$/);
+    expect(transport.upload).toHaveBeenCalledOnce();
+    expect((await app.get(ImageStorageService).read(logo.storageKey)).data).toEqual(imageBytes);
+    await database.delete(storeLogoAssets).where(eq(storeLogoAssets.storageKey, logo.storageKey));
+    enabled.mockReturnValue(false);
+    // Cleanup is by origin, not by the selected destination of new uploads.
+    expect((await server.inject({ method: "PATCH", url: `/api/v1/products/${product.id}/images/${legacy!.id}`, headers: authorization(tokens.admin), payload: { isPrimary: true } })).statusCode).toBe(200);
+    expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${cloudImage.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204);
+    await recovery.reconcile();
+    expect(assets.size).toBe(0);
+    expect(transport.deleteAsset).toHaveBeenCalledOnce();
+    expect((await local.read(localImage.storageKey)).data).toEqual(imageBytes);
+  });
+
+  it("does not hold the product SQL lock while uploading to the provider", async () => {
+    const { transport } = controlledCloudinary();
+    const product = await imageProduct();
+    const upload = transport.upload.getMockImplementation()!;
+    transport.upload.mockImplementation(async (data, options) => {
+      const probe = new Pool({ connectionString: isolatedDatabaseUrl.toString(), max: 1 });
+      const client = await probe.connect();
+      try {
+        await client.query("begin");
+        await client.query("select id from products where id = $1 for update nowait", [product.id]);
+        await client.query("rollback");
+      } finally { client.release(); await probe.end(); }
+      return upload(data, options);
+    });
+    expect((await uploadImage(product.id)).statusCode).toBe(201);
+  });
+
+  it("publishes storage errors without altering the existing binary request or gallery response", async () => {
+    const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json();
+    const operation = document.paths["/api/v1/products/{productId}/images"].post;
+    for (const [status, code] of [["502", "IMAGE_STORAGE_UPSTREAM_ERROR"], ["503", "IMAGE_STORAGE_UNAVAILABLE"], ["504", "IMAGE_STORAGE_TIMEOUT"]]) {
+      expect(operation.responses[status].description).toContain(code);
+    }
+    expect(Object.keys(operation.requestBody.content).sort()).toEqual(["image/jpeg", "image/png", "image/webp"]);
+    expect(operation.responses["201"].content["application/json"].schema.$ref).toContain("ProductGalleryImageDto");
+  });
 
   it("persists a full gallery lifecycle through REST and keeps public cover/order coherent", async () => {
     const product = await imageProduct(true);
@@ -346,8 +810,10 @@ describe("administrative product lifecycle", () => {
     expect(swapped.statusCode).toBe(200);
     const third = (await database.select().from(categories).where(eq(categories.id, configured[2]!.id)))[0]!;
     expect(third.landingOrder).toBe(1);
-    expect((await database.select().from(auditEntries).where(eq(auditEntries.entityId, third.id))).at(-1)!.changes)
-      .toMatchObject({ before: { landingOrder: 3 }, after: { landingOrder: 1 } });
+    // SQL without ORDER BY does not promise insertion order. Verify the event,
+    // rather than assuming the last returned row is the most recent audit.
+    expect((await database.select().from(auditEntries).where(eq(auditEntries.entityId, third.id))).map((entry) => entry.changes))
+      .toContainEqual(expect.objectContaining({ before: expect.objectContaining({ landingOrder: 3 }), after: expect.objectContaining({ landingOrder: 1 }) }));
     expect((await patchCategory(configured[1]!.id, { showOnLanding: false })).json()).toMatchObject({ showOnLanding: false, landingOrder: null });
     expect((await patchCategory(configured[3]!.id, { showOnLanding: true })).json().landingOrder).toBe(2);
     const publicCategory = await server.inject({ method: "GET", url: `/api/v1/categories/${existingCategory.id}` });
@@ -646,7 +1112,7 @@ describe("administrative product lifecycle", () => {
   it("does not report a failed mutation when post-commit file cleanup fails", async () => {
     const product = await imageProduct();
     const image = (await uploadImage(product.id)).json<GalleryImage>();
-    const spy = vi.spyOn(app.get(ImageStorageService), "deleteIfUnreferenced").mockRejectedValueOnce(new Error("storage temporarily unavailable"));
+    const spy = vi.spyOn(app.get(CatalogImageStorageService), "deleteIfUnreferenced").mockRejectedValueOnce(new Error("storage temporarily unavailable"));
     try { expect((await server.inject({ method: "DELETE", url: `/api/v1/products/${product.id}/images/${image.id}`, headers: authorization(tokens.admin) })).statusCode).toBe(204); } finally { spy.mockRestore(); }
     expect(await database.select().from(productImages).where(eq(productImages.id, image.id))).toHaveLength(0);
     expect(await readdir(imageRoot)).toContain(image.storageKey);

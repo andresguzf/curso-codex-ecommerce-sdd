@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "test:cloudinary:live": "tsx test/e2e/cloudinary-live.ts",
     "dev": "nest start --watch",
     "build": "nest build",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
@@ -10,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:migrate:deploy": "node dist/database/migrate.js",
     "db:seed": "tsx src/database/seed/cli.ts",
+    "images:reconcile": "tsx src/product-catalog/image-storage/reconcile-catalog-images.ts",
     "seed:images:check": "tsx src/database/seed/verify-image-manifest.ts",
     "lint": "eslint . --max-warnings=0",
     "openapi:generate": "nest build && node dist/openapi/generate.js",
@@ -28,6 +30,7 @@
     "@nestjs/platform-fastify": "12.0.1",
     "@nestjs/swagger": "12.0.1",
     "@node-rs/argon2": "2.2.0",
+    "cloudinary": "2.11.0",
     "drizzle-orm": "0.45.2",
     "fastify": "5.12.1",
     "jsonwebtoken": "9.0.3",

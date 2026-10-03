@@ -27,6 +27,7 @@ export class DatabaseService
 {
   private readonly logger = new Logger(DatabaseService.name);
   private readonly pool: Pool;
+  private readonly coordinationPool: Pool;
   readonly client: NodePgDatabase<typeof schema>;
 
   constructor(
@@ -40,6 +41,9 @@ export class DatabaseService
       max: 5,
     });
     this.client = drizzle({ client: this.pool, schema });
+    // Dedicated connections prevent uploads from starving the query pool.
+    this.coordinationPool = new Pool({ connectionString: config.get("DATABASE_URL", { infer: true }), max: 5, connectionTimeoutMillis: 5_000 });
+    this.coordinationPool.on("error", () => this.logger.warn("Image coordination connection lost"));
 
     this.pool.on("error", () => {
       this.logger.error(
@@ -67,7 +71,30 @@ export class DatabaseService
   }
 
   async onModuleDestroy(): Promise<void> {
+    await this.coordinationPool.end();
     await this.pool.end();
+  }
+
+  async withImageOperationLock<T>(id: string, action: () => Promise<T>): Promise<T | undefined> {
+    const connection = await this.coordinationPool.connect();
+    let broken = false;
+    const onError = () => { broken = true; };
+    connection.on("error", onError);
+    try {
+      const result = await connection.query<{ acquired: boolean }>(
+        "select pg_try_advisory_lock(hashtextextended($1, 0)) as acquired", [`catalog-image:${id}`],
+      );
+      if (!result.rows[0]?.acquired) return undefined;
+      // Session mutex, not a transaction or a row/table lock over external I/O.
+      return await action();
+    } finally {
+      if (!broken) {
+        try { await connection.query("select pg_advisory_unlock(hashtextextended($1, 0))", [`catalog-image:${id}`]); }
+        catch { broken = true; }
+      }
+      connection.removeListener("error", onError);
+      connection.release(broken);
+    }
   }
 
   async getDatabaseName(): Promise<string> {

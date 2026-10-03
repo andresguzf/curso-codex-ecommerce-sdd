@@ -3,7 +3,9 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService, type DatabaseTransaction } from "../database/database.service";
-import { auditEntries, productImages, products, type ProductImage } from "../database/schema";
+import { auditEntries, catalogImageOperations, productImages, products, type ProductImage } from "../database/schema";
+import { catalogAssetProvider, parseCloudinaryAssetKey } from "./image-storage/catalog-asset-key";
+import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup";
 import { assertProductImageCapacity } from "./product-image-limit";
 
 export type ImagePatch = { altText?: string; isPrimary?: boolean; sortOrder?: number };
@@ -13,11 +15,34 @@ export type ImageAsset = { storageKey: string; url: string; mimeType: string; wi
 export class ProductImagesRepository {
   constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
+  // Advisory checks before external I/O, not a reservation or final capacity check.
+  async assertUploadAllowed(productId: string, patch: ImagePatch): Promise<void> {
+    const [product] = await this.database.client.select({ id: products.id }).from(products)
+      .where(and(eq(products.id, productId), isNull(products.deletedAt)));
+    if (!product) throw new NotFoundException({ code: "PRODUCT_NOT_FOUND", message: "The product does not exist" });
+    const images = await this.database.client.select({ id: productImages.id }).from(productImages)
+      .where(eq(productImages.productId, productId)).limit(4);
+    assertProductImageCapacity(images.length);
+    if (patch.sortOrder !== undefined && patch.sortOrder > images.length) {
+      throw new BadRequestException({ code: "PRODUCT_IMAGE_ORDER_INVALID", message: "The position must be within the gallery" });
+    }
+  }
+
   async mutate(productId: string, actorId: string, operation:
-    | { kind: "add"; asset: ImageAsset; patch: ImagePatch & { altText: string } }
+    | { kind: "add"; asset: ImageAsset; patch: ImagePatch & { altText: string }; operationId?: string }
     | { kind: "edit"; imageId: string; patch: ImagePatch }
     | { kind: "delete"; imageId: string }): Promise<ProductImage> {
     return this.database.client.transaction(async (tx) => {
+      if (operation.kind === "add" && catalogAssetProvider(operation.asset.storageKey) === "cloudinary" && !operation.operationId) {
+        throw new ConflictException({ code: "IMAGE_OPERATION_NOT_CONFIRMABLE", message: "Managed cloud images require a durable upload operation" });
+      }
+      if (operation.kind === "add" && operation.operationId) {
+        const [journal] = await tx.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, operation.operationId)).for("update");
+        const identity = parseCloudinaryAssetKey(operation.asset.storageKey);
+        if (!journal || journal.state !== "UPLOADING" || identity.uploadId !== journal.id || identity.cloudName !== journal.cloudName) {
+          throw new ConflictException({ code: "IMAGE_OPERATION_NOT_CONFIRMABLE", message: "Recover the gallery before retrying" });
+        }
+      }
       const [product] = await tx.select().from(products).where(and(eq(products.id, productId), isNull(products.deletedAt))).for("update");
       if (!product) throw new NotFoundException({ code: "PRODUCT_NOT_FOUND", message: "The product does not exist" });
       const before = await tx.select().from(productImages).where(eq(productImages.productId, productId)).orderBy(asc(productImages.sortOrder));
@@ -48,6 +73,7 @@ export class ProductImagesRepository {
       } else {
         await tx.delete(productImages).where(eq(productImages.id, current!.id));
         result = current!;
+        await enqueueCloudImageCleanup(tx, result.storageKey);
       }
       const ordered = before.filter((image) => image.id !== result.id);
       if (operation.kind !== "delete") ordered.splice(patch.sortOrder ?? (operation.kind === "add" ? ordered.length : before.findIndex((image) => image.id === result.id)), 0, result);
@@ -55,6 +81,10 @@ export class ProductImagesRepository {
       await tx.update(products).set({ updatedAt: new Date() }).where(eq(products.id, productId));
       const after = await tx.select().from(productImages).where(eq(productImages.productId, productId)).orderBy(asc(productImages.sortOrder));
       await tx.insert(auditEntries).values(createAuditEntry({ actorUserId: actorId, action: `PRODUCT_IMAGE_${operation.kind.toUpperCase()}`, entityType: "PRODUCT", entityId: productId, changes: { imageId: result.id, storageKey: result.storageKey, before, after } }));
+      if (operation.kind === "add" && operation.operationId) {
+        await tx.update(catalogImageOperations).set({ state: "CONFIRMED", storageKey: result.storageKey, updatedAt: new Date() })
+          .where(eq(catalogImageOperations.id, operation.operationId));
+      }
       if (operation.kind === "delete") return result;
       return after.find((image) => image.id === result.id)!;
     });

@@ -2801,6 +2801,15 @@
           },
           "413": {
             "description": "Image exceeds the configured upload limit"
+          },
+          "502": {
+            "description": "IMAGE_STORAGE_UPSTREAM_ERROR: invalid image storage response; recover the gallery before retrying"
+          },
+          "503": {
+            "description": "IMAGE_STORAGE_UNAVAILABLE: image storage temporarily unavailable; no automatic upload retries or local fallback"
+          },
+          "504": {
+            "description": "IMAGE_STORAGE_TIMEOUT: remote result may be uncertain; recover the gallery before retrying"
           }
         },
         "security": [

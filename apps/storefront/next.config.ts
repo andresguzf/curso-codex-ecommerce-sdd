@@ -32,7 +32,9 @@ const nextConfig: NextConfig = {
       },
       {
         hostname: "res.cloudinary.com",
-        pathname: "/**",
+        pathname: "/*/image/upload/v*/codex-storefront/*",
+        port: "",
+        search: "",
         protocol: "https",
       },
     ],

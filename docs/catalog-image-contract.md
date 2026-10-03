@@ -98,6 +98,8 @@ La ejecución final completa obtuvo 104 pruebas de frontend, siete de tokens y o
 
 La fase 22 se cierra con la validación integral 22.7: cinco escenarios Playwright con REST/PostgreSQL reales y almacenamiento temporal, nueva integración del ciclo de galería y protección de sesión durante DELETE. La evidencia reproducible, controles, archivos modificados y límites están en `e2e/VALIDATION-22.7.md`. El gestor ya permite subir, editar, elegir portada, ordenar y eliminar con confirmación; no incluye compresión ni calidad. No se ejecutó el seed local ni se archivó el cambio.
 
+Desde fase 23 el mismo contrato y gestor admiten nuevas cargas Cloudinary cuando se activa explícitamente el proveedor. Conservan las referencias locales/Picsum, máximo de cuatro y portada única, sin migración automática ni ajustes de calidad. La operación y selección del proveedor están en [la guía Cloudinary](catalog-cloudinary-storage.md); su activación y migración de la base local no se ejecutaron al completar las tareas.
+
 OpenAPI define `CatalogImageDto`; el cliente TypeScript se regenera con `pnpm openapi:generate`. `packages/api-schemas` exporta `catalogImageSchema` y `CatalogImage`; los esquemas de listado requieren `coverImage` y los de detalle también requieren `images`. No se aceptan respuestas antiguas que omitan estos campos, ni IDs/dimensiones/posiciones inválidos.
 
 Las pruebas PostgreSQL/REST verifican listas sin duplicación, portada en posición distinta de cero, orden de galería, equivalencia de las dos rutas de detalle, una sola imagen, borradores vacíos/sin portada, placeholder y visibilidad pública. Se validan respuestas reales contra OpenAPI mediante AJV. Las fixtures de las pruebas de frontend y autocomplete se actualizan al nuevo contrato sin cambiar su UI.

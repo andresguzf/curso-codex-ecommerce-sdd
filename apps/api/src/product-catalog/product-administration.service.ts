@@ -131,6 +131,7 @@ export class ProductAdministrationService {
   }
 
   private normalize(input: CreateAdministrativeProduct): CreateAdministrativeProduct {
+    this.rejectManagedCloudReference(input.image.storageKey);
     this.validatedSlug(input.slug ?? input.name);
     return {
       ...input,
@@ -149,6 +150,7 @@ export class ProductAdministrationService {
   }
 
   private normalizeUpdate(input: UpdateAdministrativeProduct): UpdateAdministrativeProduct {
+    if (input.image) this.rejectManagedCloudReference(input.image.storageKey);
     return {
       ...(input.isFeatured === undefined ? {} : { isFeatured: input.isFeatured }),
       ...(input.description === undefined
@@ -210,6 +212,12 @@ export class ProductAdministrationService {
       });
     }
     throw error;
+  }
+
+  private rejectManagedCloudReference(key: string): void {
+    // Prevent reattachment racing a durable cleanup. Managed cloud assets enter
+    // the gallery only through the coordinated binary upload endpoint.
+    if (key.trim().startsWith("cloudinary:")) throw new BadRequestException({ code: "IMAGE_INVALID_KEY", message: "Use the gallery upload for managed cloud images" });
   }
 
   private validatedSlug(value: string): string {

@@ -1,4 +1,7 @@
 import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+
+import { CatalogImageStorageService, createCatalogImageStorageService } from "./catalog-image-storage.service";
 
 import { ImageMediaController } from "./image-media.controller";
 import {
@@ -8,6 +11,7 @@ import {
 import { ImageStorage } from "./image-storage.port";
 import { ImageStorageService } from "./image-storage.service";
 import { LocalImageStorage } from "./local-image-storage";
+import { CatalogImageRecoveryService } from "./catalog-image-recovery.service";
 
 @Module({
   controllers: [ImageMediaController],
@@ -17,7 +21,13 @@ import { LocalImageStorage } from "./local-image-storage";
     ImageReferenceRepository,
     { provide: ImageReferenceLookup, useExisting: ImageReferenceRepository },
     ImageStorageService,
+    CatalogImageRecoveryService,
+    {
+      provide: CatalogImageStorageService,
+      useFactory: createCatalogImageStorageService,
+      inject: [ConfigService, LocalImageStorage, ImageReferenceLookup],
+    },
   ],
-  exports: [ImageStorageService],
+  exports: [ImageStorageService, CatalogImageStorageService, CatalogImageRecoveryService],
 })
 export class ImageStorageModule {}

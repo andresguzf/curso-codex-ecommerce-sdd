@@ -37,7 +37,7 @@ function corsHeaders(request: Request): Record<string, string> {
   };
 }
 
-function productPage(page: number, pageSize: number) {
+function productPage(page: number, pageSize: number, imageUrl = "/images/product-placeholder.svg") {
   return {
     items: [{
       category: null,
@@ -45,8 +45,8 @@ function productPage(page: number, pageSize: number) {
       currency: "USD",
       description: "Monitor de prueba para validar los criterios del catálogo.",
       id: "10184fd0-3dcb-47cf-af70-a8be4c765421",
-      image: { storageKey: "defaults/products/monitor.svg", url: "/images/product-placeholder.svg" },
-      coverImage: { id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", storageKey: "defaults/products/monitor.svg", url: "/images/product-placeholder.svg", altText: "Portada del monitor", isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null },
+      image: { storageKey: "defaults/products/monitor.svg", url: imageUrl },
+      coverImage: { id: "18ef6b72-3291-4bd7-a68f-0eec92d54d7c", storageKey: "defaults/products/monitor.svg", url: imageUrl, altText: "Portada del monitor", isPrimary: true, sortOrder: 0, width: null, height: null, mimeType: null },
       name: page === 2 ? "Monitor Nova 27 — página 2" : "Monitor Nova 27",
       price: "299.90",
       sku: "MON-NOVA-27",
@@ -63,7 +63,7 @@ function productPage(page: number, pageSize: number) {
   };
 }
 
-export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingEditorial?: "full" | "partial" | "empty"; editorialCategories?: boolean; landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string } = {}) {
+export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingEditorial?: "full" | "partial" | "empty"; editorialCategories?: boolean; landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string; imageUploadTimeout?: boolean } = {}) {
   const productRequests: URL[] = [];
   const landingRequests: URL[] = [];
   const completedLandingRequests: URL[] = [];
@@ -240,6 +240,10 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
 
     if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421/images" && request.method() === "POST") {
       imageUploadRequests.push(request);
+      if (options.imageUploadTimeout) {
+        await route.fulfill({ status: 504, headers, json: { code: "IMAGE_STORAGE_TIMEOUT", message: "Image storage timed out", correlationId: "3296f1d5-5a1d-4b94-9caa-b26878f447e4" } });
+        return;
+      }
       const image = {
         id: `20000000-0000-4000-8000-${String(100 + imageUploadRequests.length).padStart(12, "0")}`,
         productId: "10184fd0-3dcb-47cf-af70-a8be4c765421", storageKey: "uploads/monitor.png",
@@ -312,7 +316,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       const requestedPage = Number(url.searchParams.get("page") ?? 1);
       const pageSize = Number(url.searchParams.get("pageSize") ?? 20);
       await route.fulfill({
-        body: JSON.stringify({ ...productPage(requestedPage, pageSize), items: productPage(requestedPage, pageSize).items.map((product) => ({ ...product, ...(url.searchParams.get("view") === "administrative" ? { isFeatured, featuredAt } : {}) })) }),
+        body: JSON.stringify({ ...productPage(requestedPage, pageSize), items: productPage(requestedPage, pageSize, options.galleryImageUrl).items.map((product) => ({ ...product, ...(url.searchParams.get("view") === "administrative" ? { isFeatured, featuredAt } : {}) })) }),
         contentType: "application/json",
         headers,
       });

@@ -15,6 +15,7 @@ import { Pool } from "pg";
 
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
+import { installControlledCloudinary } from "./controlled-cloudinary";
 
 const loadCompiled = createRequire(resolve("test/e2e/invoice-browser-server.ts"));
 if (process.env.NODE_ENV === "production") throw new Error("Browser test fixtures cannot run in production");
@@ -74,10 +75,35 @@ async function start() {
   imageRoot = await mkdtemp(resolve(tmpdir(), "ecommerce-browser-images-"));
   process.env.IMAGE_STORAGE_LOCAL_ROOT = imageRoot;
   process.env.IMAGE_STORAGE_PUBLIC_BASE_URL = "http://localhost:3001/api/v1/media/images";
+  // Never inherit real provider credentials in normal browser tests.
+  const cloudTest = process.env.E2E_CONTROLLED_CLOUDINARY === "true";
+  process.env.IMAGE_STORAGE_CATALOG_PROVIDER = cloudTest ? "cloudinary" : "local";
+  process.env.CLOUDINARY_CLOUD_NAME = cloudTest ? "browser-test" : "";
+  process.env.CLOUDINARY_API_KEY = cloudTest ? "controlled-key" : "";
+  process.env.CLOUDINARY_API_SECRET = cloudTest ? "controlled-secret" : "";
+  process.env.CLOUDINARY_FOLDER_MODE = cloudTest ? "dynamic" : "";
+  const cloud = cloudTest ? installControlledCloudinary() : undefined;
   const { AppModule } = loadCompiled("../../dist/app.module");
   const { configureApplication } = loadCompiled("../../dist/application");
   app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
   configureApplication(app);
+  if (cloud) {
+    const { LocalImageStorage } = loadCompiled("../../dist/product-catalog/image-storage/local-image-storage");
+    const { CatalogImageRecoveryService } = loadCompiled("../../dist/product-catalog/image-storage/catalog-image-recovery.service");
+    const localImage = await app.get(LocalImageStorage).upload({ mimeType: "image/png", data: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWNgYGjAgQZQAgDw8BgBXuIwQQAAAABJRU5ErkJggg==", "base64") });
+    const http = app.getHttpAdapter().getInstance();
+    // These diagnostics exist only in this loopback test executable, not AppModule.
+    http.get("/__e2e/cloudinary", async () => ({ ...cloud.stats(), localImage }));
+    http.post<{ Body: { mode: string } }>("/__e2e/cloudinary/control", async (request) => { cloud.control(request.body.mode); return { ok: true }; });
+    http.post("/__e2e/cloudinary/reconcile", async () => {
+      await app!.get(CatalogImageRecoveryService).reconcile(new Date(Date.now() + 120_001));
+      return { ok: true };
+    });
+    http.get<{ Params: { id: string } }>("/__e2e/cloudinary/media/:id", async (request, reply) => {
+      const bytes = cloud.bytes(request.params.id);
+      return bytes ? reply.type("image/png").send(bytes) : reply.code(404).send();
+    });
+  }
   await app.listen({ port: 3101, host: "127.0.0.1" });
 }
 

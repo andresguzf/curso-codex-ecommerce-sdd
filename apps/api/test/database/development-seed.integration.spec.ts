@@ -9,7 +9,8 @@ import { asc, eq, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
 
 import {
   categories,
@@ -185,6 +186,8 @@ describe("development database seed", () => {
   }, 30_000);
 
   it("creates all roles, an administrator, and catalog data without duplicates", async () => {
+    // Starting the application on a migrated empty database must not seed it.
+    expect(await readSeedCounts()).toMatchObject({ users: 0, products: 0, productImages: 0 });
     // Reproduce the earlier three-product seed, then upgrade without changing its IDs.
     const legacySkus = ["DEV-LAPTOP-001", "DEV-MONITOR-001", "DEV-KEYBOARD-001"];
     const legacyProducts = await insertProductFixtures(database, legacySkus.map((sku) => ({
@@ -618,6 +621,33 @@ describe("development database seed", () => {
       await runDevelopmentSeed({ accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" });
     }
   }, 30_000);
+
+  it("keeps the explicit demo seed on Picsum even when the catalog provider is cloudinary", async () => {
+    const upload = vi.spyOn(CloudinaryImageStorage.prototype, "upload").mockRejectedValue(new Error("Seed must never upload assets"));
+    const download = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Seed must never download assets"));
+    vi.stubEnv("IMAGE_STORAGE_CATALOG_PROVIDER", "cloudinary");
+    try {
+      const options = { accounts: seedAccounts, databaseUrl: isolatedDatabaseUrl.toString(), environment: "test" as const };
+      const projection = () => database.select({ id: productImages.id, storageKey: productImages.storageKey, url: productImages.url,
+        isPrimary: productImages.isPrimary, sortOrder: productImages.sortOrder, altText: productImages.altText }).from(productImages).orderBy(asc(productImages.id));
+      const original = await projection();
+      await runDevelopmentSeed(options);
+      await runDevelopmentSeed(options);
+      expect(await projection()).toEqual(original);
+      // Earlier cases deliberately add a non-seed image. Preserve that too;
+      // the exact sixty demo images are identified by their manifest keys.
+      const demoKeys = new Set(getDevelopmentProductImageManifest("test").flatMap((entry) => entry.images.map((image) => image.storageKey)));
+      const demoImages = original.filter((image) => demoKeys.has(image.storageKey));
+      expect(demoImages).toHaveLength(60);
+      expect(demoImages.every((image) => new URL(image.url).hostname === "picsum.photos" && !image.storageKey.startsWith("cloudinary:"))).toBe(true);
+      expect(upload).not.toHaveBeenCalled();
+      expect(download).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      upload.mockRestore();
+      download.mockRestore();
+    }
+  });
 
   it("rejects production before changing persisted data", async () => {
     const countsBefore = await readSeedCounts();

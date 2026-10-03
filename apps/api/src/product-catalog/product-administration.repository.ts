@@ -41,6 +41,7 @@ import type {
   UpdateAdministrativeProduct,
 } from "./product-administration.types";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup";
 import { normalizeSlug, slugCandidate } from "./slug";
 import type { CatalogLanding } from "./catalog-landing.types";
 
@@ -405,6 +406,7 @@ export class ProductAdministrationRepository {
 
       let image = current.image;
       if (input.image) {
+        if (input.image.storageKey !== current.image.storageKey) await enqueueCloudImageCleanup(transaction, current.image.storageKey);
         const [updatedImage] = await transaction
           .update(productImages)
           .set({

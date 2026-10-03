@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const CATALOG_IMAGE_FOLDER = "codex-storefront";
+
+const optionalPrivateString = z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(1).optional(),
+);
+
 const DEVELOPMENT_ACCESS_TOKEN_SECRET =
   "development-only-access-token-secret-change-before-production";
 const DEVELOPMENT_ALLOWED_ORIGINS =
@@ -97,6 +104,14 @@ const environmentSchema = z
       .trim()
       .min(1)
       .default(".local-storage/images"),
+    IMAGE_STORAGE_CATALOG_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
+    CLOUDINARY_CLOUD_NAME: optionalPrivateString,
+    CLOUDINARY_API_KEY: optionalPrivateString,
+    CLOUDINARY_API_SECRET: optionalPrivateString,
+    CLOUDINARY_FOLDER_MODE: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.enum(["dynamic", "fixed"]).optional(),
+    ),
     IMAGE_STORAGE_MAX_BYTES: z.coerce
       .number()
       .int()
@@ -113,6 +128,13 @@ const environmentSchema = z
     SIMULATED_SHIPPING_EXPRESS_COST: fixedMoneySchema.default("15.00"),
   })
   .superRefine((environment, context) => {
+    if (environment.IMAGE_STORAGE_CATALOG_PROVIDER === "cloudinary") {
+      for (const key of ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_FOLDER_MODE"] as const) {
+        if (!environment[key]) {
+          context.addIssue({ code: "custom", path: [key], message: `${key} is required for Cloudinary catalog storage` });
+        }
+      }
+    }
     if (
       environment.NODE_ENV === "production" &&
       !environment.AUTH_ACCESS_TOKEN_SECRET
