@@ -4,6 +4,17 @@ Define el acceso seguro al e-commerce, las sesiones de usuario y la autorizació
 
 ## ADDED Requirements
 
+### Requirement: Identidad propia y frontera de acceso tras migrar a Supabase
+El sistema SHALL conservar usuarios, IDs, hashes de contraseña, roles CUSTOMER/ADMIN/BILLING y sesiones existentes al trasladar PostgreSQL a Supabase. NestJS MUST seguir siendo la única frontera de acceso de la aplicación; las credenciales PostgreSQL MUST permanecer privadas y la Data API no utilizada MUST estar deshabilitada, con privilegios actuales y por defecto de esquemas de aplicación revisados para impedir acceso de anon/authenticated.
+
+#### Scenario: Continuidad de autenticación sin adoptar Supabase Auth
+- **WHEN** la base migrada conserva datos y configuración de sesión y un usuario usa login o refresh mediante REST
+- **THEN** el API aplica los mismos roles, hashes y protección CSRF sin convertir usuarios a Supabase Auth ni revivir sesiones expiradas o revocadas
+
+#### Scenario: No existe acceso alternativo a datos protegidos
+- **WHEN** un cliente intenta consultar datos de aplicación por Data API o con privilegios anon/authenticated
+- **THEN** no obtiene acceso, tampoco a objetos futuros por privilegios por defecto, y la operación autorizada sigue pasando exclusivamente por NestJS
+
 ### Requirement: Registro público de clientes
 El sistema SHALL permitir el registro público con credenciales válidas y SHALL asignar exclusivamente el rol `CUSTOMER`, sin aceptar una elevación de rol solicitada por el cliente.
 

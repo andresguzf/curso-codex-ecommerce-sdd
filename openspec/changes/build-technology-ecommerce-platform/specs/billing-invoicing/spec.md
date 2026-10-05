@@ -4,6 +4,17 @@ Define facturas independientes, auditables y generables manualmente o desde órd
 
 ## ADDED Requirements
 
+### Requirement: Facturación consistente después de migrar a Supabase
+El sistema SHALL preservar facturas, líneas, snapshots, numeración y estados con sus restricciones y secuencias. La conversión de orden a factura MUST continuar siendo atómica y única; facturación manual y transiciones de factura MUST seguir sin modificar inventario.
+
+#### Scenario: Conversión concurrente y siguiente número
+- **WHEN** ADMIN o BILLING convierte una orden migrada concurrentemente y emite una factura nueva
+- **THEN** se confirma como máximo una factura activa por orden, orden/factura cambian atómicamente y el siguiente número no colisiona con los históricos
+
+#### Scenario: Factura manual conserva separación de inventario
+- **WHEN** BILLING crea una factura manual mediante REST en destino
+- **THEN** se conservan sus permisos limitados y no se registra un movimiento de inventario por facturar
+
 ### Requirement: Factura generada desde una orden
 El sistema SHALL permitir que `ADMIN` o `BILLING` generen una factura desde una orden elegible y SHALL cambiar atómicamente la orden a `INVOICED` sin modificar inventario.
 

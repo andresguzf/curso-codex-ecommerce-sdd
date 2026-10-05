@@ -4,6 +4,17 @@ Define documentos PDF consistentes y protegidos para representar órdenes y fact
 
 ## ADDED Requirements
 
+### Requirement: Documentos históricos independientes del alojamiento PostgreSQL
+El sistema SHALL preservar snapshots empresariales, referencias y huellas de logos al migrar a Supabase. Los archivos locales y sus volúmenes MUST conservarse; generar PDFs MUST seguir usando snapshots y bytes históricos, sin Supabase Storage ni sustitución por el perfil vigente.
+
+#### Scenario: Exportación histórica después del corte
+- **WHEN** un actor autorizado exporta una orden o factura migrada
+- **THEN** el documento mantiene datos e identidad empresarial históricos y verifica el logo referenciado, sin consultar un emisor nuevo ni cambiar importes
+
+#### Scenario: Archivo histórico perdido no se oculta
+- **WHEN** falta un logo declarado en un snapshot migrado
+- **THEN** se devuelve el error explícito existente sin sustituirlo por el logo vigente
+
 ### Requirement: Exportación PDF de órdenes
 El sistema SHALL generar una representación PDF de una orden que incluya número, cliente, fechas, líneas, cantidades, precios, totales, pago, envío y estado.
 

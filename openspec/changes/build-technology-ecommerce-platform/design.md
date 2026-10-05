@@ -472,7 +472,30 @@ Referencias técnicas: [SDK Node.js](https://cloudinary.com/documentation/node_i
 
 Alternativas descartadas: sustituir globalmente el proveedor compartido con logos (arriesga documentos históricos), upload directo desde el navegador (cambia la frontera REST y la UI), migrar automáticamente imágenes demo (fuera del alcance confirmado), y mantener bloqueos SQL durante uploads (aumenta contención sin aportar atomicidad remota).
 
+### 25. PostgreSQL gestionado en Supabase — fase 24
+
+Tras las fases 1–23 implementadas, se trasladará la persistencia existente, no el backend ni el motor: Next.js → REST NestJS → Drizzle/node-postgres → PostgreSQL Supabase. La autenticación y los tres roles siguen siendo propios; no se introduce SDK Supabase en frontend, Supabase Auth/Storage/Realtime ni otro sistema de migraciones. Cloudinary, Picsum y archivos locales mantienen referencias y bytes; esta fase no cambia el host de almacenamiento ni la UI.
+
+**Conexiones y seguridad.** Usar el endpoint real de Connect del proyecto autorizado, sin inventar host, usuario o nombre de base. Validar TLS y certificado/CA; no usar `rejectUnauthorized: false` como solución. El runtime tiene dos pools de hasta cinco conexiones por proceso: consultas/transacciones y coordinación de imágenes. Ambos necesitan conexión directa o pool de sesión porque la coordinación usa advisory locks de sesión; el migrador también usa estos bloqueos. El pool transaccional no es compatible con esta arquitectura. Preferir conexión directa para exportaciones/migraciones; usar sesión cuando la conectividad disponible lo requiera y se verifique su comportamiento. Presupuestar conexiones por réplicas, workers y migrador; permitir una conexión privada de migración diferenciada solo después de verificar que apunta a la misma base. Credenciales exclusivamente en API, con rol runtime de privilegios mínimos y rol de migración separado cuando sea posible.
+
+Deshabilitar la Data API no utilizada y verificar que `anon`/`authenticated` no puedan acceder a tablas, secuencias o funciones de aplicación ni recibir acceso mediante privilegios por defecto para objetos futuros. No depender de ocultar claves ni introducir políticas RLS permisivas. No alterar indiscriminadamente roles/esquemas gestionados `auth`, `storage` u otros de Supabase; los usuarios de nuestra tabla se conservan sin convertirlos a Supabase Auth.
+
+**Copia verificable.** Inventariar versiones origen/destino, herramientas, extensiones, esquemas, restricciones, índices, secuencias y journal Drizzle antes de exportar. No asumir compatible una restauración hacia una versión menor de PostgreSQL: cualquier incompatibilidad bloquea el corte hasta resolverla explícitamente. Respaldar únicamente los esquemas de aplicación inventariados —actualmente `public` y `drizzle`— y sus dependencias, sin roles/propietarios/privilegios de origen ni esquemas gestionados del destino. Restaurar solo en un destino vacío aprobado; abortar ante colisiones, sin `--clean` amplio. Conservar esquema, datos e historial `drizzle.__drizzle_migrations` juntos; ejecutar solo migraciones pendientes, sin aplicar previamente el mismo DDL sobre una restauración completa. No ejecutar seed.
+
+Comprobar conteos y comparaciones deterministas por tabla, IDs, relaciones, hashes sensibles sin mostrarlos, fechas, decimales, snapshots, numeración, secuencias e inventario/auditoría. Los dumps contienen información privada: permisos restrictivos, rutas ignoradas por Git, sin secretos en logs ni artefactos versionados. Los ensayos se aíslan y no escriben en datos de desarrollo.
+
+**Fencing operativo e imágenes.** Una copia del journal puede contener operaciones que borrarían assets reales. Los ensayos y clones tendrán deshabilitados workers/comandos remotos de recuperación y uploads; solo transporte controlado para probarlos. Los advisory locks de dos bases independientes no coordinan entre ellas. Antes del snapshot final, bloquear escrituras y cargas de todos los procesos de origen, detener recuperación y resolver/documentar operaciones en vuelo; preservar íntegro el journal sin disparar limpieza por restaurarlo. Habilitar workers de destino únicamente tras comprobar que origen está detenido y destino es la única autoridad. No modificar ni descargar assets Cloudinary/Picsum ni perder volúmenes de imágenes/logos locales.
+
+**Corte y rollback.** Aceptar una ventana de mantenimiento acotada, sin replicación/dual-write. Copia final autorizada, validación, cambio privado de conexión, reinicio controlado y verificación REST preceden la reapertura. Mantener secretos de sesión y cookies/orígenes para no invalidar por configuración las sesiones vigentes; las expiradas/revocadas siguen inválidas. Antes de escrituras en destino puede volver a la conexión original verificada. Después de escrituras nuevas, no volver ciegamente a una copia antigua: congelar, respaldar/reconciliar los cambios —incluido journal y referencias de assets—, validar y obtener autorización para la recuperación. Conservar contenedor, volúmenes y respaldo originales; no borrar bases ni carpetas.
+
+Referencias técnicas: [conexiones PostgreSQL en Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres), [migración desde PostgreSQL](https://supabase.com/docs/guides/platform/migrating-to-supabase/postgres) y [seguridad de la Data API](https://supabase.com/docs/guides/api/securing-your-api). Verificar nuevamente límites, versiones y opciones del proyecto al implementar; no asumir características de un plan de pago.
+
 ## Risks / Trade-offs
+
+- [Pool transaccional pierde estado de sesión] → Usar conexión directa/sesión y probar exclusión advisory entre procesos antes del corte.
+- [Data API elude autorización NestJS] → Deshabilitarla y verificar privilegios actuales/futuros de los esquemas de aplicación.
+- [Clones del journal pueden borrar imágenes reales] → Inhibir recuperación remota en ensayos y mantener una sola base/proceso operativo al cambiar conexión.
+- [Diferencias de versión o escrituras nuevas hacen inseguro el rollback] → Preflight, respaldo, validación y reconciliación antes de reabrir; no volver a datos obsoletos.
 
 - [El alcance inicial abarca varios dominios] → Implementar en incrementos verticales y mantener cada módulo utilizable antes de avanzar al siguiente.
 - [Bloqueos concurrentes pueden causar espera o deadlocks] → Bloquear productos en orden estable, mantener transacciones cortas, limitar reintentos y probar compras simultáneas.
@@ -516,4 +539,11 @@ Alternativas descartadas: sustituir globalmente el proveedor compartido con logo
 6. Entregar facturación, PDF, auditoría y flujos end-to-end.
 7. Desplegar cada aplicación de manera independiente, ejecutar migraciones antes del API y habilitar storefront/backoffice después de verificaciones de salud.
 
-Al ser un proyecto nuevo no existe migración de datos productivos. El rollback de cada despliegue volverá a la imagen anterior y solo revertirá migraciones cuando sean explícitamente reversibles; los cambios destructivos de esquema usarán expansión y contracción en entregas futuras.
+Los pasos 1–7 describen la entrega inicial. El rollback de despliegues solo revierte migraciones explícitamente reversibles; los cambios destructivos usarán expansión y contracción. La fase 24 sí copia los datos existentes y aplica este orden adicional:
+
+1. Inventariar origen/destino y comprobar compatibilidad, conectividad y permisos.
+2. Preparar configuración TLS, seguridad y respaldo privado; ensayar restauración y continuidad en aislamiento sin recuperación Cloudinary real.
+3. Tras autorización específica, ensayar en Supabase no productivo y verificar aceptación REST, concurrencia y límites.
+4. Autorizar destino/corte, detener escrituras y workers de origen, respaldar y copiar el snapshot final, validar datos e historial Drizzle.
+5. Cambiar conexión, verificar salud y flujos existentes, habilitar una sola autoridad escritora y sus workers; conservar origen y volúmenes.
+6. Ensayar/documentar rollback antes y después de nuevas escrituras, registrar evidencia y actualizar documentación sin archivar ni hacer commit/push automáticamente.

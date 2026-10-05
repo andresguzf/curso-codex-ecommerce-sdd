@@ -4,6 +4,13 @@ Define el ciclo de vida de las órdenes de compra, su historial, estados operati
 
 ## ADDED Requirements
 
+### Requirement: Continuidad histórica de órdenes en Supabase
+El sistema SHALL preservar IDs, relaciones, estados, fechas, snapshots y auditoría de órdenes al migrar. ADMIN y BILLING MUST conservar las transiciones autorizadas y CUSTOMER solo el acceso a sus recursos.
+
+#### Scenario: Consulta y cancelación tras la migración
+- **WHEN** se consulta una orden migrada y se cancela una orden elegible mediante REST
+- **THEN** sus snapshots históricos permanecen intactos y la restitución de inventario se confirma exactamente una vez, también ante una repetición
+
 ### Requirement: Creación de orden confirmada
 El sistema SHALL crear una orden con número único, cliente, líneas, precios, código de moneda fijo `USD`, totales, dirección, envío y pago como snapshots inmutables cuando un checkout sea exitoso, sin admitir una moneda seleccionable por orden.
 

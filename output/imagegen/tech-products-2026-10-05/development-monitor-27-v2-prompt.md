@@ -1,0 +1,7 @@
+# Development Monitor 27 — variante 2
+
+Generada con la herramienta integrada imagegen. Imagen ilustrativa para el producto `0aa08306-6c49-4cbb-adeb-4234ff198b2b`; no subida ni asociada al catálogo. Los datos públicos no especifican marca ni características adicionales.
+
+## Prompt utilizado
+
+Use case: product-mockup. Asset type: illustrative product catalog image for Development Monitor 27, a generic 27-inch desktop monitor without a specified brand. Generate ONE hyperrealistic premium photographic image in landscape 4:3 composition. Scene: a beautiful uncluttered contemporary development workstation, charcoal desk and softly lit dark background. Subject: a single modern flat 27-inch 16:9 monitor with thin black bezels, matte screen surface, realistic elegant metal pedestal stand, entire screen and base visible, three-quarter view slightly above desk level. The monitor is the dominant hero and occupies most of the frame. Screen shows a tasteful blue luminous abstract wallpaper, no text or UI. A compact keyboard and mouse subtly support the monitor on the desk. Refined soft blue ambient light, balanced neutral photographic key light, nuanced realistic shadows, crisp edges, subtle dust-free material grain, believable brushed-metal reflections. Strong photographic realism, not 3D rendering or illustration. No logos, no brand names, no spec labels, no watermarks, no promotional text, no people, no collage. Do not imply any specific monitor brand or technical certification.

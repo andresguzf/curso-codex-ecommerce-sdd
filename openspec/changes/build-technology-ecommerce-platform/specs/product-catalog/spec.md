@@ -4,6 +4,28 @@ Define el catálogo tecnológico público y administrativo, incluyendo productos
 
 ## ADDED Requirements
 
+### Requirement: Migración verificable de persistencia a Supabase
+El sistema SHALL trasladar la base de aplicación a PostgreSQL gestionado en Supabase sin cambiar UI, contratos REST, Drizzle ni requisitos existentes. La migración MUST comprobar versiones, extensiones y compatibilidad antes de escribir, preservar esquema, datos, secuencias e historial Drizzle y validar conteos, IDs, relaciones y valores mediante comparaciones deterministas sin exponer secretos. MUST respaldar solo esquemas de aplicación inventariados, nunca sobrescribir esquemas gestionados de Supabase, ejecutar seed ni limpiar un destino no vacío automáticamente.
+
+#### Scenario: Restauración compatible sin duplicar esquema ni datos
+- **WHEN** se restaura un respaldo validado en un destino vacío autorizado
+- **THEN** se preservan productos, taxonomía, wishlist, perfil empresarial, auditoría y asociaciones, se restaura el historial Drizzle y solo se aplican migraciones pendientes
+
+#### Scenario: Incompatibilidad o colisión bloquea la migración
+- **WHEN** el destino tiene objetos conflictivos o una versión/extensión incompatible
+- **THEN** la operación se detiene antes de sobrescribir datos o activar el destino y conserva el origen y su respaldo privado
+
+### Requirement: Referencias de imágenes y recuperación seguras durante la migración
+La migración SHALL preservar URLs, claves, portada, orden, altText y journal de operaciones de imágenes sin trasladar bytes a Supabase Storage ni modificar Cloudinary/Picsum/archivos locales. Los clones y ensayos MUST inhibir cargas y recuperación remota contra assets reales. El corte MUST detener escrituras y workers de origen y mantener una sola autoridad operativa antes de habilitar recuperación en destino.
+
+#### Scenario: Ensayo con journal copiado sin efectos remotos
+- **WHEN** se restaura una copia que contiene operaciones de limpieza pendientes
+- **THEN** ningún worker o comando del ensayo elimina o modifica assets reales y las referencias siguen intactas
+
+#### Scenario: Corte y rollback sin restaurar datos obsoletos
+- **WHEN** el destino ya recibió escrituras y se requiere rollback
+- **THEN** se congelan escrituras, respaldan y reconcilian cambios y operaciones de imágenes antes de volver al origen, sin pérdida silenciosa ni resurrección de referencias a assets eliminados
+
 ### Requirement: Datos de producto
 El sistema SHALL mantener para cada producto un identificador, SKU único, nombre, descripción, precio no negativo expresado en la moneda global fija `USD`, imagen, fechas de creación y actualización, estado `ACTIVE` o `INACTIVE` y disponibilidad de stock, y SHALL NOT permitir configurar una moneda por producto.
 

@@ -4,6 +4,17 @@ Define la disponibilidad de productos y las operaciones consistentes y auditable
 
 ## ADDED Requirements
 
+### Requirement: Bloqueos y trazabilidad de inventario en Supabase
+El sistema SHALL conservar balances y movimientos y verificar bloqueos/transacciones reales en destino. Los pools que usen advisory locks de sesión MUST usar conexión directa o pool de sesión, nunca pool transaccional; conexiones TLS y presupuesto por procesos MUST estar validados antes del corte.
+
+#### Scenario: Exclusión entre ejecutores con conexión admitida
+- **WHEN** procesos distintos compiten por un advisory lock de coordinación en destino
+- **THEN** se mantiene exclusión durante la operación y el bloqueo se libera al terminar o perder la sesión
+
+#### Scenario: Rechazo de conexión incompatible
+- **WHEN** se configura un modo transaccional o TLS sin verificación válida para la migración
+- **THEN** el preflight bloquea el corte en lugar de debilitar seguridad o ejecutar operaciones sin las garantías de sesión
+
 ### Requirement: Balance y movimientos de inventario
 El sistema SHALL mantener un balance por producto y SHALL registrar cada variación mediante un movimiento con tipo, cantidad, motivo, referencia, autor y fecha.
 

@@ -27,6 +27,9 @@ export function ProductImage({ alt, src, ...props }: ProductImageProps) {
       alt={alt}
       onError={() => setFailedSource(safeSource)}
       src={effectiveSource}
+      // Picsum redirects to its CDN. Let the browser load demo references
+      // directly without relaxing the optimizer's local redirect protection.
+      unoptimized={props.unoptimized || effectiveSource.startsWith("https://picsum.photos/")}
     />
   );
 }

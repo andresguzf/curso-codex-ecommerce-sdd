@@ -4,6 +4,17 @@ Define el carrito público y persistente para visitantes o clientes autenticados
 
 ## ADDED Requirements
 
+### Requirement: Continuidad de carritos y checkout en Supabase
+El sistema SHALL conservar propietarios, hashes de identificadores anónimos, expiración, líneas y resultados idempotentes al migrar. El checkout MUST mantener sus transacciones y permisos REST sin reservar stock desde el carrito ni repetir descuentos.
+
+#### Scenario: Carrito y resultado idempotente sobreviven al corte
+- **WHEN** un visitante o cliente recupera su carrito o repite una clave de checkout previamente confirmada tras el corte
+- **THEN** obtiene sus datos vigentes o el mismo resultado histórico sin duplicar orden, pago ni movimientos
+
+#### Scenario: Compra concurrente con stock limitado
+- **WHEN** dos clientes intentan comprar la última unidad usando el PostgreSQL de destino
+- **THEN** solo una compra se confirma y el stock no queda negativo
+
 ### Requirement: Carrito público por cliente o visitante
 El sistema SHALL permitir agregar productos, cambiar cantidades, consultar y eliminar líneas sin registro ni login, y SHALL mantener como máximo un carrito activo por cliente autenticado o por identificador anónimo vigente.
 

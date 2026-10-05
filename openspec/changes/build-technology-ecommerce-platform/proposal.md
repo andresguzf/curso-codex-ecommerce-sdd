@@ -40,6 +40,8 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 
 ## Capabilities
 
+La fase 24 añade la migración de la base PostgreSQL local a PostgreSQL gestionado en Supabase, copiando los datos existentes y conservando todas las fases 1–23. NestJS sigue siendo el único acceso a datos; se mantienen Drizzle, autenticación propia, contratos REST, UI y almacenamiento Cloudinary/local/Picsum. No se incorporan Supabase Auth, Storage, Realtime, Edge Functions ni acceso directo desde el frontend. La migración contempla conexión TLS directa o mediante pool de sesión, seguridad de esquemas, respaldo, ensayo, validación, corte con una sola base escritora y rollback sin pérdida silenciosa de datos.
+
 ### New Capabilities
 
 - `identity-access`: Registro, autenticación, sesión, autorización con tres roles y administración del ciclo de vida de usuarios.
@@ -68,9 +70,15 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 
 ### Modified Capabilities
 
+La fase 24 extiende las siete capacidades declaradas con escenarios de continuidad: identidad y permisos; catálogo, referencias de imágenes y journal de recuperación; carrito e idempotencia; órdenes y snapshots; inventario concurrente; facturación y numeración; documentos históricos. No crea capacidades ni endpoints paralelos.
+
 - Ninguna; el proyecto todavía no contiene especificaciones funcionales existentes.
 
 ## Impact
+
+- Fase 24 pendiente: configuración privada del API para Supabase, presupuesto de conexiones de ambos pools y migrador, herramientas de exportación/restauración de esquemas de aplicación e historial Drizzle, aislamiento de ensayos y guías de corte/rollback. Deshabilitar Data API no utilizada y verificar privilegios actuales y futuros de los esquemas de aplicación para impedir eludir NestJS.
+- Se preservan IDs, hashes, sesiones vigentes, fechas, importes USD, relaciones, auditoría y operaciones de imágenes. No se ejecuta seed, no se crean proyectos remotos automáticamente y no se trasladan assets a Supabase Storage. Las copias no podrán ejecutar limpieza remota de Cloudinary; el corte detendrá escrituras y workers de origen antes de habilitar destino.
+- Esta aprobación cubre planificación; credenciales se introducirán privadamente cuando corresponda. Pruebas reales, copia de datos, corte y rollback operativo requieren autorización específica del destino y alcance. PostgreSQL local y sus volúmenes se conservarán; no se promete migración sin interrupción.
 
 - Nuevas aplicaciones de storefront, back office y API dentro del monorepo, con posibilidad de ejecutar procesos asíncronos de forma independiente.
 - Nuevos contratos REST versionados y documentados mediante OpenAPI; el frontend no accederá directamente a PostgreSQL ni usará Server Actions para lógica de negocio o datos.

@@ -1,0 +1,7 @@
+# iPhone — fotografía ilustrativa oscura
+
+Generada con la herramienta integrada imagegen. No representa con exactitud certificada un modelo comercial específico; sin subida a Cloudinary ni asociación al catálogo.
+
+## Prompt utilizado
+
+Use case: product-mockup. Asset type: premium smartphone catalog photograph. Generate one hyperrealistic photograph of a very modern Apple iPhone Pro-style smartphone, illustrative rather than a claim of an exact released model. One single device, rear three-quarter view showing the recognizable elegant triple camera system and subtle Apple emblem. Sleek dark graphite finish, exquisitely detailed metal frame and matte glass rear surface, physically believable camera lens coatings. The entire phone is visible, resting securely at a slight angle against a discreet low charcoal support on a dark minimalist surface. Refined modern background in deep navy and charcoal, uncluttered and softly graduated. Keep important details illuminated: selective soft key light on camera rings and lens glass, a controlled blue rim light along the edges, gentle silver highlights on the metal, rich shadows without losing the phone silhouette. Sophisticated premium real studio photography, natural reflections and contact shadows, crisp tactile materials, restrained blue accents, not CGI. Landscape 4:3 composition with breathing room, product dominant and sharply focused, background softly out of focus. No extra phones, no people or hands, no floating objects, no promotional text, no model numbers, no watermarks, no collage.
