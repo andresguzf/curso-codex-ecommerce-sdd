@@ -2,13 +2,15 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: 160/160 tareas OpenSpec completas. Fases 1–23 finalizadas, incluido el gestor administrativo de galería y almacenamiento Cloudinary para nuevas cargas. Cloudinary está seleccionado en el entorno local autorizado y sus migraciones están aplicadas; completar las pruebas no certifica preparación para producción.
+> Estado actual: 164/164 tareas OpenSpec completas. Fases 1–24 finalizadas, incluida la copia de PostgreSQL local a Supabase y activación del API mediante conexión directa. Cloudinary sigue activo para nuevas cargas de catálogo. Completar las pruebas no certifica preparación para producción.
 
 La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación e implementación completas, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
 
 ### Implementación actual y alcance verificado
 
-Actualizado en la tarea 23.8 (2 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 24.4 (5 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+
+- Fase 24: PostgreSQL gestionado en Supabase está activo en el API local, sin cambiar Next.js, REST, Drizzle ni autenticación propia. Se copiaron los datos existentes, no un seed: 23 productos, 5 usuarios, 3 órdenes y 4 facturas, con relaciones, imágenes referenciadas e historial. Data API se mantiene habilitada pero la app no la consume; nuestras tablas tienen RLS sin políticas y permisos restringidos. El curso usa TLS cifrado con opt-in privado sin verificación del servidor, una excepción que no certifica seguridad productiva. Véanse [operación y recuperación](docs/supabase-course-migration.md), [copia](docs/VALIDATION-24.3.md) y [activación](docs/VALIDATION-24.4.md).
 
 - Implementado en 23.1–23.8: adaptador Cloudinary privado para nuevas imágenes en `codex-storefront`, misma UI y endpoints, compatibilidad local/Picsum, journal persistente, limpieza recuperable y entrega HTTPS restringida. La cuenta de pruebas se verificó como `dynamic` con un único asset temporal ya eliminado. Posteriormente el usuario autorizó activar Cloudinary en el entorno local; el selector y modo están en `.env` privado y las migraciones están aplicadas, sin seed ni migración de imágenes. Véanse la [guía operativa](docs/catalog-cloudinary-storage.md), la [recuperación](docs/catalog-image-recovery.md) y la [evidencia 23.7](docs/VALIDATION-23.7.md). Logos y PDFs quedan fuera; calidad/compresión y migración de Picsum no se incorporan en esta fase.
 
@@ -82,7 +84,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Implementación completa | 160 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Implementación completa | 164 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -971,10 +973,11 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 21. Productos destacados y categorías importantes.
 22. Gestor administrativo de galería y límite de cuatro imágenes.
 23. Nuevas cargas de catálogo en Cloudinary y recuperación durable.
+24. Migración simplificada a Supabase: conexión, configuración, respaldo/copia y activación.
 
-Cada una de las 160 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+Cada una de las 164 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-Fases 1–23 completadas: 160 tareas. No quedan tareas de implementación pendientes y el cambio sigue sin archivar. La evidencia reciente está en [VALIDATION-23.7](docs/VALIDATION-23.7.md) y la entrega documental en [VALIDATION-23.8](docs/VALIDATION-23.8.md); la galería local y composición editorial conservan sus informes anteriores. Activar Cloudinary, aplicar migraciones a la base de desarrollo, ejecutar seed, hacer commit/push o archivar requiere autorización específica; no se deduce de este estado.
+Fases 1–24 completadas: 164 tareas. No quedan tareas pendientes y el cambio sigue sin archivar. La activación de Supabase se documenta en [VALIDATION-24.4](docs/VALIDATION-24.4.md); las fases anteriores conservan su evidencia histórica. PostgreSQL local y sus volúmenes se conservan, pero Supabase es la autoridad activa: no iniciar un segundo API/worker sobre la copia antigua ni volver a ella sin reconciliar cambios. Ejecutar seed, repetir copias, cambiar proveedores, hacer commit/push o archivar requiere autorización específica.
 
 ## Fuera del alcance inicial
 

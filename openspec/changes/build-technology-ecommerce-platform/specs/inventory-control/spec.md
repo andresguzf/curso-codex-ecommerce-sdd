@@ -12,8 +12,23 @@ El sistema SHALL conservar balances y movimientos y verificar bloqueos/transacci
 - **THEN** se mantiene exclusión durante la operación y el bloqueo se libera al terminar o perder la sesión
 
 #### Scenario: Rechazo de conexión incompatible
-- **WHEN** se configura un modo transaccional o TLS sin verificación válida para la migración
+- **WHEN** se configura un modo transaccional, se desactiva TLS o se omite verificación del servidor sin el opt-in explícito de la excepción del curso
 - **THEN** el preflight bloquea el corte en lugar de debilitar seguridad o ejecutar operaciones sin las garantías de sesión
+
+### Requirement: Excepción TLS explícita para el curso
+El sistema SHALL verificar certificado e identidad del servidor PostgreSQL por defecto. Para el curso, incluido su despliegue demo con NODE_ENV=production, SHALL permitir un opt-in privado explícito `DATABASE_TLS_VERIFY_SERVER=false` para mantener TLS cifrado sin CA ni verificación del servidor, con advertencia segura del riesgo de suplantación. MUST NOT usar fallback automático a este modo, desactivar TLS ni alterar globalmente la verificación TLS de otros servicios. La excepción no constituye una certificación de seguridad para producción real.
+
+#### Scenario: Conexión del curso sin archivo CA
+- **WHEN** se activa explícitamente la excepción para el curso
+- **THEN** se permite la conexión PostgreSQL cifrada sin verificar certificado/hostname y se advierte que la identidad del servidor no está autenticada
+
+#### Scenario: Despliegue docente con entorno production
+- **WHEN** el despliegue demo del curso utiliza NODE_ENV=production y se activa explícitamente la excepción desde runtime, preflight o migrador
+- **THEN** se permite únicamente PostgreSQL cifrado sin verificación del servidor, con advertencia del riesgo y sin desactivar la verificación TLS de otros servicios
+
+#### Scenario: Un certificado inválido no activa una excepción
+- **WHEN** falla la verificación y no existe opt-in explícito
+- **THEN** la conexión falla de forma segura sin reintentar con verificación deshabilitada
 
 ### Requirement: Balance y movimientos de inventario
 El sistema SHALL mantener un balance por producto y SHALL registrar cada variación mediante un movimiento con tipo, cantidad, motivo, referencia, autor y fecha.

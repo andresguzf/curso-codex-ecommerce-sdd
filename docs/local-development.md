@@ -2,6 +2,12 @@
 
 Esta es la guía operativa del estado implementado del proyecto. Las especificaciones OpenSpec continúan siendo la fuente de verdad para comportamiento y alcance futuro.
 
+Desde la fase 24, el API de esta máquina usa Supabase. El Docker local se
+conserva para recuperación/pruebas, no como segunda autoridad. Consulta
+[operación Supabase](supabase-course-migration.md) antes de cambiar conexiones,
+ejecutar seed o pruebas de integración. Los pasos de PostgreSQL local siguientes
+siguen siendo válidos para un checkout nuevo, no indican volver al origen activo.
+
 ## Requisitos previos
 
 - Git.

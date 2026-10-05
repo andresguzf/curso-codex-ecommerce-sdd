@@ -12,6 +12,7 @@ import { Pool } from "pg";
 
 import type { EnvironmentVariables } from "../config/environment";
 import * as schema from "./schema";
+import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./connection-options";
 
 export type DatabaseTransaction = Parameters<
   Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]
@@ -33,16 +34,21 @@ export class DatabaseService
   constructor(
     @Inject(ConfigService) config: ConfigService<EnvironmentVariables, true>,
   ) {
+    const verifyServer = config.get("DATABASE_TLS_VERIFY_SERVER", { infer: true });
+    const connection = databaseConnectionOptions(
+      config.get("DATABASE_URL", { infer: true }), verifyServer,
+    );
+    if (verifyServer === false) this.logger.warn(DATABASE_TLS_WARNING);
     this.pool = new Pool({
       application_name: "technology-ecommerce-api",
-      connectionString: config.get("DATABASE_URL", { infer: true }),
+      ...connection,
       connectionTimeoutMillis: 5_000,
       idleTimeoutMillis: 30_000,
       max: 5,
     });
     this.client = drizzle({ client: this.pool, schema });
     // Dedicated connections prevent uploads from starving the query pool.
-    this.coordinationPool = new Pool({ connectionString: config.get("DATABASE_URL", { infer: true }), max: 5, connectionTimeoutMillis: 5_000 });
+    this.coordinationPool = new Pool({ ...connection, max: 5, connectionTimeoutMillis: 5_000 });
     this.coordinationPool.on("error", () => this.logger.warn("Image coordination connection lost"));
 
     this.pool.on("error", () => {

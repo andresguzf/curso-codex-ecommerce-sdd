@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { databaseConnectionOptions } from "../database/connection-options";
+
 export const CATALOG_IMAGE_FOLDER = "codex-storefront";
 
 const optionalPrivateString = z.preprocess(
@@ -66,6 +68,8 @@ const environmentSchema = z
         "DATABASE_URL must use the postgresql:// scheme",
       ),
     AUTH_ACCESS_TOKEN_SECRET: z.string().min(32).optional(),
+    DATABASE_TLS_VERIFY_SERVER: z.enum(["true", "false"]).default("true")
+      .transform((value) => value === "true"),
     AUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce
       .number()
       .int()
@@ -128,6 +132,12 @@ const environmentSchema = z
     SIMULATED_SHIPPING_EXPRESS_COST: fixedMoneySchema.default("15.00"),
   })
   .superRefine((environment, context) => {
+    try {
+      databaseConnectionOptions(environment.DATABASE_URL, environment.DATABASE_TLS_VERIFY_SERVER);
+    } catch (error) {
+      context.addIssue({ code: "custom", path: ["DATABASE_URL"],
+        message: error instanceof Error ? error.message : "Invalid database connection configuration" });
+    }
     if (environment.IMAGE_STORAGE_CATALOG_PROVIDER === "cloudinary") {
       for (const key of ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_FOLDER_MODE"] as const) {
         if (!environment[key]) {

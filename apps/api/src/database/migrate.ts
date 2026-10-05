@@ -29,6 +29,7 @@ async function main(): Promise<void> {
   await runDatabaseMigrations({
     databaseUrl: requiredDatabaseUrl(),
     migrationsFolder,
+    tlsVerifyServer: env.DATABASE_TLS_VERIFY_SERVER ?? "true",
   });
 
   stdout.write(

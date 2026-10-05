@@ -2,14 +2,15 @@
 
 Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado revisado en la tarea 23.8, el 2 de octubre de 2026:
+Estado revisado en la tarea 24.4, el 5 de octubre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 160 tareas verificables.
+- Existen propuesta, diseño, siete especificaciones y 164 tareas verificables.
 - Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
 - Fases 1–23 completadas: 160/160 tareas, incluidos controles editoriales, seed, landing, gestor de imágenes y adaptador Cloudinary con recuperación durable. No quedan tareas de implementación pendientes. Tras autorización posterior a 23.8, Cloudinary está seleccionado en `.env` local con modo dynamic y migraciones aplicadas; no se ejecutó seed ni migración de imágenes. Evidencia: `e2e/VALIDATION-22.7.md`, `docs/VALIDATION-23.7.md` y `docs/VALIDATION-23.8.md`. El cambio sigue sin archivar. Esta autorización no habilita operaciones futuras de seed, nuevos smoke reales, archivo o ampliaciones de alcance.
 - La revisión 18.5 y los informes de fases 18–20 son evidencia histórica. La consolidación final está en `e2e/VALIDATION-21.8.md`; los controles y la composición editorial se documentan en `docs/backoffice-featured-products.md`, `docs/backoffice-landing-categories.md` y `docs/landing-editorial.md`. Las pruebas automatizadas no equivalen a certificación de producción ni a auditoría manual completa de accesibilidad.
+- Fase 24 completada: 164/164 tareas. Supabase PostgreSQL 17.11 es la autoridad activa del API local mediante conexión directa; PostgreSQL Docker 18.6 y su volumen siguen conservados como origen histórico. Copia de datos existentes sin seed, esquema Drizzle, RLS/permisos restringidos y smoke REST de los tres roles más UI pública verificados. Evidencia en `docs/VALIDATION-24.3.md` y `docs/VALIDATION-24.4.md`; operación en `docs/supabase-course-migration.md`. No volver al origen después de nuevas escrituras sin reconciliar datos ni iniciar workers en ambas bases. No hay autorización para copias futuras, seed, commit/push o archivo.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
 
 ## Sources of truth
@@ -221,6 +222,15 @@ Temas, dashboard, imágenes múltiples, seed, galería, API editorial, controles
 - `Product` incorpora `isFeatured` y `featuredAt`; `Category` incorpora `showOnLanding` y `landingOrder` del 1 al 3.
 
 # Domain modules
+
+## PostgreSQL gestionado — fase 24
+
+- Solo NestJS accede a Supabase por PostgreSQL privado; no introducir Supabase Auth, Storage, SDK frontend o un segundo historial de migraciones. Drizzle sigue siendo la autoridad del esquema.
+- `DATABASE_URL` usa URI real de Connect, directa o Session pooler. Actualmente directa, verificada desde esta máquina; si otro alojamiento carece de IPv6, solicitar URI Session pooler real. No inventar host a partir de región ni usar Transaction pooler/6543: los advisory locks requieren sesión.
+- `DATABASE_TLS_VERIFY_SERVER=true` por defecto. Excepción explícita del curso: false permite TLS cifrado sin verificar identidad del servidor, incluso en la demo NODE_ENV=production. No es configuración segura certificada; no usar fallback automático ni NODE_TLS_REJECT_UNAUTHORIZED global.
+- Data API permanece habilitada pero no se consume. El runner aplica RLS sin políticas y revoca grants de anon/authenticated/PUBLIC sobre objetos de aplicación antes/después del DDL. No FORCE RLS contra el propietario ni modificaciones de Auth/Storage. Nuevos objetos requieren actualizar allowlist y pruebas. La conexión del curso usa postgres con bypass RLS; NestJS conserva autorización/propiedad, no afirmar aislamiento RLS por cliente.
+- Backups, `.env.supabase-preflight` y copia privada del entorno anterior viven fuera de Git. No imprimir URI, hashes o dumps. La copia original tiene 23 productos: no ejecutar seed para reducirlos a 20.
+- Mantener una sola autoridad y worker de imágenes. Tras activación/login ya hubo escrituras en Supabase: el origen es histórico, no un rollback inmediato. Detener API y reconciliar cambios antes de regresar. Las pruebas de integración deben usar PostgreSQL local/bases temporales explícitas, nunca apuntar automáticamente al destino activo de Supabase.
 
 ## Almacenamiento de catálogo — fase 23
 
@@ -572,7 +582,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 160 tareas distribuidas en 23 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial. La fase 22 añade galería administrativa y límite de cuatro; la 23, Cloudinary para nuevas cargas y recuperación durable. Verifica siempre el estado real y no infieras implementación ni activación por existir endpoints o credenciales.
+- El plan contiene 164 tareas distribuidas en 24 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial. La fase 22 añade galería administrativa y límite de cuatro; la 23, Cloudinary; la 24, migración y activación de Supabase. Verifica siempre el estado real y no infieras activación por existir credenciales.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.
@@ -581,6 +591,8 @@ Al implementar el cambio activo:
 
 # Available skills
 
+- `supabase`: Operación y diagnóstico de Supabase con documentación actual y controles de seguridad. Fuente: `.agents/skills/supabase/SKILL.md`.
+- `supabase-postgres-best-practices`: SQL, esquema, migraciones, RLS, permisos, restauraciones y rendimiento de PostgreSQL. Fuente: `.agents/skills/supabase-postgres-best-practices/SKILL.md`.
 - `openspec-explore`: Analiza ideas, decisiones, problemas o requisitos sin implementar. Fuente: `.agents/skills/openspec-explore/SKILL.md`.
 - `openspec-propose`: Crea un nuevo cambio con propuesta, specs, diseño y tareas. Fuente: `.agents/skills/openspec-propose/SKILL.md`.
 - `openspec-update-change`: Revisa artefactos de planificación existentes sin editar código. Fuente: `.agents/skills/openspec-update-change/SKILL.md`.
@@ -593,6 +605,8 @@ Al implementar el cambio activo:
 # Skill trigger rules
 
 - Antes de usar un skill, lee completamente su `SKILL.md` y sigue sus límites.
+- Usa `supabase` ante cualquier tarea de Supabase; verifica documentación/changelog y resultados sin cambiar la arquitectura REST/Drizzle aprobada.
+- Usa `supabase-postgres-best-practices` antes de escribir SQL, esquema, migraciones, políticas/permisos RLS, importaciones/restauraciones o diagnosticar problemas de PostgreSQL; también aplica a PostgreSQL local.
 - Usa `openspec-explore` cuando el usuario quiera analizar o aclarar antes de planificar o implementar. En explore no escribas código.
 - Usa `openspec-propose` cuando el usuario pida crear una propuesta nueva y todos sus artefactos. En propose crea planificación, no implementación.
 - Usa `openspec-update-change` cuando el usuario cambie decisiones, alcance, arquitectura o requisitos del cambio existente. No edites código con este skill.

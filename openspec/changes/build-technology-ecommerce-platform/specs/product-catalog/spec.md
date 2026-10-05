@@ -5,10 +5,10 @@ Define el catálogo tecnológico público y administrativo, incluyendo productos
 ## ADDED Requirements
 
 ### Requirement: Migración verificable de persistencia a Supabase
-El sistema SHALL trasladar la base de aplicación a PostgreSQL gestionado en Supabase sin cambiar UI, contratos REST, Drizzle ni requisitos existentes. La migración MUST comprobar versiones, extensiones y compatibilidad antes de escribir, preservar esquema, datos, secuencias e historial Drizzle y validar conteos, IDs, relaciones y valores mediante comparaciones deterministas sin exponer secretos. MUST respaldar solo esquemas de aplicación inventariados, nunca sobrescribir esquemas gestionados de Supabase, ejecutar seed ni limpiar un destino no vacío automáticamente.
+El sistema SHALL trasladar la base de aplicación a PostgreSQL gestionado en Supabase sin cambiar UI, contratos REST, Drizzle ni requisitos existentes. Para el curso SHALL ejecutar una migración simplificada en cuatro tareas, con conexión/compatibilidad básica, configuración, respaldo/copia y activación/prueba básica. MUST preservar esquema, datos, IDs, relaciones, secuencias e historial Drizzle, comprobar conteos y registros representativos sin exponer secretos y respaldar solo esquemas de aplicación. MUST NOT sobrescribir esquemas gestionados, ejecutar seed ni limpiar un destino no vacío automáticamente. No se exige harness genérico, ensayo exhaustivo ni comparación determinista de todos los valores como condición de esta fase.
 
 #### Scenario: Restauración compatible sin duplicar esquema ni datos
-- **WHEN** se restaura un respaldo validado en un destino vacío autorizado
+- **WHEN** se copia la base a un destino vacío autorizado mediante restauración compatible o migraciones Drizzle más importación de datos/historial
 - **THEN** se preservan productos, taxonomía, wishlist, perfil empresarial, auditoría y asociaciones, se restaura el historial Drizzle y solo se aplican migraciones pendientes
 
 #### Scenario: Incompatibilidad o colisión bloquea la migración
