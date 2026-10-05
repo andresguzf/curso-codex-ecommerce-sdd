@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -9,20 +9,20 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { InvoiceFromOrderService } from "../../src/billing-invoicing/invoice-from-order.service";
-import { ManualInvoiceService } from "../../src/billing-invoicing/manual-invoice.service";
-import { StoreProfileService } from "../../src/billing-invoicing/store-profile.service";
-import { currentIssuerSnapshot } from "../../src/billing-invoicing/issuer-snapshot";
-import { DocumentExportService } from "../../src/document-export/document-export.service";
-import { SimplePdfAdapter } from "../../src/document-export/simple-pdf.adapter";
-import type { DatabaseService } from "../../src/database/database.service";
-import { invoices, orders, payments, roleAssignments, users } from "../../src/database/schema";
-import { companyLogoReference } from "../../src/billing-invoicing/company-logo";
-import * as schema from "../../src/database/schema";
-import type { AuthenticatedUser } from "../../src/identity-access/auth.types";
-import { CustomerOrdersService } from "../../src/order-management/customer-orders.service";
-import { OrderService } from "../../src/order-management/order.service";
-import type { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
+import { InvoiceFromOrderService } from "../../src/billing-invoicing/invoice-from-order.service.js";
+import { ManualInvoiceService } from "../../src/billing-invoicing/manual-invoice.service.js";
+import { StoreProfileService } from "../../src/billing-invoicing/store-profile.service.js";
+import { currentIssuerSnapshot } from "../../src/billing-invoicing/issuer-snapshot.js";
+import { DocumentExportService } from "../../src/document-export/document-export.service.js";
+import { SimplePdfAdapter } from "../../src/document-export/simple-pdf.adapter.js";
+import type { DatabaseService } from "../../src/database/database.service.js";
+import { invoices, orders, payments, roleAssignments, users } from "../../src/database/schema/index.js";
+import { companyLogoReference } from "../../src/billing-invoicing/company-logo.js";
+import * as schema from "../../src/database/schema/index.js";
+import type { AuthenticatedUser } from "../../src/identity-access/auth.types.js";
+import { CustomerOrdersService } from "../../src/order-management/customer-orders.service.js";
+import { OrderService } from "../../src/order-management/order.service.js";
+import type { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for issuer snapshot integration tests");

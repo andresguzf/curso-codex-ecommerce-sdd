@@ -1,9 +1,9 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import { eq, sql, type SQL } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, categories, tags } from "../database/schema";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, categories, tags } from "../database/schema/index.js";
 import type {
   ClassificationInput,
   ClassificationKind,
@@ -11,7 +11,7 @@ import type {
   ClassificationPatch,
   ClassificationQuery,
   ClassificationRecord,
-} from "./classification.types";
+} from "./classification.types.js";
 
 type CountRow = { totalItems: number };
 type RawClassificationRecord = Omit<ClassificationRecord, "createdAt" | "updatedAt" | "deletedAt"> & {

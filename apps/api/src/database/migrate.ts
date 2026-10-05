@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { env, stderr, stdout } from "node:process";
 
-import { runDatabaseMigrations } from "./migration-runner";
+import { runDatabaseMigrations } from "./migration-runner.js";
 
 function requiredDatabaseUrl(): string {
   const databaseUrl = env.DATABASE_URL?.trim();

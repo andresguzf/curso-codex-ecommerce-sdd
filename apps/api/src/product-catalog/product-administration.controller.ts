@@ -29,18 +29,18 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
-import { ProductAdministrationService } from "./product-administration.service";
+} from "../identity-access/authorization/index.js";
+import { ProductAdministrationService } from "./product-administration.service.js";
 import {
   PRODUCT_STATUSES,
   type AdministrativeProduct,
-} from "./product-administration.types";
+} from "./product-administration.types.js";
 
 const uuidSchema = z.string().uuid();
 const tagIdsSchema = z.array(uuidSchema).max(20).refine((ids) => new Set(ids).size === ids.length);

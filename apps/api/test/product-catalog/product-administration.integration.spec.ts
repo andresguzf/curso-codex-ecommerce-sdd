@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
-import Ajv from "ajv";
-import addFormats from "ajv-formats";
-import { insertProductFixtures } from "../product-fixtures";
+import { Ajv } from "ajv";
+import formatsModule from "ajv-formats";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -20,23 +20,23 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { ProductImagesRepository } from "../../src/product-catalog/product-images.repository";
-import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
-import { CatalogImageStorageService } from "../../src/product-catalog/image-storage/catalog-image-storage.service";
-import { CatalogImageRecoveryService } from "../../src/product-catalog/image-storage/catalog-image-recovery.service";
-import { DatabaseService } from "../../src/database/database.service";
-import { StoreLogoService } from "../../src/billing-invoicing/store-logo.service";
-import { catalogImageOperations } from "../../src/database/schema";
-import { storeLogoAssets } from "../../src/database/schema";
-import { enqueueCloudImageCleanup } from "../../src/product-catalog/image-storage/catalog-image-cleanup";
-import { CatalogImageStorageRouter } from "../../src/product-catalog/image-storage/catalog-image-storage-router";
-import { CATALOG_ASSET_TAG, CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
-import type { CloudinaryTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport";
-import { ImageReferenceLookup } from "../../src/product-catalog/image-storage/image-reference.repository";
-import { LocalImageStorage } from "../../src/product-catalog/image-storage/local-image-storage";
-import { type EnvironmentVariables, validateEnvironment } from "../../src/config/environment";
+import { ProductImagesRepository } from "../../src/product-catalog/product-images.repository.js";
+import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service.js";
+import { CatalogImageStorageService } from "../../src/product-catalog/image-storage/catalog-image-storage.service.js";
+import { CatalogImageRecoveryService } from "../../src/product-catalog/image-storage/catalog-image-recovery.service.js";
+import { DatabaseService } from "../../src/database/database.service.js";
+import { StoreLogoService } from "../../src/billing-invoicing/store-logo.service.js";
+import { catalogImageOperations } from "../../src/database/schema/index.js";
+import { storeLogoAssets } from "../../src/database/schema/index.js";
+import { enqueueCloudImageCleanup } from "../../src/product-catalog/image-storage/catalog-image-cleanup.js";
+import { CatalogImageStorageRouter } from "../../src/product-catalog/image-storage/catalog-image-storage-router.js";
+import { CATALOG_ASSET_TAG, CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage.js";
+import type { CloudinaryTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport.js";
+import { ImageReferenceLookup } from "../../src/product-catalog/image-storage/image-reference.repository.js";
+import { LocalImageStorage } from "../../src/product-catalog/image-storage/local-image-storage.js";
+import { type EnvironmentVariables, validateEnvironment } from "../../src/config/environment.js";
 
-import { configureApplication } from "../../src/application";
+import { configureApplication } from "../../src/application.js";
 import {
   auditEntries,
   categories,
@@ -48,13 +48,13 @@ import {
   roleAssignments,
   tags,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { hashPassword } from "../../src/identity-access/password/password";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
 import {
   InventoryStockUnavailableError,
-} from "../../src/inventory-control/inventory-stock.repository";
-import { InventoryStockService } from "../../src/inventory-control/inventory-stock.service";
+} from "../../src/inventory-control/inventory-stock.repository.js";
+import { InventoryStockService } from "../../src/inventory-control/inventory-stock.service.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -169,8 +169,8 @@ describe("administrative product lifecycle", () => {
     imageBytes = await sharp({ create: { width: 8, height: 6, channels: 3, background: "blue" } }).png().toBuffer();
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
     app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
@@ -910,7 +910,7 @@ describe("administrative product lifecycle", () => {
     expect(detail.images[0]).not.toHaveProperty("createdAt");
     const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
     const validator = new Ajv({ strict: false });
-    addFormats(validator);
+    formatsModule.default(validator);
     validator.addSchema({ $id: "urn:technology-ecommerce:catalog-images-contract", components: document.components });
     for (const [type, body] of [["ProductPageResponseDto", listing.json()], ["ProductDetailResponseDto", byId.json()]]) {
       const validate = validator.compile({ $ref: `urn:technology-ecommerce:catalog-images-contract#/components/schemas/${type}` });
@@ -934,7 +934,7 @@ describe("administrative product lifecycle", () => {
     expect(empty.json()).toMatchObject({ coverImage: null, images: [], image: { url: "/images/product-placeholder.svg" } });
     const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
     const validator = new Ajv({ strict: false });
-    addFormats(validator);
+    formatsModule.default(validator);
     validator.addSchema({ $id: "urn:technology-ecommerce:empty-gallery", components: document.components });
     const validate = validator.compile({ $ref: "urn:technology-ecommerce:empty-gallery#/components/schemas/ProductDetailResponseDto" });
     expect(validate(empty.json()), JSON.stringify(validate.errors)).toBe(true);
@@ -966,7 +966,7 @@ describe("administrative product lifecycle", () => {
     const image = added.json<GalleryImage>();
     const document = (await server.inject({ method: "GET", url: "/api/v1/openapi.json" })).json<{ components: object }>();
     const validator = new Ajv({ strict: false });
-    addFormats(validator);
+    formatsModule.default(validator);
     validator.addSchema({ $id: "urn:technology-ecommerce:product-images", components: document.components });
     const validateResponse = validator.compile({ $ref: "urn:technology-ecommerce:product-images#/components/schemas/ProductGalleryImageDto" });
     expect(validateResponse(image), JSON.stringify(validateResponse.errors)).toBe(true);

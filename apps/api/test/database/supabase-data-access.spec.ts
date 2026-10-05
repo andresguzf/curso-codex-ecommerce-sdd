@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { protectSupabaseApplicationAccess, SUPABASE_APPLICATION_ACCESS_SQL } from "../../src/database/supabase-data-access";
+import { protectSupabaseApplicationAccess, SUPABASE_APPLICATION_ACCESS_SQL } from "../../src/database/supabase-data-access.js";
 
 describe("Supabase application access boundary", () => {
   it("does not modify local PostgreSQL", async () => {

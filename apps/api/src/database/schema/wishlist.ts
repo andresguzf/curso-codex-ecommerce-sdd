@@ -6,8 +6,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { products } from "./catalog";
-import { users } from "./identity";
+import { products } from "./catalog.js";
+import { users } from "./identity.js";
 
 export const wishlists = pgTable(
   "wishlists",

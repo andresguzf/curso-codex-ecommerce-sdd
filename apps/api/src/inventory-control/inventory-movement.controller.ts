@@ -26,12 +26,12 @@ import {
   AuthenticationGuard,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
-import { InventoryMovementService } from "./inventory-movement.service";
+} from "../identity-access/authorization/index.js";
+import { InventoryMovementService } from "./inventory-movement.service.js";
 import {
   INVENTORY_MOVEMENT_TYPES,
   type InventoryMovementPage,
-} from "./inventory-movement.types";
+} from "./inventory-movement.types.js";
 
 const uuidSchema = z.string().uuid();
 const querySchema = z

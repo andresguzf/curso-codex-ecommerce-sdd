@@ -10,8 +10,8 @@ import {
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AppModule } from "../../src/app.module";
-import { configureApplication } from "../../src/application";
+import { AppModule } from "../../src/app.module.js";
+import { configureApplication } from "../../src/application.js";
 
 describe("versioned OpenAPI contract", () => {
   let app: NestFastifyApplication;

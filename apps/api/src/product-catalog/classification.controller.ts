@@ -10,16 +10,16 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard, CurrentUser, OptionalAuthenticationGuard, Roles,
   RolesGuard, type AuthenticatedRequest,
-} from "../identity-access/authorization";
-import { ClassificationService } from "./classification.service";
+} from "../identity-access/authorization/index.js";
+import { ClassificationService } from "./classification.service.js";
 import {
   CLASSIFICATION_SORT_FIELDS, CLASSIFICATION_STATUSES,
   type CategoryRecord, type ClassificationPage, type ClassificationQuery, type TagRecord,
-} from "./classification.types";
+} from "./classification.types.js";
 
 const identifierSchema = z.string().uuid();
 const viewSchema = z.object({ view: z.enum(["public", "administrative"]).default("public") }).strict();

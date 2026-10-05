@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-import { CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER } from "./auth-cookie.service";
+import { CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER } from "./auth-cookie.service.js";
 
 @Injectable()
 export class CsrfGuard implements CanActivate {

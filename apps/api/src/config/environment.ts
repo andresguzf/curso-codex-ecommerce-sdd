@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { databaseConnectionOptions } from "../database/connection-options";
+import { databaseConnectionOptions } from "../database/connection-options.js";
 
 export const CATALOG_IMAGE_FOLDER = "codex-storefront";
 

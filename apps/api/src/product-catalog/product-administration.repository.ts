@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
-import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image.js";
 import {
   and,
   asc,
@@ -17,9 +17,9 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import type { DatabaseTransaction } from "../database/database.service";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import type { DatabaseTransaction } from "../database/database.service.js";
 import {
   auditEntries,
   categories,
@@ -28,7 +28,7 @@ import {
   productTags,
   products,
   tags,
-} from "../database/schema";
+} from "../database/schema/index.js";
 import type {
   AdministrativeProduct,
   CatalogImage,
@@ -40,11 +40,11 @@ import type {
   ProductStatus,
   ProductClassificationSummary,
   UpdateAdministrativeProduct,
-} from "./product-administration.types";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup";
-import { normalizeSlug, slugCandidate } from "./slug";
-import type { CatalogLanding } from "./catalog-landing.types";
+} from "./product-administration.types.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup.js";
+import { normalizeSlug, slugCandidate } from "./slug.js";
+import type { CatalogLanding } from "./catalog-landing.types.js";
 
 const productSelection = {
   id: products.id,

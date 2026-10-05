@@ -8,31 +8,31 @@ import {
 } from "@nestjs/common";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
+import { DatabaseService } from "../database/database.service.js";
 import {
   cartItems,
   carts,
   idempotencyRecords,
   payments,
   products,
-} from "../database/schema";
+} from "../database/schema/index.js";
 import {
   InventoryStockUnavailableError,
-} from "../inventory-control/inventory-stock.repository";
-import { InventoryStockService } from "../inventory-control/inventory-stock.service";
-import { OrderService } from "../order-management/order.service";
-import { currentIssuerSnapshot } from "../billing-invoicing/issuer-snapshot";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import { addMoneyAmounts, calculateCartTotals } from "./cart-totals";
+} from "../inventory-control/inventory-stock.repository.js";
+import { InventoryStockService } from "../inventory-control/inventory-stock.service.js";
+import { OrderService } from "../order-management/order.service.js";
+import { currentIssuerSnapshot } from "../billing-invoicing/issuer-snapshot.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import { addMoneyAmounts, calculateCartTotals } from "./cart-totals.js";
 import type {
   CheckoutCustomer,
   CheckoutInput,
   CheckoutOrderItem,
   CheckoutResult,
   RejectedCheckoutResult,
-} from "./checkout.types";
-import { PaymentProcessor } from "./payment/payment.port";
-import { ShippingQuoteProvider } from "./shipping/shipping.port";
+} from "./checkout.types.js";
+import { PaymentProcessor } from "./payment/payment.port.js";
+import { ShippingQuoteProvider } from "./shipping/shipping.port.js";
 
 const CHECKOUT_SCOPE = "CHECKOUT";
 const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1_000;

@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
   type EnvironmentVariables,
   validateEnvironment,
-} from "../config/environment";
-import type { PaymentMethod } from "./payment/payment.port";
-import { SimulatedPaymentAdapter } from "./payment/simulated-payment.adapter";
-import type { ShippingMethod } from "./shipping/shipping.port";
-import { SimulatedShippingAdapter } from "./shipping/simulated-shipping.adapter";
+} from "../config/environment.js";
+import type { PaymentMethod } from "./payment/payment.port.js";
+import { SimulatedPaymentAdapter } from "./payment/simulated-payment.adapter.js";
+import type { ShippingMethod } from "./shipping/shipping.port.js";
+import { SimulatedShippingAdapter } from "./shipping/simulated-shipping.adapter.js";
 
 const databaseUrl = "postgresql://postgres:password@localhost:5432/ecommerce";
 

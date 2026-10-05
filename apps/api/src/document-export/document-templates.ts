@@ -1,6 +1,6 @@
-import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate";
-import type { OrderSnapshot } from "../order-management/order.aggregate";
-import type { PdfDocument } from "./pdf-renderer.port";
+import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate.js";
+import type { OrderSnapshot } from "../order-management/order.aggregate.js";
+import type { PdfDocument } from "./pdf-renderer.port.js";
 
 function snapshotText(snapshot: Readonly<Record<string, unknown>>, ...keys: string[]): string {
   for (const key of keys) {

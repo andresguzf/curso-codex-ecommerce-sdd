@@ -502,6 +502,13 @@ Node.js mediante soporte oficial Vercel. No crear backend comercial dentro de
 Next.js, microservicios, otro ORM o Supabase Auth/Storage. La fase 24 no autorizó
 este despliegue: la fase 25 es la revisión posterior confirmada.
 
+**Formato del API.** La implementación usa ESM nativo (`type: module`,
+TypeScript NodeNext e imports relativos con extensión `.js`). Esto permite cargar
+NestJS/config 12 sin depender del puente CommonJS `require(ESM)`, rechazado por
+el runtime Vercel observado en 25.3. Los recursos inmutables se resuelven con
+`new URL(..., import.meta.url)` y deben conservar su rastreo en el bundle.
+La comprobación offline del arranque no sustituye el health del dominio publicado.
+
 **Conexión/entornos.** En Vercel usar URI real de Session pooler 5432 copiada
 de Connect; nunca inferir host/usuario de aws-0-us-east-1. 6543 es Transaction
 pooler e incompatible con los locks de sesión actuales. Reutilizar pools por

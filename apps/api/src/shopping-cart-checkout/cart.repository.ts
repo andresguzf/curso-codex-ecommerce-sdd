@@ -1,22 +1,22 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, asc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
+import { DatabaseService } from "../database/database.service.js";
 import {
   cartItems,
   carts,
   inventoryBalances,
   productImages,
   products,
-} from "../database/schema";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import { deliveredCatalogImage } from "../product-catalog/image-storage/bundled-catalog-image";
-import { calculateCartTotals } from "./cart-totals";
+} from "../database/schema/index.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import { deliveredCatalogImage } from "../product-catalog/image-storage/bundled-catalog-image.js";
+import { calculateCartTotals } from "./cart-totals.js";
 import type {
   ActiveCart,
   CartClaimResult,
   CartOwner,
-} from "./cart.types";
+} from "./cart.types.js";
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
 

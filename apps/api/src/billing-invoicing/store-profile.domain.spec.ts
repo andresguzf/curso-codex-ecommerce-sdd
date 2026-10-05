@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateStoreProfile } from "./store-profile.domain";
+import { validateStoreProfile } from "./store-profile.domain.js";
 
 const validProfile = {
   tradeName: "Tecnología Central",

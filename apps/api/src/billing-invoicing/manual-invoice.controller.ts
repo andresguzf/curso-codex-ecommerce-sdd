@@ -11,18 +11,18 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
-import { InvoiceResponseDto } from "./invoice-response.dto";
+} from "../identity-access/authorization/index.js";
+import { InvoiceResponseDto } from "./invoice-response.dto.js";
 import {
   ManualInvoiceService,
   manualInvoiceRequestSchema,
-} from "./manual-invoice.service";
+} from "./manual-invoice.service.js";
 
 class ManualInvoiceLineRequestDto {
   @ApiProperty({ type: String, format: "uuid", nullable: true, required: false })

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { sanitizeAuditChanges } from "./audit-entry";
-import type { ApiMetricDomain } from "./api-metrics.service";
+import { sanitizeAuditChanges } from "./audit-entry.js";
+import type { ApiMetricDomain } from "./api-metrics.service.js";
 
 export type HttpCompletionLog = Readonly<{
   correlationId: string;

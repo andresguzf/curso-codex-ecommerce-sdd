@@ -19,23 +19,23 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { configureApplication } from "../../src/application";
+import { configureApplication } from "../../src/application.js";
 import {
   invoiceLines,
   invoices,
   orders,
   roleAssignments,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
 import {
   AuthenticationGuard,
   OwnershipGuard,
   RequireOwnership,
   Roles,
   RolesGuard,
-} from "../../src/identity-access/authorization";
-import { hashPassword } from "../../src/identity-access/password/password";
+} from "../../src/identity-access/authorization/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
 
 class AuthorizationProbeController {
   customer(): { authorized: true } {
@@ -236,8 +236,8 @@ describe("role and ownership authorization", () => {
     process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS = "3600";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
 
     Module({ imports: [AppModule] })(AuthorizationProbeModule);

@@ -26,18 +26,18 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
-import { CheckoutService } from "./checkout.service";
-import type { CheckoutResult } from "./checkout.types";
-import { PAYMENT_METHODS } from "./payment/payment.port";
-import { SHIPPING_METHODS, ShippingQuoteProvider } from "./shipping/shipping.port";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
+} from "../identity-access/authorization/index.js";
+import { CheckoutService } from "./checkout.service.js";
+import type { CheckoutResult } from "./checkout.types.js";
+import { PAYMENT_METHODS } from "./payment/payment.port.js";
+import { SHIPPING_METHODS, ShippingQuoteProvider } from "./shipping/shipping.port.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
 
 const checkoutSchema = z
   .object({

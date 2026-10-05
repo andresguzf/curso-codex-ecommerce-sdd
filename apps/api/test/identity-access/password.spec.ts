@@ -6,7 +6,7 @@ import {
   hashPassword,
   passwordNeedsRehash,
   verifyPassword,
-} from "../../src/identity-access/password/password";
+} from "../../src/identity-access/password/password.js";
 
 function createLegacyScryptHash(password: string): Promise<string> {
   const salt = Buffer.from("legacy-test-salt", "utf8");

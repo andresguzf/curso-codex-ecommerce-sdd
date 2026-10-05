@@ -13,11 +13,11 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { configureApplication } from "../../src/application";
-import { COMPANY_LOGO_KEY, companyLogoReference } from "../../src/billing-invoicing/company-logo";
-import { auditEntries, roleAssignments, storeLogoAssets, storeProfiles, users } from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { hashPassword } from "../../src/identity-access/password/password";
+import { configureApplication } from "../../src/application.js";
+import { COMPANY_LOGO_KEY, companyLogoReference } from "../../src/billing-invoicing/company-logo.js";
+import { auditEntries, roleAssignments, storeLogoAssets, storeProfiles, users } from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for store profile end-to-end tests");
@@ -92,8 +92,8 @@ describe("store profile REST permissions and audit", () => {
     process.env.IMAGE_STORAGE_LOCAL_ROOT = imageRoot;
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
     app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
     configureApplication(app);

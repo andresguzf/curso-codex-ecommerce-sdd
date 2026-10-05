@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import type { EnvironmentVariables } from "../../config/environment";
+import type { EnvironmentVariables } from "../../config/environment.js";
 import {
   SHIPPING_METHODS,
   type ShippingMethod,
@@ -9,7 +9,7 @@ import {
   ShippingQuoteProvider,
   type ShippingQuoteRequest,
   UnsupportedShippingMethodError,
-} from "./shipping.port";
+} from "./shipping.port.js";
 
 type ShippingMethodConfiguration = Readonly<{
   cost: string;

@@ -1,21 +1,21 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import type { DatabaseTransaction } from "../database/database.service";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import type { DatabaseTransaction } from "../database/database.service.js";
 import {
   auditEntries,
   inventoryBalances,
   inventoryMovements,
-} from "../database/schema";
+} from "../database/schema/index.js";
 import type {
   InventoryShortage,
   InventoryStockChange,
   InventoryStockItem,
   InventoryStockMovementType,
   InventoryStockReference,
-} from "./inventory-stock.types";
+} from "./inventory-stock.types.js";
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
 

@@ -1,6 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import * as schema from "../src/database/schema";
-import type { NewProduct, Product } from "../src/database/schema";
+import * as schema from "../src/database/schema/index.js";
+import type { NewProduct, Product } from "../src/database/schema/index.js";
 
 /** Valid fixtures obey the same commit-time cover invariant as production. */
 export function insertProductFixtures(

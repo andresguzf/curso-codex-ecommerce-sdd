@@ -2,9 +2,9 @@ import { BadRequestException, Body, Controller, Delete, Headers, HttpCode, Injec
 import { ApiBadRequestResponse, ApiBearerAuth, ApiBody, ApiConflictResponse, ApiConsumes, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiPropertyOptional, ApiQuery, ApiResponse, ApiTags, ApiUnauthorizedResponse } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { ProductImagesService } from "./product-images.service";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { ProductImagesService } from "./product-images.service.js";
 
 const patchSchema = z.object({ altText: z.string().trim().min(1).max(500).optional(), isPrimary: z.boolean().optional(), sortOrder: z.number().int().min(0).max(2_147_483_646).optional() }).strict().refine((value) => Object.keys(value).length > 0);
 const uploadSchema = z.object({ altText: z.string().trim().min(1).max(500), isPrimary: z.enum(["true", "false"]).transform((value) => value === "true").optional(), sortOrder: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(0).max(2_147_483_646)).optional() }).strict();

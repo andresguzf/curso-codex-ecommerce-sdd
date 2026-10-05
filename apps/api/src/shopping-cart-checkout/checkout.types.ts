@@ -1,5 +1,5 @@
-import type { PaymentMethod, PaymentStatus } from "./payment/payment.port";
-import type { ShippingMethod } from "./shipping/shipping.port";
+import type { PaymentMethod, PaymentStatus } from "./payment/payment.port.js";
+import type { ShippingMethod } from "./shipping/shipping.port.js";
 
 export type CheckoutAddress = Readonly<{
   recipientName: string;

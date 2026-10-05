@@ -12,7 +12,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { runDatabaseMigrations } from "../../src/database/migration-runner";
+import { runDatabaseMigrations } from "../../src/database/migration-runner.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 

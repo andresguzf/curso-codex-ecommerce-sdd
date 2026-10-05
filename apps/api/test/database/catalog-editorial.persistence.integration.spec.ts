@@ -8,8 +8,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { runDatabaseMigrations } from "../../src/database/migration-runner";
-import { categories, products } from "../../src/database/schema";
+import { runDatabaseMigrations } from "../../src/database/migration-runner.js";
+import { categories, products } from "../../src/database/schema/index.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for PostgreSQL integration tests");

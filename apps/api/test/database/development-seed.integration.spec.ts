@@ -10,7 +10,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
+import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage.js";
 
 import {
   categories,
@@ -23,16 +23,16 @@ import {
   roleAssignments,
   storeProfiles,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
 import {
   runDevelopmentSeed,
   type SeedAccount,
-} from "../../src/database/seed/development-seed";
-import { getDevelopmentProductImageManifest } from "../../src/database/seed/product-image-manifest";
-import { verifySeedPassword } from "../../src/database/seed/password";
-import { insertProductFixtures } from "../product-fixtures";
-import { configureApplication } from "../../src/application";
+} from "../../src/database/seed/development-seed.js";
+import { getDevelopmentProductImageManifest } from "../../src/database/seed/product-image-manifest.js";
+import { verifySeedPassword } from "../../src/database/seed/password.js";
+import { insertProductFixtures } from "../product-fixtures.js";
+import { configureApplication } from "../../src/application.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -155,7 +155,7 @@ describe("development database seed", () => {
     process.env.AUTH_ACCESS_TOKEN_SECRET = "isolated-seed-authentication-test-secret-at-least-32-characters";
     process.env.AUTH_COOKIE_SECURE = "false";
     process.env.CORS_ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3002";
-    const { AppModule } = await import("../../src/app.module");
+    const { AppModule } = await import("../../src/app.module.js");
     app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
     configureApplication(app);
     await app.init();

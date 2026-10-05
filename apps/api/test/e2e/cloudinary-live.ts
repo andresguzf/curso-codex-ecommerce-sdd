@@ -8,9 +8,9 @@ import { parse } from "dotenv";
 import sharp from "sharp";
 import { z } from "zod";
 
-import { validateEnvironment, type EnvironmentVariables } from "../../src/config/environment";
-import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
-import type { StoredImage } from "../../src/product-catalog/image-storage/image-storage.port";
+import { validateEnvironment, type EnvironmentVariables } from "../../src/config/environment.js";
+import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage.js";
+import type { StoredImage } from "../../src/product-catalog/image-storage/image-storage.port.js";
 
 async function main() {
   if (process.env.CLOUDINARY_LIVE_TEST_AUTHORIZED !== "yes" || process.env.CLOUDINARY_LIVE_TEST_NONPRODUCTION !== "yes"

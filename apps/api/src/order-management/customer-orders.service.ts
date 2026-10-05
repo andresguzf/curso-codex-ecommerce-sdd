@@ -1,10 +1,10 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
-import { orderItems, orders } from "../database/schema";
-import type { OrderStatus } from "./order.aggregate";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import { DatabaseService } from "../database/database.service.js";
+import { orderItems, orders } from "../database/schema/index.js";
+import type { OrderStatus } from "./order.aggregate.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 
 export type CustomerOrderQuery = Readonly<{ page: number; pageSize: number; status?: OrderStatus }>;
 

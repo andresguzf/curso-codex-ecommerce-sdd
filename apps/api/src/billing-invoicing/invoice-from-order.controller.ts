@@ -13,10 +13,10 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { InvoiceFromOrderService } from "./invoice-from-order.service";
-import { InvoiceResponseDto } from "./invoice-response.dto";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { InvoiceFromOrderService } from "./invoice-from-order.service.js";
+import { InvoiceResponseDto } from "./invoice-response.dto.js";
 
 @ApiTags("invoices", "orders")
 @ApiBearerAuth("access-token")

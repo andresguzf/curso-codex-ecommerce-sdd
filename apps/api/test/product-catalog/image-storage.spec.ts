@@ -9,14 +9,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type EnvironmentVariables,
   validateEnvironment,
-} from "../../src/config/environment";
-import { ImageReferenceLookup } from "../../src/product-catalog/image-storage/image-reference.repository";
-import { ImageMediaController } from "../../src/product-catalog/image-storage/image-media.controller";
+} from "../../src/config/environment.js";
+import { ImageReferenceLookup } from "../../src/product-catalog/image-storage/image-reference.repository.js";
+import { ImageMediaController } from "../../src/product-catalog/image-storage/image-media.controller.js";
 import {
   ImageStorageReferencedError,
-} from "../../src/product-catalog/image-storage/image-storage.port";
-import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service";
-import { LocalImageStorage } from "../../src/product-catalog/image-storage/local-image-storage";
+} from "../../src/product-catalog/image-storage/image-storage.port.js";
+import { ImageStorageService } from "../../src/product-catalog/image-storage/image-storage.service.js";
+import { LocalImageStorage } from "../../src/product-catalog/image-storage/local-image-storage.js";
 
 const PNG_BYTES = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),

@@ -2,9 +2,9 @@ import { BadRequestException, Controller, Get, Header, Inject, Query } from "@ne
 import { ApiBadRequestResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags, OmitType } from "@nestjs/swagger";
 import { z } from "zod";
 
-import { CatalogLandingService } from "./catalog-landing.service";
-import type { CatalogLanding } from "./catalog-landing.types";
-import { ProductListItemDto } from "./product-listing.controller";
+import { CatalogLandingService } from "./catalog-landing.service.js";
+import type { CatalogLanding } from "./catalog-landing.types.js";
+import { ProductListItemDto } from "./product-listing.controller.js";
 
 export class LandingProductDto extends OmitType(ProductListItemDto, ["isFeatured", "featuredAt"] as const) {
   @ApiProperty({ enum: ["ACTIVE"] }) declare status: "ACTIVE";

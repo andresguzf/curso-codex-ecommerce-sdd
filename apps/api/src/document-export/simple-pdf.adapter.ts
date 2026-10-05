@@ -1,7 +1,7 @@
 import { deflateSync } from "node:zlib";
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import sharp from "sharp";
-import type { PdfDocument, PdfRenderer } from "./pdf-renderer.port";
+import type { PdfDocument, PdfRenderer } from "./pdf-renderer.port.js";
 
 const NAVY = "0.063 0.176 0.314";
 const INK = "0.125 0.176 0.235";

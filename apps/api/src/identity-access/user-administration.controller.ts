@@ -33,19 +33,19 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import { AUTH_ROLES, type AuthenticatedUser } from "./auth.types";
+import { AUTH_ROLES, type AuthenticatedUser } from "./auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "./authorization";
-import { UserAdministrationService } from "./user-administration.service";
+} from "./authorization/index.js";
+import { UserAdministrationService } from "./user-administration.service.js";
 import {
   USER_STATUSES,
   type AdministrativeUser,
   type UserPage,
-} from "./user-administration.types";
+} from "./user-administration.types.js";
 
 const uuidSchema = z.string().uuid();
 const createUserSchema = z

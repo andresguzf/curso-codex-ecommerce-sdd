@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import type { DatabaseTransaction } from "../database/database.service";
-import { invoices, orders, payments } from "../database/schema";
+import type { DatabaseTransaction } from "../database/database.service.js";
+import { invoices, orders, payments } from "../database/schema/index.js";
 
 @Injectable()
 export class OrderSummaryReader {

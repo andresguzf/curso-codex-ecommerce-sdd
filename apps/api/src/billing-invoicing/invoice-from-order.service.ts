@@ -1,13 +1,13 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, eq, ne } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, invoiceLines, invoices, orderItems, orders, payments } from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { assertOrderTransition, InvalidOrderTransitionError } from "../order-management/order.aggregate";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import { InvoiceAggregate, type InvoiceLineSnapshot, type InvoiceSnapshot } from "./invoice.aggregate";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, invoiceLines, invoices, orderItems, orders, payments } from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { assertOrderTransition, InvalidOrderTransitionError } from "../order-management/order.aggregate.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import { InvoiceAggregate, type InvoiceLineSnapshot, type InvoiceSnapshot } from "./invoice.aggregate.js";
 
 function multiplyMoney(unitPrice: string, quantity: number): string {
   const cents = BigInt(unitPrice.replace(".", "")) * BigInt(quantity);

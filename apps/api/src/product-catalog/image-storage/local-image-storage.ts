@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import type { EnvironmentVariables } from "../../config/environment";
+import type { EnvironmentVariables } from "../../config/environment.js";
 import {
   ImageStorage,
   ImageStorageNotFoundError,
@@ -14,9 +14,9 @@ import {
   type StoredImage,
   type StoredImageContent,
   type SupportedImageMimeType,
-} from "./image-storage.port";
-import { detectImageMimeType, extensionFor } from "./image-signature";
-import { readBundledCatalogImage } from "./bundled-catalog-image";
+} from "./image-storage.port.js";
+import { detectImageMimeType, extensionFor } from "./image-signature.js";
+import { readBundledCatalogImage } from "./bundled-catalog-image.js";
 
 const STORAGE_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|png|webp)$/;

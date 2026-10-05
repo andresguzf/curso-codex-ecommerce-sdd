@@ -1,15 +1,15 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries } from "../database/schema/audit";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries } from "../database/schema/audit.js";
 import {
   roleAssignments,
   sessions,
   users,
-} from "../database/schema/identity";
-import type { AuthenticatedUser, SessionUser } from "./auth.types";
+} from "../database/schema/identity.js";
+import type { AuthenticatedUser, SessionUser } from "./auth.types.js";
 
 type LoginUser = AuthenticatedUser &
   Readonly<{

@@ -19,9 +19,9 @@ import type { FastifyReply } from "fastify";
 import {
   ImageStorageNotFoundError,
   ImageStorageValidationError,
-} from "./image-storage.port";
-import { ImageStorageService } from "./image-storage.service";
-import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../../billing-invoicing/company-logo";
+} from "./image-storage.port.js";
+import { ImageStorageService } from "./image-storage.service.js";
+import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../../billing-invoicing/company-logo.js";
 
 @ApiTags("catalog-media")
 @Controller("media/images")

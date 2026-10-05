@@ -1,18 +1,18 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
-import { BillingInvoicingModule } from "./billing-invoicing/billing-invoicing.module";
-import { AuditObservabilityModule } from "./audit-observability/audit-observability.module";
-import { validateEnvironment } from "./config/environment";
-import { DatabaseModule } from "./database/database.module";
-import { DocumentExportModule } from "./document-export/document-export.module";
-import { HealthModule } from "./health/health.module";
-import { DashboardModule } from "./dashboard/dashboard.module";
-import { AuthModule } from "./identity-access/auth.module";
-import { InventoryControlModule } from "./inventory-control/inventory-control.module";
-import { ProductCatalogModule } from "./product-catalog/product-catalog.module";
-import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-cart-checkout.module";
-import { InternalJobsModule } from "./internal-jobs/internal-jobs.controller";
+import { BillingInvoicingModule } from "./billing-invoicing/billing-invoicing.module.js";
+import { AuditObservabilityModule } from "./audit-observability/audit-observability.module.js";
+import { validateEnvironment } from "./config/environment.js";
+import { DatabaseModule } from "./database/database.module.js";
+import { DocumentExportModule } from "./document-export/document-export.module.js";
+import { HealthModule } from "./health/health.module.js";
+import { DashboardModule } from "./dashboard/dashboard.module.js";
+import { AuthModule } from "./identity-access/auth.module.js";
+import { InventoryControlModule } from "./inventory-control/inventory-control.module.js";
+import { ProductCatalogModule } from "./product-catalog/product-catalog.module.js";
+import { ShoppingCartCheckoutModule } from "./shopping-cart-checkout/shopping-cart-checkout.module.js";
+import { InternalJobsModule } from "./internal-jobs/internal-jobs.controller.js";
 
 @Module({
   imports: [

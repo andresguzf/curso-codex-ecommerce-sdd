@@ -10,13 +10,13 @@ import {
   CartItemNotFoundError,
   CartProductUnavailableError,
   CartRepository,
-} from "./cart.repository";
+} from "./cart.repository.js";
 import type {
   ActiveCart,
   AddCartItem,
   CartClaimResult,
   CartOwner,
-} from "./cart.types";
+} from "./cart.types.js";
 
 @Injectable()
 export class CartService {

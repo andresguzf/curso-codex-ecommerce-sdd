@@ -1,4 +1,4 @@
-import { CatalogImageDto } from "./catalog-image.dto";
+import { CatalogImageDto } from "./catalog-image.dto.js";
 import {
   BadRequestException,
   Controller,
@@ -28,8 +28,8 @@ import { z } from "zod";
 import {
   type AuthenticatedRequest,
   OptionalAuthenticationGuard,
-} from "../identity-access/authorization";
-import { ProductAdministrationService } from "./product-administration.service";
+} from "../identity-access/authorization/index.js";
+import { ProductAdministrationService } from "./product-administration.service.js";
 import {
   PRODUCT_AVAILABILITIES,
   PRODUCT_LIST_VIEWS,
@@ -37,7 +37,7 @@ import {
   PRODUCT_STATUSES,
   type ProductDetail,
   type ProductPage,
-} from "./product-administration.types";
+} from "./product-administration.types.js";
 
 const uuidSchema = z.string().uuid();
 const slugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(220);

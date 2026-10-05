@@ -1,26 +1,26 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import Ajv, { type AnySchema } from "ajv";
-import addFormats from "ajv-formats";
+import { Ajv, type AnySchema } from "ajv";
+import formatsModule from "ajv-formats";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { configureApplication } from "../../src/application";
-import { DatabaseService } from "../../src/database/database.service";
-import { inventoryBalances, invoices, orders, payments, roleAssignments, sessions, users } from "../../src/database/schema";
-import { AuthTokenService } from "../../src/identity-access/auth-token.service";
-import type { AuthRole, AuthenticatedUser } from "../../src/identity-access/auth.types";
-import { IdentitySummaryReader } from "../../src/identity-access/identity-summary.reader";
-import { CatalogSummaryReader } from "../../src/product-catalog/catalog-summary.reader";
-import { InventorySummaryReader } from "../../src/inventory-control/inventory-summary.reader";
-import { DashboardSummaryService } from "../../src/dashboard/dashboard-summary.service";
+import { configureApplication } from "../../src/application.js";
+import { DatabaseService } from "../../src/database/database.service.js";
+import { inventoryBalances, invoices, orders, payments, roleAssignments, sessions, users } from "../../src/database/schema/index.js";
+import { AuthTokenService } from "../../src/identity-access/auth-token.service.js";
+import type { AuthRole, AuthenticatedUser } from "../../src/identity-access/auth.types.js";
+import { IdentitySummaryReader } from "../../src/identity-access/identity-summary.reader.js";
+import { CatalogSummaryReader } from "../../src/product-catalog/catalog-summary.reader.js";
+import { InventorySummaryReader } from "../../src/inventory-control/inventory-summary.reader.js";
+import { DashboardSummaryService } from "../../src/dashboard/dashboard-summary.service.js";
 
 const sourceUrl = process.env.DATABASE_URL;
 if (!sourceUrl) throw new Error("DATABASE_URL is required for dashboard integration tests");
@@ -85,7 +85,7 @@ describe("dashboard summary HTTP, PostgreSQL and published contract", () => {
       AUTH_ACCESS_TOKEN_TTL_SECONDS: "900", AUTH_REFRESH_TOKEN_TTL_SECONDS: "3600",
       AUTH_COOKIE_SECURE: "false", CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3002",
     });
-    const { AppModule } = await import("../../src/app.module");
+    const { AppModule } = await import("../../src/app.module.js");
     app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
     configureApplication(app);
     await app.init();
@@ -113,7 +113,7 @@ describe("dashboard summary HTTP, PostgreSQL and published contract", () => {
     expect(operation.responses).toHaveProperty("401");
     expect(operation.responses).toHaveProperty("403");
     const ajv = new Ajv({ strict: false });
-    addFormats(ajv);
+    formatsModule.default(ajv);
     validateContract = ajv.compile(operation.responses["200"]!.content["application/json"]!.schema);
   }, 30_000);
 

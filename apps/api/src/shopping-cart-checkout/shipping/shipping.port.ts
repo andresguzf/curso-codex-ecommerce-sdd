@@ -43,4 +43,4 @@ export class UnsupportedShippingMethodError extends Error {
     this.name = "UnsupportedShippingMethodError";
   }
 }
-import type { SystemCurrency } from "../../shared/system-currency";
+import type { SystemCurrency } from "../../shared/system-currency.js";

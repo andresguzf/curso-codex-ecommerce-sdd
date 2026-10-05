@@ -14,9 +14,9 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { products } from "./catalog";
-import { orders } from "./commerce";
-import { users } from "./identity";
+import { products } from "./catalog.js";
+import { orders } from "./commerce.js";
+import { users } from "./identity.js";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 

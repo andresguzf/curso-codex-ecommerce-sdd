@@ -7,14 +7,14 @@ import {
   storeProfiles,
   users,
   type NewUser,
-} from "../schema";
-import * as schema from "../schema";
-import { seedCatalog } from "./catalog-seed";
-import { getDevelopmentProductImageManifest } from "./product-image-manifest";
-import { hashSeedPassword, seedPasswordNeedsRehash, verifySeedPassword } from "./password";
-import { validateSeedAccounts, type SeedAccount } from "./seed-config";
+} from "../schema/index.js";
+import * as schema from "../schema/index.js";
+import { seedCatalog } from "./catalog-seed.js";
+import { getDevelopmentProductImageManifest } from "./product-image-manifest.js";
+import { hashSeedPassword, seedPasswordNeedsRehash, verifySeedPassword } from "./password.js";
+import { validateSeedAccounts, type SeedAccount } from "./seed-config.js";
 
-export type { SeedAccount } from "./seed-config";
+export type { SeedAccount } from "./seed-config.js";
 
 type SeedEnvironment = "development" | "test" | "production";
 type SeedRole = SeedAccount["role"];

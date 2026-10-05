@@ -4,20 +4,20 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import Ajv, { type AnySchema } from "ajv";
-import addFormats from "ajv-formats";
+import { Ajv, type AnySchema } from "ajv";
+import formatsModule from "ajv-formats";
 import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { configureApplication } from "../../src/application";
-import { DatabaseService, type DatabaseTransaction } from "../../src/database/database.service";
-import { categories, inventoryBalances, productImages, productTags, products, roleAssignments, sessions, tags, users } from "../../src/database/schema";
-import { AuthTokenService } from "../../src/identity-access/auth-token.service";
-import { ProductAdministrationRepository } from "../../src/product-catalog/product-administration.repository";
-import { insertProductFixtures } from "../product-fixtures";
+import { configureApplication } from "../../src/application.js";
+import { DatabaseService, type DatabaseTransaction } from "../../src/database/database.service.js";
+import { categories, inventoryBalances, productImages, productTags, products, roleAssignments, sessions, tags, users } from "../../src/database/schema/index.js";
+import { AuthTokenService } from "../../src/identity-access/auth-token.service.js";
+import { ProductAdministrationRepository } from "../../src/product-catalog/product-administration.repository.js";
+import { insertProductFixtures } from "../product-fixtures.js";
 
 const sourceUrl = process.env.DATABASE_URL;
 if (!sourceUrl) throw new Error("DATABASE_URL is required for landing integration tests");
@@ -71,7 +71,7 @@ describe("fixed public landing composition", () => {
     await maintenance.query(`create database "${databaseName}" template template0`);
     created = true;
     Object.assign(process.env, { NODE_ENV: "test", DATABASE_URL: isolatedUrl.toString(), AUTH_ACCESS_TOKEN_SECRET: "landing-test-secret-at-least-32-characters", AUTH_ACCESS_TOKEN_TTL_SECONDS: "900", AUTH_REFRESH_TOKEN_TTL_SECONDS: "3600" });
-    const { AppModule } = await import("../../src/app.module");
+    const { AppModule } = await import("../../src/app.module.js");
     app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
     configureApplication(app);
     await app.init();
@@ -95,7 +95,7 @@ describe("fixed public landing composition", () => {
     expect(operation.parameters ?? []).toEqual([]);
     expect(operation.security ?? []).toEqual([]);
     const ajv = new Ajv({ strict: false });
-    addFormats(ajv);
+    formatsModule.default(ajv);
     const schemaId = "urn:technology-ecommerce:landing-contract";
     const schema = JSON.parse(JSON.stringify(operation.responses["200"].content["application/json"].schema).replaceAll('"#/', `"${schemaId}#/`)) as AnySchema;
     ajv.addSchema(JSON.parse(JSON.stringify({ $id: schemaId, components: document.components }).replaceAll('"#/', `"${schemaId}#/`)));

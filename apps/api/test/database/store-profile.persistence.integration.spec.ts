@@ -7,8 +7,8 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as schema from "../../src/database/schema";
-import { storeProfiles } from "../../src/database/schema";
+import * as schema from "../../src/database/schema/index.js";
+import { storeProfiles } from "../../src/database/schema/index.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for store profile persistence tests");

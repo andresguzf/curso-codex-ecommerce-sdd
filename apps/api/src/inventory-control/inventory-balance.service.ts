@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { InventoryBalanceRepository } from "./inventory-balance.repository";
-import type { InventoryBalancePage, InventoryBalanceQuery } from "./inventory-balance.types";
+import { InventoryBalanceRepository } from "./inventory-balance.repository.js";
+import type { InventoryBalancePage, InventoryBalanceQuery } from "./inventory-balance.types.js";
 
 @Injectable()
 export class InventoryBalanceService {

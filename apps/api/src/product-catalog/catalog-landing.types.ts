@@ -1,4 +1,4 @@
-import type { ProductClassificationSummary, ProductListItem } from "./product-administration.types";
+import type { ProductClassificationSummary, ProductListItem } from "./product-administration.types.js";
 
 export type LandingProduct = Omit<ProductListItem, "isFeatured" | "featuredAt">;
 export type CatalogLanding = Readonly<{

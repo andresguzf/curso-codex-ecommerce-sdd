@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -15,13 +15,13 @@ import {
   users,
   wishlistItems,
   wishlists,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
 import {
   WishlistProductUnavailableError,
   WishlistRepository,
   type WishlistListQuery,
-} from "../../src/product-catalog/wishlist.repository";
+} from "../../src/product-catalog/wishlist.repository.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for wishlist persistence tests");

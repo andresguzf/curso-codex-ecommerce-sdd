@@ -2,10 +2,10 @@ import type { INestApplication } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { FastifyInstance } from "fastify";
 
-import { configureObservability } from "./audit-observability/configure-observability";
-import { configureOpenApi } from "./openapi/openapi";
-import { configureHttpSecurity } from "./security/http-security";
-import type { EnvironmentVariables } from "./config/environment";
+import { configureObservability } from "./audit-observability/configure-observability.js";
+import { configureOpenApi } from "./openapi/openapi.js";
+import { configureHttpSecurity } from "./security/http-security.js";
+import type { EnvironmentVariables } from "./config/environment.js";
 
 export const API_PREFIX = "api/v1";
 

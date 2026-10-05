@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import type { DatabaseTransaction } from "../database/database.service";
-import { auditEntries, orderItems, orders } from "../database/schema";
-import { OrderAggregate, type OrderCommercialSnapshot } from "./order.aggregate";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import type { DatabaseTransaction } from "../database/database.service.js";
+import { auditEntries, orderItems, orders } from "../database/schema/index.js";
+import { OrderAggregate, type OrderCommercialSnapshot } from "./order.aggregate.js";
 
 @Injectable()
 export class OrderService {

@@ -2,14 +2,14 @@ import { BadRequestException, ConflictException, ForbiddenException, Inject, Inj
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, invoices, orders } from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { InventoryStockService } from "../inventory-control/inventory-stock.service";
-import { InventoryStockOverflowError } from "../inventory-control/inventory-stock.repository";
-import { summaryColumns } from "./customer-orders.service";
-import { assertOrderTransition, InvalidOrderTransitionError } from "./order.aggregate";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, invoices, orders } from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { InventoryStockService } from "../inventory-control/inventory-stock.service.js";
+import { InventoryStockOverflowError } from "../inventory-control/inventory-stock.repository.js";
+import { summaryColumns } from "./customer-orders.service.js";
+import { assertOrderTransition, InvalidOrderTransitionError } from "./order.aggregate.js";
 
 export const cancellationRequestSchema = z.object({ reason: z.string().trim().min(1).max(500) }).strict();
 

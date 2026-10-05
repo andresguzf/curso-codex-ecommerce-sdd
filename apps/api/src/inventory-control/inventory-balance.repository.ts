@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or, sql } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
-import { inventoryBalances, products } from "../database/schema";
-import type { InventoryBalancePage, InventoryBalanceQuery } from "./inventory-balance.types";
+import { DatabaseService } from "../database/database.service.js";
+import { inventoryBalances, products } from "../database/schema/index.js";
+import type { InventoryBalancePage, InventoryBalanceQuery } from "./inventory-balance.types.js";
 
 const availableQuantity = sql<number>`coalesce(${inventoryBalances.availableQuantity}, 0)`.mapWith(Number);
 

@@ -6,8 +6,8 @@ import type { FastifyInstance } from "fastify";
 import {
   getRequestCorrelationId,
   resolveCorrelationId,
-} from "../audit-observability/request-context";
-import type { EnvironmentVariables } from "../config/environment";
+} from "../audit-observability/request-context.js";
+import type { EnvironmentVariables } from "../config/environment.js";
 
 const ORIGIN_FORBIDDEN_RESPONSE = {
   code: "ORIGIN_FORBIDDEN",

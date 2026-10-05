@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 
 // Only this historical asset was authorized for immutable deployment delivery.
 export const BUNDLED_CATALOG_KEY = "a1bad9a3-59e8-491c-a0cd-ffa76c3ec8ef.png";
@@ -8,7 +7,9 @@ export const BUNDLED_CATALOG_SHA256 = "b9d0f53fc42fa0a81b27259c832a1b23a0d81ebf5
 
 export async function readBundledCatalogImage(key: string): Promise<Buffer | undefined> {
   if (key !== BUNDLED_CATALOG_KEY) return undefined;
-  const data = await readFile(join(__dirname, "bundled-assets", BUNDLED_CATALOG_KEY));
+  const data = await readFile(new URL(
+    "./bundled-assets/a1bad9a3-59e8-491c-a0cd-ffa76c3ec8ef.png", import.meta.url,
+  ));
   if (createHash("sha256").update(data).digest("hex") !== BUNDLED_CATALOG_SHA256) {
     throw new Error("Bundled catalog image integrity check failed");
   }

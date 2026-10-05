@@ -33,21 +33,21 @@ import { z } from "zod";
 import {
   AuthenticationGuard,
   CurrentUser,
-} from "./authorization";
+} from "./authorization/index.js";
 import {
   AuthCookieService,
   CSRF_TOKEN_HEADER,
   REFRESH_TOKEN_COOKIE,
-} from "./auth-cookie.service";
-import { AuthService } from "./auth.service";
+} from "./auth-cookie.service.js";
+import { AuthService } from "./auth.service.js";
 import {
   AUTH_ROLES,
   type AuthenticatedUser,
   type AuthSession,
   type PublicAuthSession,
-} from "./auth.types";
-import { AuthenticationRateLimitError } from "./authentication-attempt-limiter.service";
-import { CsrfGuard } from "./csrf.guard";
+} from "./auth.types.js";
+import { AuthenticationRateLimitError } from "./authentication-attempt-limiter.service.js";
+import { CsrfGuard } from "./csrf.guard.js";
 
 const loginRequestSchema = z.object({
   email: z.string().trim().email().max(320),

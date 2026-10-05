@@ -21,23 +21,23 @@ import {
   it,
 } from "vitest";
 
-import { configureApplication } from "../../src/application";
+import { configureApplication } from "../../src/application.js";
 import {
   auditEntries,
   roleAssignments,
   sessions,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
 import {
   hashPassword,
   verifyPassword,
-} from "../../src/identity-access/password/password";
+} from "../../src/identity-access/password/password.js";
 import {
   CSRF_TOKEN_COOKIE,
   CSRF_TOKEN_HEADER,
   REFRESH_TOKEN_COOKIE,
-} from "../../src/identity-access/auth-cookie.service";
+} from "../../src/identity-access/auth-cookie.service.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -195,8 +195,8 @@ describe("authentication sessions", () => {
       "https://storefront.example.com,https://backoffice.example.com";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
 
     app = await NestFactory.create<NestFastifyApplication>(

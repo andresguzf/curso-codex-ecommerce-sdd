@@ -1,7 +1,9 @@
 # Vercel Hobby — tres aplicaciones, misma Supabase y Cloudinary
 
-Preparación 25.2 del curso. **No se ha publicado ni cambiado la conexión local.**
-La publicación/corte corresponde a 25.3; pruebas con dominios finales, a 25.4.
+Preparación 25.2 y despliegue parcial 25.3 del curso. El proyecto API ya tiene
+dominio; la corrección de runtime ESM requiere verificar el nuevo despliegue.
+No se ha cambiado la conexión local. El corte y los otros dos proyectos siguen
+pendientes en 25.3; pruebas con dominios finales, a 25.4.
 
 ## Proyectos
 
@@ -19,6 +21,16 @@ Seleccionar Node.js **22.x**. Cada `vercel.json` fija instalación con
 `pnpm install --frozen-lockfile` y build `pnpm build`; no indicar Output Directory
 manual ni crear otro backend. El API conserva `src/main.ts` y soporte nativo
 [NestJS](https://vercel.com/docs/frameworks/backend/nestjs).
+
+El API usa ESM nativo: `type: module` en su package.json y TypeScript
+`module/moduleResolution: NodeNext`. Los imports relativos de TypeScript llevan
+`.js` (o `/index.js`) para resolver el código compilado. No convertir el entrypoint
+a CommonJS ni confiar en `require(ESM)`: `@nestjs/config` 12 es ESM y el runtime
+de Vercel rechazó su carga con `ERR_REQUIRE_ESM`, incluso tras seleccionar 22.x.
+Los paquetes externos y los contratos REST no cambian. La prueba
+`test/deployment/esm-runtime.spec.ts` compila y arranca HTTP sin base de datos,
+con `require(ESM)` deshabilitado; consulta evidencia parcial en
+[VALIDATION-25.3.md](VALIDATION-25.3.md).
 
 No añadir `functions["src/main.ts"]`: la validación de CLI 62.1.0 lo rechaza
 con `unmatched-function-pattern` antes de compilar NestJS. Mantener Root Directory

@@ -7,12 +7,12 @@ import {
 } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { sanitizeAuditChanges } from "./audit-entry";
+import { sanitizeAuditChanges } from "./audit-entry.js";
 import {
   CORRELATION_ID_HEADER,
   getRequestCorrelationId,
   resolveCorrelationId,
-} from "./request-context";
+} from "./request-context.js";
 
 const FALLBACK_ERRORS: Readonly<Record<number, readonly [string, string]>> = {
   [HttpStatus.BAD_REQUEST]: ["BAD_REQUEST", "The request is invalid"],

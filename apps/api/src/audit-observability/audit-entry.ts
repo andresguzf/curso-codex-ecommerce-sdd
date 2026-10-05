@@ -1,5 +1,5 @@
-import type { NewAuditEntry } from "../database/schema";
-import { getCorrelationId } from "./request-context";
+import type { NewAuditEntry } from "../database/schema/index.js";
+import { getCorrelationId } from "./request-context.js";
 
 const SENSITIVE_KEY_PARTS = [
   "apikey",

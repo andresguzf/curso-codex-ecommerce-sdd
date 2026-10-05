@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -15,14 +15,14 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { configureApplication } from "../../src/application";
+import { configureApplication } from "../../src/application.js";
 import {
   auditEntries,
   roleAssignments,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { hashPassword } from "../../src/identity-access/password/password";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -123,8 +123,8 @@ describe("administrative user lifecycle", () => {
     process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS = "3600";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
 
     app = await NestFactory.create<NestFastifyApplication>(

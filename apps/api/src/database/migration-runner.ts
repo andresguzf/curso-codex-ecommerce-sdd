@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./connection-options";
-import { protectSupabaseApplicationAccess } from "./supabase-data-access";
+import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./connection-options.js";
+import { protectSupabaseApplicationAccess } from "./supabase-data-access.js";
 
 const MIGRATION_LOCK_ID = "84110420260211";
 

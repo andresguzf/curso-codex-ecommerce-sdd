@@ -5,7 +5,7 @@ import {
   InvalidInvoiceTransitionError,
   invoiceNumberFor,
   type InvoiceCommercialSnapshot,
-} from "./invoice.aggregate";
+} from "./invoice.aggregate.js";
 
 const createdAt = new Date("2026-09-10T12:00:00.000Z");
 const issuedAt = new Date("2026-09-10T13:00:00.000Z");

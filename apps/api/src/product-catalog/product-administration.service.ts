@@ -8,9 +8,9 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { ProductAdministrationRepository, ProductCategoryRequiredError, ProductClassificationUnavailableError, ProductTagInactiveError, ProductTagLimitExceededError, ProductTagNameInvalidError } from "./product-administration.repository";
-import { normalizeSlug } from "./slug";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { ProductAdministrationRepository, ProductCategoryRequiredError, ProductClassificationUnavailableError, ProductTagInactiveError, ProductTagLimitExceededError, ProductTagNameInvalidError } from "./product-administration.repository.js";
+import { normalizeSlug } from "./slug.js";
 import type {
   AdministrativeProduct,
   CreateAdministrativeProduct,
@@ -20,7 +20,7 @@ import type {
   ProductPage,
   ProductStatus,
   UpdateAdministrativeProduct,
-} from "./product-administration.types";
+} from "./product-administration.types.js";
 
 @Injectable()
 export class ProductAdministrationService {

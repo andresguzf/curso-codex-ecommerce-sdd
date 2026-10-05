@@ -7,17 +7,17 @@ import {
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AuditObservabilityModule } from "../../src/audit-observability/audit-observability.module";
-import { ApiMetricsService } from "../../src/audit-observability/api-metrics.service";
+import { AuditObservabilityModule } from "../../src/audit-observability/audit-observability.module.js";
+import { ApiMetricsService } from "../../src/audit-observability/api-metrics.service.js";
 import {
   configureObservability,
   safeHttpPath,
-} from "../../src/audit-observability/configure-observability";
+} from "../../src/audit-observability/configure-observability.js";
 import {
   type HttpCompletionLog,
   serializeHttpCompletionLog,
   StructuredLoggerService,
-} from "../../src/audit-observability/structured-logger.service";
+} from "../../src/audit-observability/structured-logger.service.js";
 
 class ObservabilityTestController {
   authProbe(): { status: "ok" } {

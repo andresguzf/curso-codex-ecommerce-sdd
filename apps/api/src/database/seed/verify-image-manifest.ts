@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { getDevelopmentProductImageManifest } from "./product-image-manifest";
+import { getDevelopmentProductImageManifest } from "./product-image-manifest.js";
 
 async function verify(): Promise<void> {
   // Explicit opt-in, fail closed before the first network request. No database

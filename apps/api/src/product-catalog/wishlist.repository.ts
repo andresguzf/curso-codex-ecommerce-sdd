@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image.js";
 import { and, asc, count, desc, eq, gt, ilike, isNull, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
-import { inventoryBalances, productImages, products, wishlistItems, wishlists } from "../database/schema";
+import { DatabaseService } from "../database/database.service.js";
+import { inventoryBalances, productImages, products, wishlistItems, wishlists } from "../database/schema/index.js";
 
 export class WishlistProductUnavailableError extends Error {}
 

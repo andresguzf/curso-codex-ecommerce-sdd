@@ -1,13 +1,13 @@
 import { BadGatewayException, BadRequestException, GatewayTimeoutException, Inject, Injectable, Logger, PayloadTooLargeException, ServiceUnavailableException } from "@nestjs/common";
 import sharp from "sharp";
 
-import { ImageStorageValidationError } from "./image-storage/image-storage.port";
-import { CatalogImageStorageService } from "./image-storage/catalog-image-storage.service";
-import { ProductImagesRepository, type ImagePatch } from "./product-images.repository";
-import { CloudinaryStorageError } from "./image-storage/cloudinary-image-storage";
-import { catalogAssetProvider } from "./image-storage/catalog-asset-key";
-import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
-import { CatalogImageRecoveryService } from "./image-storage/catalog-image-recovery.service";
+import { ImageStorageValidationError } from "./image-storage/image-storage.port.js";
+import { CatalogImageStorageService } from "./image-storage/catalog-image-storage.service.js";
+import { ProductImagesRepository, type ImagePatch } from "./product-images.repository.js";
+import { CloudinaryStorageError } from "./image-storage/cloudinary-image-storage.js";
+import { catalogAssetProvider } from "./image-storage/catalog-asset-key.js";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image.js";
+import { CatalogImageRecoveryService } from "./image-storage/catalog-image-recovery.service.js";
 
 @Injectable()
 export class ProductImagesService {

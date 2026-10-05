@@ -4,7 +4,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import jsonwebtoken, { type JwtPayload } from "jsonwebtoken";
 
-import type { EnvironmentVariables } from "../config/environment";
+import type { EnvironmentVariables } from "../config/environment.js";
 
 const ACCESS_TOKEN_ISSUER = "technology-ecommerce-api";
 const ACCESS_TOKEN_AUDIENCE = "technology-ecommerce-frontends";

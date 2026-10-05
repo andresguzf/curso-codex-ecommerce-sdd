@@ -1,12 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { DatabaseTransaction } from "../database/database.service";
-import { InventoryStockRepository } from "./inventory-stock.repository";
+import type { DatabaseTransaction } from "../database/database.service.js";
+import { InventoryStockRepository } from "./inventory-stock.repository.js";
 import type {
   InventoryStockChange,
   InventoryStockItem,
   InventoryStockReference,
-} from "./inventory-stock.types";
+} from "./inventory-stock.types.js";
 
 export function normalizeInventoryStockItems(
   items: readonly InventoryStockItem[],

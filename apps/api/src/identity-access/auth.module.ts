@@ -1,24 +1,24 @@
 import { Module } from "@nestjs/common";
 
-import { AuthController } from "./auth.controller";
-import { IdentitySummaryReader } from "./identity-summary.reader";
-import { AuthCookieService } from "./auth-cookie.service";
-import { AuthRepository } from "./auth.repository";
-import { AuthService } from "./auth.service";
-import { AuthTokenService } from "./auth-token.service";
-import { AuthenticationAttemptLimiter } from "./authentication-attempt-limiter.service";
-import { PasswordService } from "./password/password.service";
-import { CsrfGuard } from "./csrf.guard";
-import { UserAdministrationController } from "./user-administration.controller";
-import { UserAdministrationRepository } from "./user-administration.repository";
-import { UserAdministrationService } from "./user-administration.service";
+import { AuthController } from "./auth.controller.js";
+import { IdentitySummaryReader } from "./identity-summary.reader.js";
+import { AuthCookieService } from "./auth-cookie.service.js";
+import { AuthRepository } from "./auth.repository.js";
+import { AuthService } from "./auth.service.js";
+import { AuthTokenService } from "./auth-token.service.js";
+import { AuthenticationAttemptLimiter } from "./authentication-attempt-limiter.service.js";
+import { PasswordService } from "./password/password.service.js";
+import { CsrfGuard } from "./csrf.guard.js";
+import { UserAdministrationController } from "./user-administration.controller.js";
+import { UserAdministrationRepository } from "./user-administration.repository.js";
+import { UserAdministrationService } from "./user-administration.service.js";
 import {
   AuthenticationGuard,
   OptionalAuthenticationGuard,
   OwnershipGuard,
   ResourceOwnershipService,
   RolesGuard,
-} from "./authorization";
+} from "./authorization/index.js";
 
 const authorizationProviders = [
   AuthenticationGuard,

@@ -5,10 +5,10 @@ import { ConfigService } from "@nestjs/config";
 import type { ExecutionContext } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 
-import { assertDeploymentRuntime } from "../../src/config/deployment-runtime";
-import { validateEnvironment } from "../../src/config/environment";
-import { AuthCookieService } from "../../src/identity-access/auth-cookie.service";
-import { CsrfGuard } from "../../src/identity-access/csrf.guard";
+import { assertDeploymentRuntime } from "../../src/config/deployment-runtime.js";
+import { validateEnvironment } from "../../src/config/environment.js";
+import { AuthCookieService } from "../../src/identity-access/auth-cookie.service.js";
+import { CsrfGuard } from "../../src/identity-access/csrf.guard.js";
 
 afterEach(() => vi.unstubAllEnvs());
 

@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { users } from "./identity";
+import { users } from "./identity.js";
 
 export const auditEntries = pgTable(
   "audit_entries",

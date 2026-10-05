@@ -5,18 +5,18 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
-import type { AuthRole } from "./auth.types";
-import { PasswordService } from "./password/password.service";
+import type { AuthRole } from "./auth.types.js";
+import { PasswordService } from "./password/password.service.js";
 import {
   LastActiveAdministratorError,
   UserAdministrationRepository,
-} from "./user-administration.repository";
+} from "./user-administration.repository.js";
 import type {
   AdministrativeUser,
   UserListQuery,
   UserPage,
   UserStatus,
-} from "./user-administration.types";
+} from "./user-administration.types.js";
 
 @Injectable()
 export class UserAdministrationService {

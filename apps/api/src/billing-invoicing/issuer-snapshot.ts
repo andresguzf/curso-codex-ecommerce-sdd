@@ -1,9 +1,9 @@
 import { ConflictException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 
-import type { DatabaseTransaction } from "../database/database.service";
-import { storeProfiles, type StoreProfile } from "../database/schema";
-import { companyLogoReference } from "./company-logo";
+import type { DatabaseTransaction } from "../database/database.service.js";
+import { storeProfiles, type StoreProfile } from "../database/schema/index.js";
+import { companyLogoReference } from "./company-logo.js";
 
 export type IssuerSnapshot = Readonly<{
   tradeName: string;

@@ -4,8 +4,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { EnvironmentVariables } from "../config/environment";
-import type { CartOwner } from "./cart.types";
+import type { EnvironmentVariables } from "../config/environment.js";
+import type { CartOwner } from "./cart.types.js";
 
 export const ANONYMOUS_CART_COOKIE = "technology_ecommerce_cart";
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;

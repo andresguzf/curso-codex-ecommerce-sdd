@@ -1,7 +1,7 @@
 import { UnauthorizedException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-import type { AuthenticatedUser } from "../auth.types";
+import type { AuthenticatedUser } from "../auth.types.js";
 
 export type AuthenticatedRequest = FastifyRequest & {
   authUser?: AuthenticatedUser;

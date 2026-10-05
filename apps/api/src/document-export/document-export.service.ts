@@ -2,13 +2,13 @@ import { createHash } from "node:crypto";
 
 import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
 
-import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate";
-import type { OrderSnapshot } from "../order-management/order.aggregate";
-import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
-import { ImageStorageNotFoundError, ImageStorageValidationError } from "../product-catalog/image-storage/image-storage.port";
-import { invoiceDocumentTemplate, orderDocumentTemplate } from "./document-templates";
-import { PDF_RENDERER, type PdfRenderer } from "./pdf-renderer.port";
-import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../billing-invoicing/company-logo";
+import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate.js";
+import type { OrderSnapshot } from "../order-management/order.aggregate.js";
+import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service.js";
+import { ImageStorageNotFoundError, ImageStorageValidationError } from "../product-catalog/image-storage/image-storage.port.js";
+import { invoiceDocumentTemplate, orderDocumentTemplate } from "./document-templates.js";
+import { PDF_RENDERER, type PdfRenderer } from "./pdf-renderer.port.js";
+import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../billing-invoicing/company-logo.js";
 
 @Injectable()
 export class DocumentExportService {

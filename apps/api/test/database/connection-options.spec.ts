@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { databaseConnectionOptions } from "../../src/database/connection-options";
-import { validateEnvironment } from "../../src/config/environment";
+import { databaseConnectionOptions } from "../../src/database/connection-options.js";
+import { validateEnvironment } from "../../src/config/environment.js";
 
 const remote = "postgresql://postgres:private-password@db.course.supabase.co:5432/postgres";
 

@@ -1,5 +1,5 @@
-import { CATALOG_IMAGE_FOLDER } from "../../config/environment";
-import { ImageStorageValidationError } from "./image-storage.port";
+import { CATALOG_IMAGE_FOLDER } from "../../config/environment.js";
+import { ImageStorageValidationError } from "./image-storage.port.js";
 
 export const UPLOAD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const LOCAL_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/;

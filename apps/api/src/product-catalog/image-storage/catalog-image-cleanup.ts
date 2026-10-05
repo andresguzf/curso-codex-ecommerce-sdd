@@ -1,6 +1,6 @@
-import type { DatabaseTransaction } from "../../database/database.service";
-import { catalogImageOperations } from "../../database/schema";
-import { catalogAssetProvider, parseCloudinaryAssetKey } from "./catalog-asset-key";
+import type { DatabaseTransaction } from "../../database/database.service.js";
+import { catalogImageOperations } from "../../database/schema/index.js";
+import { catalogAssetProvider, parseCloudinaryAssetKey } from "./catalog-asset-key.js";
 
 export async function enqueueCloudImageCleanup(tx: DatabaseTransaction, storageKey: string): Promise<void> {
   if (catalogAssetProvider(storageKey) !== "cloudinary") return;

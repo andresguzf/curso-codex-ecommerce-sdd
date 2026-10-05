@@ -5,14 +5,14 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { DocumentExportService } from "../document-export/document-export.service";
-import type { OrderSnapshot } from "./order.aggregate";
-import { ORDER_STATUSES, type OrderStatus } from "./order.aggregate";
-import { CustomerOrdersService } from "./customer-orders.service";
-import { OrderAdministrationService } from "./order-administration.service";
-import { OrderCancellationService } from "./order-cancellation.service";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { DocumentExportService } from "../document-export/document-export.service.js";
+import type { OrderSnapshot } from "./order.aggregate.js";
+import { ORDER_STATUSES, type OrderStatus } from "./order.aggregate.js";
+import { CustomerOrdersService } from "./customer-orders.service.js";
+import { OrderAdministrationService } from "./order-administration.service.js";
+import { OrderCancellationService } from "./order-cancellation.service.js";
 
 class CancelOrderRequestDto {
   @ApiProperty({ minLength: 1, maxLength: 500, description: "Required reason; the first successful cancellation preserves its reason and actor" }) reason!: string;

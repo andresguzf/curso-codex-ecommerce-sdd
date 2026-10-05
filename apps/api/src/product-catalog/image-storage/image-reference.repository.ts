@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 
-import { DatabaseService } from "../../database/database.service";
-import { productImages, storeLogoAssets } from "../../database/schema";
+import { DatabaseService } from "../../database/database.service.js";
+import { productImages, storeLogoAssets } from "../../database/schema/index.js";
 
 export abstract class ImageReferenceLookup {
   abstract isReferenced(storageKey: string): Promise<boolean>;

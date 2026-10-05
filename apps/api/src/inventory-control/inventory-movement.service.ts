@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
-import { InventoryMovementRepository } from "./inventory-movement.repository";
-import type { InventoryMovementPage, InventoryMovementQuery } from "./inventory-movement.types";
+import { InventoryMovementRepository } from "./inventory-movement.repository.js";
+import type { InventoryMovementPage, InventoryMovementQuery } from "./inventory-movement.types.js";
 
 @Injectable()
 export class InventoryMovementService {

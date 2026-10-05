@@ -1,7 +1,7 @@
 import {
   ImageStorageValidationError,
   type SupportedImageMimeType,
-} from "./image-storage.port";
+} from "./image-storage.port.js";
 
 const SIGNATURES: ReadonlyArray<
   Readonly<{

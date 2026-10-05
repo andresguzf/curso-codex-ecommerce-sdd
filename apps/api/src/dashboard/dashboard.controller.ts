@@ -1,9 +1,9 @@
 import { Controller, Get, Header, Inject, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiForbiddenResponse, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from "@nestjs/swagger";
 import type { ApiResponseSchemaHost } from "@nestjs/swagger";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { DashboardSummaryService } from "./dashboard-summary.service";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { DashboardSummaryService } from "./dashboard-summary.service.js";
 
 const metric = (description: string) => ({ type: "integer" as const, minimum: 0, description });
 const dateTime = { type: "string" as const, format: "date-time" };

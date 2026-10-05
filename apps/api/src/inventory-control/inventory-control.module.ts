@@ -1,18 +1,18 @@
 import { Module } from "@nestjs/common";
 
-import { AuthModule } from "../identity-access/auth.module";
-import { InventorySummaryReader } from "./inventory-summary.reader";
-import { InventoryAdjustmentController } from "./inventory-adjustment.controller";
-import { InventoryAdjustmentRepository } from "./inventory-adjustment.repository";
-import { InventoryAdjustmentService } from "./inventory-adjustment.service";
-import { InventoryBalanceController } from "./inventory-balance.controller";
-import { InventoryBalanceRepository } from "./inventory-balance.repository";
-import { InventoryBalanceService } from "./inventory-balance.service";
-import { InventoryMovementController } from "./inventory-movement.controller";
-import { InventoryMovementRepository } from "./inventory-movement.repository";
-import { InventoryMovementService } from "./inventory-movement.service";
-import { InventoryStockRepository } from "./inventory-stock.repository";
-import { InventoryStockService } from "./inventory-stock.service";
+import { AuthModule } from "../identity-access/auth.module.js";
+import { InventorySummaryReader } from "./inventory-summary.reader.js";
+import { InventoryAdjustmentController } from "./inventory-adjustment.controller.js";
+import { InventoryAdjustmentRepository } from "./inventory-adjustment.repository.js";
+import { InventoryAdjustmentService } from "./inventory-adjustment.service.js";
+import { InventoryBalanceController } from "./inventory-balance.controller.js";
+import { InventoryBalanceRepository } from "./inventory-balance.repository.js";
+import { InventoryBalanceService } from "./inventory-balance.service.js";
+import { InventoryMovementController } from "./inventory-movement.controller.js";
+import { InventoryMovementRepository } from "./inventory-movement.repository.js";
+import { InventoryMovementService } from "./inventory-movement.service.js";
+import { InventoryStockRepository } from "./inventory-stock.repository.js";
+import { InventoryStockService } from "./inventory-stock.service.js";
 
 @Module({
   controllers: [InventoryAdjustmentController, InventoryBalanceController, InventoryMovementController],

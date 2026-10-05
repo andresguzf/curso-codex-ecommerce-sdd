@@ -11,8 +11,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { products } from "./catalog";
-import { users } from "./identity";
+import { products } from "./catalog.js";
+import { users } from "./identity.js";
 
 export const inventoryMovementType = pgEnum("inventory_movement_type", [
   "OPENING",

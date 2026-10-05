@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, asc, count, desc, eq, gte, ilike, isNull, lte, or } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
-import { inventoryMovements, products, users } from "../database/schema";
-import type { InventoryMovementPage, InventoryMovementQuery } from "./inventory-movement.types";
+import { DatabaseService } from "../database/database.service.js";
+import { inventoryMovements, products, users } from "../database/schema/index.js";
+import type { InventoryMovementPage, InventoryMovementQuery } from "./inventory-movement.types.js";
 
 function escapeLikePattern(value: string): string {
   return `%${value.replace(/[\\%_]/g, "\\$&")}%`;

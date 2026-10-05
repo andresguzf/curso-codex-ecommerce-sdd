@@ -1,9 +1,9 @@
 import "reflect-metadata";
 import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
-import { AppModule } from "../../app.module";
-import { CatalogImageRecoveryService } from "./catalog-image-recovery.service";
-import { UPLOAD_ID_PATTERN } from "./catalog-asset-key";
+import { AppModule } from "../../app.module.js";
+import { CatalogImageRecoveryService } from "./catalog-image-recovery.service.js";
+import { UPLOAD_ID_PATTERN } from "./catalog-asset-key.js";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

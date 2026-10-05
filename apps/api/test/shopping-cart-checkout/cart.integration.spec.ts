@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -24,7 +24,7 @@ import {
   vi,
 } from "vitest";
 
-import { configureApplication } from "../../src/application";
+import { configureApplication } from "../../src/application.js";
 import {
   cartItems,
   auditEntries,
@@ -41,11 +41,11 @@ import {
   roleAssignments,
   storeProfiles,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { hashPassword } from "../../src/identity-access/password/password";
-import { InventoryStockService } from "../../src/inventory-control/inventory-stock.service";
-import { AnonymousCartCleanupService } from "../../src/shopping-cart-checkout/anonymous-cart-cleanup.service";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
+import { InventoryStockService } from "../../src/inventory-control/inventory-stock.service.js";
+import { AnonymousCartCleanupService } from "../../src/shopping-cart-checkout/anonymous-cart-cleanup.service.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -240,8 +240,8 @@ describe("persistent public cart", () => {
     process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS = "3600";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
     app = await NestFactory.create<NestFastifyApplication>(
       AppModule,

@@ -10,9 +10,9 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import type { EnvironmentVariables } from "../config/environment";
-import * as schema from "./schema";
-import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./connection-options";
+import type { EnvironmentVariables } from "../config/environment.js";
+import * as schema from "./schema/index.js";
+import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./connection-options.js";
 
 export type DatabaseTransaction = Parameters<
   Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]

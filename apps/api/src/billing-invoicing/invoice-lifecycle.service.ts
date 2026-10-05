@@ -7,24 +7,24 @@ import {
 } from "@nestjs/common";
 import { asc, eq } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
 import {
   auditEntries,
   invoiceLines,
   invoices,
-} from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+} from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   SYSTEM_CURRENCY,
   type SystemCurrency,
-} from "../shared/system-currency";
+} from "../shared/system-currency.js";
 import {
   InvoiceAggregate,
   InvalidInvoiceTransitionError,
   type InvoiceSnapshot,
   type InvoiceStatus,
-} from "./invoice.aggregate";
+} from "./invoice.aggregate.js";
 
 function restoreCurrency(value: string): SystemCurrency {
   if (value !== SYSTEM_CURRENCY) {

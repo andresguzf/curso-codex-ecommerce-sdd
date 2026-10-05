@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
 import "dotenv/config";
-import Ajv, { type AnySchema } from "ajv";
-import addFormats from "ajv-formats";
+import { Ajv, type AnySchema } from "ajv";
+import formatsModule from "ajv-formats";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
@@ -15,9 +15,9 @@ import { Pool } from "pg";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { DatabaseService } from "../../src/database/database.service";
-import { configureApplication } from "../../src/application";
-import { manualInvoiceRequestSchema } from "../../src/billing-invoicing/manual-invoice.service";
+import { DatabaseService } from "../../src/database/database.service.js";
+import { configureApplication } from "../../src/application.js";
+import { manualInvoiceRequestSchema } from "../../src/billing-invoicing/manual-invoice.service.js";
 
 const OPENAPI_DOCUMENT_ID = "urn:technology-ecommerce:openapi";
 const HTTP_METHODS = ["delete", "get", "patch", "post", "put"] as const;
@@ -128,7 +128,7 @@ function createResponseValidator(
   }
 
   const ajv = new Ajv({ allErrors: true, strict: false });
-  addFormats(ajv);
+  formatsModule.default(ajv);
   ajv.addSchema(
     {
       $id: OPENAPI_DOCUMENT_ID,
@@ -208,7 +208,7 @@ describe("OpenAPI, generated client and runtime response contracts", () => {
       ),
     ]);
 
-    const { AppModule } = await import("../../src/app.module");
+    const { AppModule } = await import("../../src/app.module.js");
     app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
       new FastifyAdapter(),

@@ -3,15 +3,15 @@ import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
-import { DocumentExportService } from "./document-export.service";
-import { SimplePdfAdapter } from "./simple-pdf.adapter";
-import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate";
-import type { OrderSnapshot } from "../order-management/order.aggregate";
-import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
-import type { ImageStorage } from "../product-catalog/image-storage/image-storage.port";
-import type { ImageReferenceLookup } from "../product-catalog/image-storage/image-reference.repository";
-import { CatalogImageStorageRouter } from "../product-catalog/image-storage/catalog-image-storage-router";
-import { ImageStorageNotFoundError } from "../product-catalog/image-storage/image-storage.port";
+import { DocumentExportService } from "./document-export.service.js";
+import { SimplePdfAdapter } from "./simple-pdf.adapter.js";
+import type { InvoiceSnapshot } from "../billing-invoicing/invoice.aggregate.js";
+import type { OrderSnapshot } from "../order-management/order.aggregate.js";
+import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service.js";
+import type { ImageStorage } from "../product-catalog/image-storage/image-storage.port.js";
+import type { ImageReferenceLookup } from "../product-catalog/image-storage/image-reference.repository.js";
+import { CatalogImageStorageRouter } from "../product-catalog/image-storage/catalog-image-storage-router.js";
+import { ImageStorageNotFoundError } from "../product-catalog/image-storage/image-storage.port.js";
 
 const order: OrderSnapshot = {
   id: "16f7d829-e4c8-4a78-a883-4e21b2d8a957",

@@ -5,7 +5,7 @@ import { env } from "node:process";
 import "dotenv/config";
 
 import { defineConfig } from "drizzle-kit";
-import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./src/database/connection-options";
+import { databaseConnectionOptions, DATABASE_TLS_WARNING } from "./src/database/connection-options.js";
 
 const databaseUrl = env.DATABASE_URL;
 

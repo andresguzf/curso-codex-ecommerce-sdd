@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { and, count, eq, isNull } from "drizzle-orm";
-import type { DatabaseTransaction } from "../database/database.service";
-import { roleAssignments, users } from "../database/schema";
+import type { DatabaseTransaction } from "../database/database.service.js";
+import { roleAssignments, users } from "../database/schema/index.js";
 
 @Injectable()
 export class IdentitySummaryReader {

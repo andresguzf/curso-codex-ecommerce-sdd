@@ -1,16 +1,16 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, storeProfiles, type StoreProfile } from "../database/schema";
-import { companyLogoReference } from "./company-logo";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, storeProfiles, type StoreProfile } from "../database/schema/index.js";
+import { companyLogoReference } from "./company-logo.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   storeProfileInputSchema,
   type StoreProfileInput,
   type StoreProfilePatch,
-} from "./store-profile.domain";
+} from "./store-profile.domain.js";
 
 export type StoreProfileResponse = Readonly<{
   id: 1;

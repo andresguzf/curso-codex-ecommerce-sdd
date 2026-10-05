@@ -1,12 +1,12 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import { DatabaseService } from "../database/database.service";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { IdentitySummaryReader } from "../identity-access/identity-summary.reader";
-import { CatalogSummaryReader } from "../product-catalog/catalog-summary.reader";
-import { InventorySummaryReader } from "../inventory-control/inventory-summary.reader";
-import { OrderSummaryReader } from "../order-management/order-summary.reader";
-import { BillingSummaryReader } from "../billing-invoicing/billing-summary.reader";
+import { DatabaseService } from "../database/database.service.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { IdentitySummaryReader } from "../identity-access/identity-summary.reader.js";
+import { CatalogSummaryReader } from "../product-catalog/catalog-summary.reader.js";
+import { InventorySummaryReader } from "../inventory-control/inventory-summary.reader.js";
+import { OrderSummaryReader } from "../order-management/order-summary.reader.js";
+import { BillingSummaryReader } from "../billing-invoicing/billing-summary.reader.js";
 
 @Injectable()
 export class DashboardSummaryService {

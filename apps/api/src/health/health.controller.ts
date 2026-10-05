@@ -1,7 +1,7 @@
 import { Controller, Get, Inject } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
 
-import { DatabaseService } from "../database/database.service";
+import { DatabaseService } from "../database/database.service.js";
 
 class HealthDatabaseResponseDto {
   @ApiProperty({ enum: ["up"], example: "up" })

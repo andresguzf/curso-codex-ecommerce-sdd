@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { COMPANY_LOGO_BYTES, companyLogoReference } from "../billing-invoicing/company-logo";
-import { DocumentExportService } from "./document-export.service";
-import { SimplePdfAdapter } from "./simple-pdf.adapter";
-import type { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
-import type { OrderSnapshot } from "../order-management/order.aggregate";
+import { COMPANY_LOGO_BYTES, companyLogoReference } from "../billing-invoicing/company-logo.js";
+import { DocumentExportService } from "./document-export.service.js";
+import { SimplePdfAdapter } from "./simple-pdf.adapter.js";
+import type { ImageStorageService } from "../product-catalog/image-storage/image-storage.service.js";
+import type { OrderSnapshot } from "../order-management/order.aggregate.js";
 
 describe("structured PDF", () => {
   it("paginates all rows and repeats headers without silently trimming text", async () => {

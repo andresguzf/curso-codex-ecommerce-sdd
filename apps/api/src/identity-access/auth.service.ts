@@ -5,15 +5,15 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 
-import { AuthRepository } from "./auth.repository";
-import { AuthTokenService } from "./auth-token.service";
-import { AuthenticationAttemptLimiter } from "./authentication-attempt-limiter.service";
+import { AuthRepository } from "./auth.repository.js";
+import { AuthTokenService } from "./auth-token.service.js";
+import { AuthenticationAttemptLimiter } from "./authentication-attempt-limiter.service.js";
 import type {
   AuthenticatedUser,
   AuthSession,
   SessionUser,
-} from "./auth.types";
-import { PasswordService } from "./password/password.service";
+} from "./auth.types.js";
+import { PasswordService } from "./password/password.service.js";
 
 type RequestMetadata = Readonly<{
   ipAddress?: string;

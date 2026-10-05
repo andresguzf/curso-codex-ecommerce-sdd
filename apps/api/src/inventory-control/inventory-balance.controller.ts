@@ -11,9 +11,9 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import { AuthenticationGuard, Roles, RolesGuard } from "../identity-access/authorization";
-import { InventoryBalanceService } from "./inventory-balance.service";
-import type { InventoryBalancePage } from "./inventory-balance.types";
+import { AuthenticationGuard, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { InventoryBalanceService } from "./inventory-balance.service.js";
+import type { InventoryBalancePage } from "./inventory-balance.types.js";
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),

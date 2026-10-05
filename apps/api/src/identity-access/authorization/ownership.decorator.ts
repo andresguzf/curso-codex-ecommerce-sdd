@@ -1,6 +1,6 @@
 import { SetMetadata } from "@nestjs/common";
 
-import type { AuthRole } from "../auth.types";
+import type { AuthRole } from "../auth.types.js";
 
 export const OWNERSHIP_METADATA = "identity-access:ownership";
 

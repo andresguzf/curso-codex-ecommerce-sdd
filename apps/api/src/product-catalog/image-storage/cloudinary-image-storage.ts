@@ -4,11 +4,11 @@ import type { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
 import { z } from "zod";
 
-import { CATALOG_IMAGE_FOLDER, type EnvironmentVariables } from "../../config/environment";
-import { cloudinaryAssetKey, parseCloudinaryAssetKey, UPLOAD_ID_PATTERN } from "./catalog-asset-key";
-import { CLOUDINARY_TIMEOUT_MS, CloudinarySdkTransport, type CloudinaryTransport } from "./cloudinary-sdk.transport";
-import { detectImageMimeType } from "./image-signature";
-import { ImageStorage, ImageStorageNotFoundError, ImageStorageValidationError, type ImageUpload, type StoredImage, type StoredImageContent, type SupportedImageMimeType } from "./image-storage.port";
+import { CATALOG_IMAGE_FOLDER, type EnvironmentVariables } from "../../config/environment.js";
+import { cloudinaryAssetKey, parseCloudinaryAssetKey, UPLOAD_ID_PATTERN } from "./catalog-asset-key.js";
+import { CLOUDINARY_TIMEOUT_MS, CloudinarySdkTransport, type CloudinaryTransport } from "./cloudinary-sdk.transport.js";
+import { detectImageMimeType } from "./image-signature.js";
+import { ImageStorage, ImageStorageNotFoundError, ImageStorageValidationError, type ImageUpload, type StoredImage, type StoredImageContent, type SupportedImageMimeType } from "./image-storage.port.js";
 
 export const CATALOG_ASSET_TAG = "technology-ecommerce-catalog";
 const responseSchema = z.object({

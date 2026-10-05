@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { resolve } from "node:path";
 
 import "dotenv/config";
@@ -13,18 +13,18 @@ import {
   InvoiceAggregate,
   type InvoiceCommercialSnapshot,
   type InvoiceSnapshot,
-} from "../../src/billing-invoicing/invoice.aggregate";
-import { InvoiceLifecycleService } from "../../src/billing-invoicing/invoice-lifecycle.service";
-import type { DatabaseService } from "../../src/database/database.service";
+} from "../../src/billing-invoicing/invoice.aggregate.js";
+import { InvoiceLifecycleService } from "../../src/billing-invoicing/invoice-lifecycle.service.js";
+import type { DatabaseService } from "../../src/database/database.service.js";
 import {
   auditEntries,
   invoiceLines,
   invoices,
   products,
   users,
-} from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import type { AuthenticatedUser } from "../../src/identity-access/auth.types";
+} from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import type { AuthenticatedUser } from "../../src/identity-access/auth.types.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

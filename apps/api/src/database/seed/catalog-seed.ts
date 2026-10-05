@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import * as schema from "../schema";
-import { assertProductImageCapacity } from "../../product-catalog/product-image-limit";
-import { getDevelopmentProductImageManifest } from "./product-image-manifest";
+import * as schema from "../schema/index.js";
+import { assertProductImageCapacity } from "../../product-catalog/product-image-limit.js";
+import { getDevelopmentProductImageManifest } from "./product-image-manifest.js";
 
 type Transaction = Parameters<Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]>[0];
 const CLASSIFICATIONS = {

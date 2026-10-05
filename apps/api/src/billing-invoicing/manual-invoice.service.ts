@@ -8,8 +8,8 @@ import {
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
 import {
   auditEntries,
   invoiceLines,
@@ -17,15 +17,15 @@ import {
   products,
   roleAssignments,
   users,
-} from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import { currentIssuerSnapshot } from "./issuer-snapshot";
+} from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import { currentIssuerSnapshot } from "./issuer-snapshot.js";
 import {
   InvoiceAggregate,
   type InvoiceLineSnapshot,
   type InvoiceSnapshot,
-} from "./invoice.aggregate";
+} from "./invoice.aggregate.js";
 
 const moneySchema = z.string().regex(/^\d{1,12}\.\d{2}$/);
 const taxRateSchema = z

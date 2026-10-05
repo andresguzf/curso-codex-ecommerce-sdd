@@ -6,8 +6,8 @@ import {
   type ImageUpload,
   type StoredImage,
   type StoredImageContent,
-} from "./image-storage.port";
-import { ImageReferenceLookup } from "./image-reference.repository";
+} from "./image-storage.port.js";
+import { ImageReferenceLookup } from "./image-reference.repository.js";
 
 @Injectable()
 export class ImageStorageService {

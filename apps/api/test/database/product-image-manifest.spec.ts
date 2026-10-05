@@ -1,7 +1,7 @@
 import { access } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { getDevelopmentProductImageManifest } from "../../src/database/seed/product-image-manifest";
+import { getDevelopmentProductImageManifest } from "../../src/database/seed/product-image-manifest.js";
 
 describe("development product image manifest", () => {
   it("defines twenty stable product associations and sixty ordered images with exactly one cover per product", () => {

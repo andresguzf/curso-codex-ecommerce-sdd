@@ -5,7 +5,7 @@ import type { TLSSocket } from "node:tls";
 import { parse } from "dotenv";
 import { Pool } from "pg";
 
-import { databaseConnectionOptions } from "../../src/database/connection-options";
+import { databaseConnectionOptions } from "../../src/database/connection-options.js";
 
 async function main(): Promise<void> {
   const privateEnvironment = parse(await readFile(resolve(".env.vercel-preflight")));

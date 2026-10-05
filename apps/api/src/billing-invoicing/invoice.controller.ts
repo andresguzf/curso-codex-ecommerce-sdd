@@ -26,22 +26,22 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { DocumentExportService } from "../document-export/document-export.service";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { DocumentExportService } from "../document-export/document-export.service.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
+} from "../identity-access/authorization/index.js";
 import {
   INVOICE_ORIGINS,
   INVOICE_STATUSES,
   type InvoiceStatus,
-} from "./invoice.aggregate";
-import { InvoiceLifecycleService } from "./invoice-lifecycle.service";
-import { InvoiceQueryService } from "./invoice-query.service";
-import { InvoiceResponseDto } from "./invoice-response.dto";
+} from "./invoice.aggregate.js";
+import { InvoiceLifecycleService } from "./invoice-lifecycle.service.js";
+import { InvoiceQueryService } from "./invoice-query.service.js";
+import { InvoiceResponseDto } from "./invoice-response.dto.js";
 
 const querySchema = z
   .object({

@@ -6,10 +6,10 @@ import {
 } from "@nestjs/platform-fastify";
 import "reflect-metadata";
 
-import { AppModule } from "./app.module";
-import { configureApplication } from "./application";
-import type { EnvironmentVariables } from "./config/environment";
-import { assertDeploymentRuntime } from "./config/deployment-runtime";
+import { AppModule } from "./app.module.js";
+import { configureApplication } from "./application.js";
+import type { EnvironmentVariables } from "./config/environment.js";
+import { assertDeploymentRuntime } from "./config/deployment-runtime.js";
 
 async function bootstrap(): Promise<void> {
   assertDeploymentRuntime(process.env);

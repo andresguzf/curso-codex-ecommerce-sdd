@@ -6,7 +6,7 @@ import {
   OrderAggregate,
   type OrderCommercialSnapshot,
   type OrderStatus,
-} from "./order.aggregate";
+} from "./order.aggregate.js";
 
 const now = new Date("2026-09-09T12:00:00.000Z");
 const later = new Date("2026-09-09T13:00:00.000Z");

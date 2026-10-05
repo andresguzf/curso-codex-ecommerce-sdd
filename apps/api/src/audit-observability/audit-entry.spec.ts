@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createAuditEntry, sanitizeAuditChanges } from "./audit-entry";
-import { runWithRequestContext } from "./request-context";
+import { createAuditEntry, sanitizeAuditChanges } from "./audit-entry.js";
+import { runWithRequestContext } from "./request-context.js";
 
 describe("audit entries", () => {
   it("keeps relevant changes and recursively removes credential-shaped fields", () => {

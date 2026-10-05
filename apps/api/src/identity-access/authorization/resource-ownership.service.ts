@@ -1,10 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 
-import { DatabaseService } from "../../database/database.service";
-import { invoices } from "../../database/schema/billing";
-import { carts, orders } from "../../database/schema/commerce";
-import type { OwnedResourceType } from "./ownership.decorator";
+import { DatabaseService } from "../../database/database.service.js";
+import { invoices } from "../../database/schema/billing.js";
+import { carts, orders } from "../../database/schema/commerce.js";
+import type { OwnedResourceType } from "./ownership.decorator.js";
 
 @Injectable()
 export class ResourceOwnershipService {

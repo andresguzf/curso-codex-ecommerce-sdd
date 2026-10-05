@@ -11,21 +11,21 @@ import {
   sql,
 } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries } from "../database/schema/audit";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries } from "../database/schema/audit.js";
 import {
   roleAssignments,
   sessions,
   users,
-} from "../database/schema/identity";
+} from "../database/schema/identity.js";
 import type {
   AdministrativeUser,
   CreateAdministrativeUser,
   UpdateAdministrativeUser,
   UserListQuery,
   UserPage,
-} from "./user-administration.types";
+} from "./user-administration.types.js";
 
 export class LastActiveAdministratorError extends Error {
   constructor() {

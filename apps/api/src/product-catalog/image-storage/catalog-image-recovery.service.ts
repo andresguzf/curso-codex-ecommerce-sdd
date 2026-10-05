@@ -3,12 +3,12 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnModuleD
 import { ConfigService } from "@nestjs/config";
 import { and, eq, inArray, lte } from "drizzle-orm";
 
-import type { EnvironmentVariables } from "../../config/environment";
-import { DatabaseService } from "../../database/database.service";
-import { catalogImageOperations } from "../../database/schema";
-import { CloudinaryImageStorage } from "./cloudinary-image-storage";
-import { ImageReferenceLookup } from "./image-reference.repository";
-import { ImageStorageValidationError, type ImageUpload, type StoredImage } from "./image-storage.port";
+import type { EnvironmentVariables } from "../../config/environment.js";
+import { DatabaseService } from "../../database/database.service.js";
+import { catalogImageOperations } from "../../database/schema/index.js";
+import { CloudinaryImageStorage } from "./cloudinary-image-storage.js";
+import { ImageReferenceLookup } from "./image-reference.repository.js";
+import { ImageStorageValidationError, type ImageUpload, type StoredImage } from "./image-storage.port.js";
 
 export const IMAGE_RECOVERY_MAX_ATTEMPTS = 8;
 export const IMAGE_RECOVERY_GRACE_MS = 120_000;

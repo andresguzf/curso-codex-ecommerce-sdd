@@ -9,9 +9,9 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 
-import { AppModule } from "../app.module";
-import { configureApplication } from "../application";
-import { createOpenApiDocument } from "./openapi";
+import { AppModule } from "../app.module.js";
+import { configureApplication } from "../application.js";
+import { createOpenApiDocument } from "./openapi.js";
 
 const fallbackDatabaseUrl =
   "postgresql://openapi:openapi@127.0.0.1:5432/openapi_generation";

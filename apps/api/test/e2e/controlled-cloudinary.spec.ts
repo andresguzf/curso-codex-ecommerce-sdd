@@ -2,9 +2,9 @@ import { ConfigService } from "@nestjs/config";
 import { v2 } from "cloudinary";
 import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { validateEnvironment, type EnvironmentVariables } from "../../src/config/environment";
-import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
-import { installControlledCloudinary } from "./controlled-cloudinary";
+import { validateEnvironment, type EnvironmentVariables } from "../../src/config/environment.js";
+import { CloudinaryImageStorage } from "../../src/product-catalog/image-storage/cloudinary-image-storage.js";
+import { installControlledCloudinary } from "./controlled-cloudinary.js";
 
 const original = { upload: v2.uploader.upload_stream, resource: v2.api.resource, delete: v2.api.delete_resources_by_asset_ids };
 let bytes: Buffer;

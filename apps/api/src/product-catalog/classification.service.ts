@@ -8,8 +8,8 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { ClassificationRepository } from "./classification.repository";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { ClassificationRepository } from "./classification.repository.js";
 import type {
   CategoryRecord,
   ClassificationInput,
@@ -19,8 +19,8 @@ import type {
   ClassificationQuery,
   ClassificationRecord,
   TagRecord,
-} from "./classification.types";
-import { normalizeSlug, slugCandidate } from "./slug";
+} from "./classification.types.js";
+import { normalizeSlug, slugCandidate } from "./slug.js";
 
 @Injectable()
 export class ClassificationService {

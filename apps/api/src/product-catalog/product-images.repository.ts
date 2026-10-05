@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, eq, isNull } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService, type DatabaseTransaction } from "../database/database.service";
-import { auditEntries, catalogImageOperations, productImages, products, type ProductImage } from "../database/schema";
-import { catalogAssetProvider, parseCloudinaryAssetKey } from "./image-storage/catalog-asset-key";
-import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup";
-import { assertProductImageCapacity } from "./product-image-limit";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService, type DatabaseTransaction } from "../database/database.service.js";
+import { auditEntries, catalogImageOperations, productImages, products, type ProductImage } from "../database/schema/index.js";
+import { catalogAssetProvider, parseCloudinaryAssetKey } from "./image-storage/catalog-asset-key.js";
+import { enqueueCloudImageCleanup } from "./image-storage/catalog-image-cleanup.js";
+import { assertProductImageCapacity } from "./product-image-limit.js";
 
 export type ImagePatch = { altText?: string; isPrimary?: boolean; sortOrder?: number };
 export type ImageAsset = { storageKey: string; url: string; mimeType: string; width: number; height: number };

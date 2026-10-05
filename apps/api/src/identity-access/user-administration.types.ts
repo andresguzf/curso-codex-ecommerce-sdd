@@ -1,4 +1,4 @@
-import type { AuthRole } from "./auth.types";
+import type { AuthRole } from "./auth.types.js";
 
 export const USER_STATUSES = ["ACTIVE", "INACTIVE", "BLOCKED"] as const;
 

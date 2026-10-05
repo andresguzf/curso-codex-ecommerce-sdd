@@ -9,7 +9,7 @@ import {
   type PaymentRequest,
   type PaymentResult,
   UnsupportedPaymentMethodError,
-} from "./payment.port";
+} from "./payment.port.js";
 
 const PAYMENT_OUTCOME_BY_METHOD = {
   SIMULATED_CARD_APPROVED: {

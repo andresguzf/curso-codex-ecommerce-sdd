@@ -11,7 +11,7 @@ import {
   getRequestCorrelationId,
   resolveCorrelationId,
   runWithRequestContext,
-} from "./request-context";
+} from "./request-context.js";
 
 @Injectable()
 export class RequestContextInterceptor implements NestInterceptor {

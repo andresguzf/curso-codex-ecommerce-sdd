@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addMoneyAmounts, calculateCartTotals } from "./cart-totals";
+import { addMoneyAmounts, calculateCartTotals } from "./cart-totals.js";
 
 describe("calculateCartTotals", () => {
   it("uses exact minor-unit arithmetic for line subtotals and the total", () => {

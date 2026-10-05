@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { DatabaseService } from "../database/database.service";
-import { ManualInvoiceService, type ManualInvoiceRequest } from "./manual-invoice.service";
+import type { DatabaseService } from "../database/database.service.js";
+import { ManualInvoiceService, type ManualInvoiceRequest } from "./manual-invoice.service.js";
 
 describe("manual invoice service boundary", () => {
   it("rejects invalid internal requests before starting a transaction", () => {

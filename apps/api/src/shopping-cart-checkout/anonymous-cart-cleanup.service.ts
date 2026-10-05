@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 
-import { CartRepository } from "./cart.repository";
+import { CartRepository } from "./cart.repository.js";
 
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1_000;
 

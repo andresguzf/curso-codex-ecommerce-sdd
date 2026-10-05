@@ -31,20 +31,20 @@ import {
 import { z } from "zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   OptionalAuthenticationGuard,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
+} from "../identity-access/authorization/index.js";
 import {
   ANONYMOUS_CART_COOKIE,
   AnonymousCartCookieService,
-} from "./anonymous-cart-cookie.service";
-import { CartService } from "./cart.service";
-import type { ActiveCart, CartClaimResult, CartOwner } from "./cart.types";
+} from "./anonymous-cart-cookie.service.js";
+import { CartService } from "./cart.service.js";
+import type { ActiveCart, CartClaimResult, CartOwner } from "./cart.types.js";
 
 type OptionalAuthenticatedRequest = FastifyRequest & {
   authUser?: AuthenticatedUser;

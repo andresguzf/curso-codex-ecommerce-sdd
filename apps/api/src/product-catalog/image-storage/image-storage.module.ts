@@ -1,17 +1,17 @@
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { CatalogImageStorageService, createCatalogImageStorageService } from "./catalog-image-storage.service";
+import { CatalogImageStorageService, createCatalogImageStorageService } from "./catalog-image-storage.service.js";
 
-import { ImageMediaController } from "./image-media.controller";
+import { ImageMediaController } from "./image-media.controller.js";
 import {
   ImageReferenceLookup,
   ImageReferenceRepository,
-} from "./image-reference.repository";
-import { ImageStorage } from "./image-storage.port";
-import { ImageStorageService } from "./image-storage.service";
-import { LocalImageStorage } from "./local-image-storage";
-import { CatalogImageRecoveryService } from "./catalog-image-recovery.service";
+} from "./image-reference.repository.js";
+import { ImageStorage } from "./image-storage.port.js";
+import { ImageStorageService } from "./image-storage.service.js";
+import { LocalImageStorage } from "./local-image-storage.js";
+import { CatalogImageRecoveryService } from "./catalog-image-recovery.service.js";
 
 @Module({
   controllers: [ImageMediaController],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CATALOG_IMAGE_FOLDER, validateEnvironment } from "../../src/config/environment";
+import { CATALOG_IMAGE_FOLDER, validateEnvironment } from "../../src/config/environment.js";
 
 const databaseUrl = "postgresql://postgres:password@localhost:5432/ecommerce";
 const productionSecret = "production-test-secret-at-least-32-characters";

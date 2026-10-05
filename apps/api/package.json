@@ -2,6 +2,7 @@
   "name": "@technology-ecommerce/api",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "vercel:preflight": "tsx test/deployment/vercel-preflight.ts",
     "test:cloudinary:live": "tsx test/e2e/cloudinary-live.ts",

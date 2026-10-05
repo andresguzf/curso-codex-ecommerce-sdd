@@ -10,11 +10,11 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { configureApplication } from "../../src/application";
-import { roleAssignments, users } from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER, REFRESH_TOKEN_COOKIE } from "../../src/identity-access/auth-cookie.service";
-import { hashPassword } from "../../src/identity-access/password/password";
+import { configureApplication } from "../../src/application.js";
+import { roleAssignments, users } from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER, REFRESH_TOKEN_COOKIE } from "../../src/identity-access/auth-cookie.service.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for wishlist end-to-end tests");
@@ -143,8 +143,8 @@ describe("wishlist across two customers and sessions over HTTP", () => {
     process.env.CORS_ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3002";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
     app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger: false });
     configureApplication(app);

@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 
-import { INVOICE_ORIGINS, INVOICE_STATUSES, type InvoiceOrigin, type InvoiceStatus } from "./invoice.aggregate";
+import { INVOICE_ORIGINS, INVOICE_STATUSES, type InvoiceOrigin, type InvoiceStatus } from "./invoice.aggregate.js";
 
 export class InvoiceLineResponseDto {
   @ApiProperty({ type: String, format: "uuid", nullable: true }) productId!: string | null;

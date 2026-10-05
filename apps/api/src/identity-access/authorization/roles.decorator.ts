@@ -1,6 +1,6 @@
 import { SetMetadata } from "@nestjs/common";
 
-import type { AuthRole } from "../auth.types";
+import type { AuthRole } from "../auth.types.js";
 
 export const REQUIRED_ROLES_METADATA = "identity-access:required-roles";
 

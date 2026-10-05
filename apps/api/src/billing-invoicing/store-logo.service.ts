@@ -2,12 +2,12 @@ import { createHash } from "node:crypto";
 
 import { BadRequestException, ForbiddenException, Inject, Injectable } from "@nestjs/common";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, storeLogoAssets } from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service";
-import { ImageStorageValidationError } from "../product-catalog/image-storage/image-storage.port";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, storeLogoAssets } from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { ImageStorageService } from "../product-catalog/image-storage/image-storage.service.js";
+import { ImageStorageValidationError } from "../product-catalog/image-storage/image-storage.port.js";
 
 @Injectable()
 export class StoreLogoService {

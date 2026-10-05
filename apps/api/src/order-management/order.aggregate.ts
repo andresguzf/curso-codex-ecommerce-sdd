@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
-import type { IssuerSnapshot } from "../billing-invoicing/issuer-snapshot";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
+import type { IssuerSnapshot } from "../billing-invoicing/issuer-snapshot.js";
 
 export const ORDER_STATUSES = ["PROCESSING", "INVOICED", "COMPLETED", "CANCELLED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];

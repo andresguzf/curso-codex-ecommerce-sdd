@@ -1,5 +1,5 @@
-import { catalogAssetProvider } from "./catalog-asset-key";
-import { ImageStorage, ImageStorageValidationError, type ImageUpload, type StoredImage, type StoredImageContent } from "./image-storage.port";
+import { catalogAssetProvider } from "./catalog-asset-key.js";
+import { ImageStorage, ImageStorageValidationError, type ImageUpload, type StoredImage, type StoredImageContent } from "./image-storage.port.js";
 
 // Upload selection is separate from asset origin; existing references never migrate.
 export class CatalogImageStorageRouter extends ImageStorage {

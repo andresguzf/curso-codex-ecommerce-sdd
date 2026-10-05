@@ -4,7 +4,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { EnvironmentVariables } from "../config/environment";
+import type { EnvironmentVariables } from "../config/environment.js";
 
 export const REFRESH_TOKEN_COOKIE = "technology_ecommerce_refresh";
 export const CSRF_TOKEN_COOKIE = "XSRF-TOKEN";

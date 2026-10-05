@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfigService } from "@nestjs/config";
-import { BUNDLED_CATALOG_KEY, BUNDLED_CATALOG_SHA256, deliveredCatalogImage } from "./bundled-catalog-image";
-import { LocalImageStorage } from "./local-image-storage";
-import type { EnvironmentVariables } from "../../config/environment";
+import { BUNDLED_CATALOG_KEY, BUNDLED_CATALOG_SHA256, deliveredCatalogImage } from "./bundled-catalog-image.js";
+import { LocalImageStorage } from "./local-image-storage.js";
+import type { EnvironmentVariables } from "../../config/environment.js";
 
 describe("authorized read-only catalog asset", () => {
   afterEach(() => vi.unstubAllEnvs());

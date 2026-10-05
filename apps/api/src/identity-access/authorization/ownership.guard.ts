@@ -10,12 +10,12 @@ import { Reflector } from "@nestjs/core";
 import {
   type AuthenticatedRequest,
   requireAuthenticatedUser,
-} from "./authenticated-request";
+} from "./authenticated-request.js";
 import {
   OWNERSHIP_METADATA,
   type OwnershipRequirement,
-} from "./ownership.decorator";
-import { ResourceOwnershipService } from "./resource-ownership.service";
+} from "./ownership.decorator.js";
+import { ResourceOwnershipService } from "./resource-ownership.service.js";
 
 @Injectable()
 export class OwnershipGuard implements CanActivate {

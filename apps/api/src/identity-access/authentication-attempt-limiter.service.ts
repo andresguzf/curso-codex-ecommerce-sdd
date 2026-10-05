@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import type { EnvironmentVariables } from "../config/environment";
+import type { EnvironmentVariables } from "../config/environment.js";
 
 type AttemptBucket = {
   attempts: number;

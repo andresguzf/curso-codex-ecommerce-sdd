@@ -6,12 +6,12 @@ import { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { type EnvironmentVariables, validateEnvironment } from "../../src/config/environment";
-import { catalogAssetProvider, cloudinaryAssetKey, parseCloudinaryAssetKey } from "../../src/product-catalog/image-storage/catalog-asset-key";
-import { CatalogImageStorageRouter } from "../../src/product-catalog/image-storage/catalog-image-storage-router";
-import { CATALOG_ASSET_TAG, CloudinaryImageStorage, CloudinaryStorageError } from "../../src/product-catalog/image-storage/cloudinary-image-storage";
-import type { CloudinaryTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport";
-import { ImageStorage, ImageStorageNotFoundError } from "../../src/product-catalog/image-storage/image-storage.port";
+import { type EnvironmentVariables, validateEnvironment } from "../../src/config/environment.js";
+import { catalogAssetProvider, cloudinaryAssetKey, parseCloudinaryAssetKey } from "../../src/product-catalog/image-storage/catalog-asset-key.js";
+import { CatalogImageStorageRouter } from "../../src/product-catalog/image-storage/catalog-image-storage-router.js";
+import { CATALOG_ASSET_TAG, CloudinaryImageStorage, CloudinaryStorageError } from "../../src/product-catalog/image-storage/cloudinary-image-storage.js";
+import type { CloudinaryTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport.js";
+import { ImageStorage, ImageStorageNotFoundError } from "../../src/product-catalog/image-storage/image-storage.port.js";
 
 const uploadId = "b12bb32a-b99a-44ab-8e70-32d6c2cba001";
 const assetId = "a".repeat(32);

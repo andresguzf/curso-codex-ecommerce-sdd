@@ -3,7 +3,7 @@ import { Writable } from "node:stream";
 import { v2, type UploadApiOptions, type UploadApiResponse, type UploadResponseCallback } from "cloudinary";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CloudinarySdkTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport";
+import { CloudinarySdkTransport } from "../../src/product-catalog/image-storage/cloudinary-sdk.transport.js";
 
 const credentials = { cloud_name: "test-cloud", api_key: "test-key-only", api_secret: "test-secret-only" };
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });

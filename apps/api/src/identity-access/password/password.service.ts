@@ -4,7 +4,7 @@ import {
   hashPassword,
   passwordNeedsRehash,
   verifyPassword,
-} from "./password";
+} from "./password.js";
 
 const DUMMY_PASSWORD = "not-a-real-user-password-for-timing-equalization";
 

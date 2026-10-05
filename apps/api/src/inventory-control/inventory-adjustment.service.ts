@@ -9,11 +9,11 @@ import {
   InsufficientInventoryError,
   InventoryAdjustmentRepository,
   InventoryQuantityOverflowError,
-} from "./inventory-adjustment.repository";
+} from "./inventory-adjustment.repository.js";
 import type {
   InventoryAdjustmentInput,
   InventoryAdjustmentResult,
-} from "./inventory-adjustment.types";
+} from "./inventory-adjustment.types.js";
 
 @Injectable()
 export class InventoryAdjustmentService {

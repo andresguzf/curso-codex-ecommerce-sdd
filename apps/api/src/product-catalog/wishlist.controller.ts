@@ -9,9 +9,9 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { WishlistProductUnavailableError, WishlistRepository, type WishlistListQuery, type WishlistPage } from "./wishlist.repository";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { WishlistProductUnavailableError, WishlistRepository, type WishlistListQuery, type WishlistPage } from "./wishlist.repository.js";
 
 const identifierSchema = z.uuid();
 const listSchema = z.object({

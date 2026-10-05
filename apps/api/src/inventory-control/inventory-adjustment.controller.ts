@@ -22,15 +22,15 @@ import {
 } from "@nestjs/swagger";
 import { z } from "zod";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   AuthenticationGuard,
   CurrentUser,
   Roles,
   RolesGuard,
-} from "../identity-access/authorization";
-import { InventoryAdjustmentService } from "./inventory-adjustment.service";
-import type { InventoryAdjustmentResult } from "./inventory-adjustment.types";
+} from "../identity-access/authorization/index.js";
+import { InventoryAdjustmentService } from "./inventory-adjustment.service.js";
+import type { InventoryAdjustmentResult } from "./inventory-adjustment.types.js";
 
 const uuidSchema = z.string().uuid();
 const inventoryAdjustmentSchema = z

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSlug, slugCandidate } from "./slug";
+import { normalizeSlug, slugCandidate } from "./slug.js";
 
 describe("catalog slugs", () => {
   it("normalizes accents, punctuation and spaces", () => {

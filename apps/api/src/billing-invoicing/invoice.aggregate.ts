@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import { SYSTEM_CURRENCY } from "../shared/system-currency.js";
 
 export const INVOICE_ORIGINS = ["MANUAL", "ORDER"] as const;
 export type InvoiceOrigin = (typeof INVOICE_ORIGINS)[number];

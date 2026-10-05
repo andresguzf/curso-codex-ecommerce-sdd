@@ -1,10 +1,10 @@
 import { ConfigService } from "@nestjs/config";
 import { describe, expect, it, vi } from "vitest";
-import { InternalJobsController } from "./internal-jobs.controller";
-import type { DatabaseService } from "../database/database.service";
-import type { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service";
-import type { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service";
-import type { EnvironmentVariables } from "../config/environment";
+import { InternalJobsController } from "./internal-jobs.controller.js";
+import type { DatabaseService } from "../database/database.service.js";
+import type { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service.js";
+import type { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service.js";
+import type { EnvironmentVariables } from "../config/environment.js";
 
 function fixture(preview = false) {
   const images = { reconcile: vi.fn().mockResolvedValue(undefined) };

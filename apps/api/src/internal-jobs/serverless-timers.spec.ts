@@ -1,11 +1,11 @@
 import { ConfigService } from "@nestjs/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EnvironmentVariables } from "../config/environment";
-import type { DatabaseService } from "../database/database.service";
-import { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service";
-import type { ImageReferenceLookup } from "../product-catalog/image-storage/image-reference.repository";
-import { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service";
-import type { CartRepository } from "../shopping-cart-checkout/cart.repository";
+import type { EnvironmentVariables } from "../config/environment.js";
+import type { DatabaseService } from "../database/database.service.js";
+import { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service.js";
+import type { ImageReferenceLookup } from "../product-catalog/image-storage/image-reference.repository.js";
+import { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service.js";
+import type { CartRepository } from "../shopping-cart-checkout/cart.repository.js";
 
 describe("serverless bootstrap", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });

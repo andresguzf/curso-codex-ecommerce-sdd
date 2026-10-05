@@ -1,6 +1,6 @@
 /** Real REST server for Playwright; all writes target a disposable database. */
 import { randomUUID } from "node:crypto";
-import { insertProductFixtures } from "../product-fixtures";
+import { insertProductFixtures } from "../product-fixtures.js";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -13,9 +13,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
-import * as schema from "../../src/database/schema";
-import { hashPassword } from "../../src/identity-access/password/password";
-import { installControlledCloudinary } from "./controlled-cloudinary";
+import * as schema from "../../src/database/schema/index.js";
+import { hashPassword } from "../../src/identity-access/password/password.js";
+import { installControlledCloudinary } from "./controlled-cloudinary.js";
 
 const loadCompiled = createRequire(resolve("test/e2e/invoice-browser-server.ts"));
 if (process.env.NODE_ENV === "production") throw new Error("Browser test fixtures cannot run in production");

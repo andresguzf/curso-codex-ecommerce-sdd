@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeInventoryStockItems } from "./inventory-stock.service";
+import { normalizeInventoryStockItems } from "./inventory-stock.service.js";
 
 describe("normalizeInventoryStockItems", () => {
   it("consolidates duplicate products and sorts locks by product id", () => {

@@ -1,5 +1,5 @@
-import { runDevelopmentSeed } from "./development-seed";
-import { parseSeedEnvironment } from "./seed-config";
+import { runDevelopmentSeed } from "./development-seed.js";
+import { parseSeedEnvironment } from "./seed-config.js";
 
 type SeedLogger = Pick<Console, "info" | "error">;
 

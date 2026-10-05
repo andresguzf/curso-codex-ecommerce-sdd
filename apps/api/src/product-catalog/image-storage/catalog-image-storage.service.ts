@@ -1,11 +1,11 @@
 import { ConfigService } from "@nestjs/config";
 
-import type { EnvironmentVariables } from "../../config/environment";
-import { ImageReferenceLookup } from "./image-reference.repository";
-import { ImageStorageService } from "./image-storage.service";
-import { LocalImageStorage } from "./local-image-storage";
-import { CatalogImageStorageRouter } from "./catalog-image-storage-router";
-import { CloudinaryImageStorage } from "./cloudinary-image-storage";
+import type { EnvironmentVariables } from "../../config/environment.js";
+import { ImageReferenceLookup } from "./image-reference.repository.js";
+import { ImageStorageService } from "./image-storage.service.js";
+import { LocalImageStorage } from "./local-image-storage.js";
+import { CatalogImageStorageRouter } from "./catalog-image-storage-router.js";
+import { CloudinaryImageStorage } from "./cloudinary-image-storage.js";
 
 // A distinct DI token: enterprise logos and historical PDF reads remain local.
 export class CatalogImageStorageService extends ImageStorageService {}

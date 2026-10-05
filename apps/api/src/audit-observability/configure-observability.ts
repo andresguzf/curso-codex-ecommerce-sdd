@@ -4,14 +4,14 @@ import type { FastifyInstance } from "fastify";
 import {
   ApiMetricsService,
   classifyMetricDomain,
-} from "./api-metrics.service";
+} from "./api-metrics.service.js";
 import {
   CORRELATION_ID_HEADER,
   getRequestCorrelationId,
   resolveCorrelationId,
   setRequestCorrelationId,
-} from "./request-context";
-import { StructuredLoggerService } from "./structured-logger.service";
+} from "./request-context.js";
+import { StructuredLoggerService } from "./structured-logger.service.js";
 
 type RequestObservation = Readonly<{
   correlationId: string;

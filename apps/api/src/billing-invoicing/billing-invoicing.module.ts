@@ -1,18 +1,18 @@
 import { Module } from "@nestjs/common";
 
-import { AuthModule } from "../identity-access/auth.module";
-import { BillingSummaryReader } from "./billing-summary.reader";
-import { InvoiceFromOrderController } from "./invoice-from-order.controller";
-import { InvoiceFromOrderService } from "./invoice-from-order.service";
-import { InvoiceController } from "./invoice.controller";
-import { InvoiceLifecycleService } from "./invoice-lifecycle.service";
-import { InvoiceQueryService } from "./invoice-query.service";
-import { ManualInvoiceController } from "./manual-invoice.controller";
-import { ManualInvoiceService } from "./manual-invoice.service";
-import { StoreProfileController } from "./store-profile.controller";
-import { StoreProfileService } from "./store-profile.service";
-import { DocumentExportModule } from "../document-export/document-export.module";
-import { ImageStorageModule } from "../product-catalog/image-storage/image-storage.module";
+import { AuthModule } from "../identity-access/auth.module.js";
+import { BillingSummaryReader } from "./billing-summary.reader.js";
+import { InvoiceFromOrderController } from "./invoice-from-order.controller.js";
+import { InvoiceFromOrderService } from "./invoice-from-order.service.js";
+import { InvoiceController } from "./invoice.controller.js";
+import { InvoiceLifecycleService } from "./invoice-lifecycle.service.js";
+import { InvoiceQueryService } from "./invoice-query.service.js";
+import { ManualInvoiceController } from "./manual-invoice.controller.js";
+import { ManualInvoiceService } from "./manual-invoice.service.js";
+import { StoreProfileController } from "./store-profile.controller.js";
+import { StoreProfileService } from "./store-profile.service.js";
+import { DocumentExportModule } from "../document-export/document-export.module.js";
+import { ImageStorageModule } from "../product-catalog/image-storage/image-storage.module.js";
 
 @Module({
   imports: [AuthModule, DocumentExportModule, ImageStorageModule],

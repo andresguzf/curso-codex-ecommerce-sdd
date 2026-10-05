@@ -5,8 +5,8 @@ import {
   Injectable,
 } from "@nestjs/common";
 
-import { AuthService } from "../auth.service";
-import type { AuthenticatedRequest } from "./authenticated-request";
+import { AuthService } from "../auth.service.js";
+import type { AuthenticatedRequest } from "./authenticated-request.js";
 
 @Injectable()
 export class AuthenticationGuard implements CanActivate {

@@ -17,19 +17,19 @@ import {
   sql,
 } from "drizzle-orm";
 
-import { DatabaseService } from "../database/database.service";
-import { invoiceLines, invoices } from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
+import { DatabaseService } from "../database/database.service.js";
+import { invoiceLines, invoices } from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
 import {
   SYSTEM_CURRENCY,
   type SystemCurrency,
-} from "../shared/system-currency";
+} from "../shared/system-currency.js";
 import type {
   InvoiceLineSnapshot,
   InvoiceOrigin,
   InvoiceSnapshot,
   InvoiceStatus,
-} from "./invoice.aggregate";
+} from "./invoice.aggregate.js";
 
 export type InvoiceQuery = Readonly<{
   page: number;

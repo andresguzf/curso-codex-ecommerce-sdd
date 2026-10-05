@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { parseSeedEnvironment, validateSeedAccounts } from "../../src/database/seed/seed-config";
-import { executeDevelopmentSeed } from "../../src/database/seed/seed-runner";
+import { parseSeedEnvironment, validateSeedAccounts } from "../../src/database/seed/seed-config.js";
+import { executeDevelopmentSeed } from "../../src/database/seed/seed-runner.js";
 
 // Test-only credentials, never connected to a real development database.
 const environment = {

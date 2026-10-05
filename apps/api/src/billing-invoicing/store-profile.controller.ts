@@ -5,10 +5,10 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
-import { storeProfilePatchSchema } from "./store-profile.domain";
-import { StoreProfileService, type StoreProfileResponse } from "./store-profile.service";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization/index.js";
+import { storeProfilePatchSchema } from "./store-profile.domain.js";
+import { StoreProfileService, type StoreProfileResponse } from "./store-profile.service.js";
 
 class StoreAddressDto {
   @ApiProperty({ maxLength: 250 }) line1!: string;

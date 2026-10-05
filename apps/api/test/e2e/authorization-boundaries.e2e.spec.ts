@@ -13,10 +13,10 @@ import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { configureApplication } from "../../src/application";
-import { roleAssignments, sessions, storeProfiles, users } from "../../src/database/schema";
-import * as schema from "../../src/database/schema";
-import { AuthTokenService } from "../../src/identity-access/auth-token.service";
+import { configureApplication } from "../../src/application.js";
+import { roleAssignments, sessions, storeProfiles, users } from "../../src/database/schema/index.js";
+import * as schema from "../../src/database/schema/index.js";
+import { AuthTokenService } from "../../src/identity-access/auth-token.service.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -246,8 +246,8 @@ describe("authorization boundaries over HTTP", () => {
       "http://localhost:3000,http://localhost:3002";
 
     const [{ AppModule }, { DatabaseService }] = await Promise.all([
-      import("../../src/app.module"),
-      import("../../src/database/database.service"),
+      import("../../src/app.module.js"),
+      import("../../src/database/database.service.js"),
     ]);
     app = await NestFactory.create<NestFastifyApplication>(
       AppModule,

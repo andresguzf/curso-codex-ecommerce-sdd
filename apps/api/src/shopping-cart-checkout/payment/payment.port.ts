@@ -36,4 +36,4 @@ export class UnsupportedPaymentMethodError extends Error {
     this.name = "UnsupportedPaymentMethodError";
   }
 }
-import type { SystemCurrency } from "../../shared/system-currency";
+import type { SystemCurrency } from "../../shared/system-currency.js";

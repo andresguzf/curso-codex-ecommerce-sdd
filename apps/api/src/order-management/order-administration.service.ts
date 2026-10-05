@@ -1,12 +1,12 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, asc, count, desc, eq, exists, gte, ilike, lte, ne, not, or, sql } from "drizzle-orm";
 
-import { createAuditEntry } from "../audit-observability/audit-entry";
-import { DatabaseService } from "../database/database.service";
-import { auditEntries, invoices, orders } from "../database/schema";
-import type { AuthenticatedUser } from "../identity-access/auth.types";
-import { assertOrderTransition, InvalidOrderTransitionError, type OrderStatus } from "./order.aggregate";
-import { summaryColumns } from "./customer-orders.service";
+import { createAuditEntry } from "../audit-observability/audit-entry.js";
+import { DatabaseService } from "../database/database.service.js";
+import { auditEntries, invoices, orders } from "../database/schema/index.js";
+import type { AuthenticatedUser } from "../identity-access/auth.types.js";
+import { assertOrderTransition, InvalidOrderTransitionError, type OrderStatus } from "./order.aggregate.js";
+import { summaryColumns } from "./customer-orders.service.js";
 
 export type AdministrativeOrderQuery = Readonly<{
   page: number; pageSize: number; search?: string; customerId?: string; status?: OrderStatus;

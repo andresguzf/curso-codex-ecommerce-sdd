@@ -2,12 +2,12 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { Controller, Get, Headers, Inject, Module, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiExcludeController } from "@nestjs/swagger";
-import type { EnvironmentVariables } from "../config/environment";
-import { DatabaseService } from "../database/database.service";
-import { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service";
-import { ImageStorageModule } from "../product-catalog/image-storage/image-storage.module";
-import { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service";
-import { ShoppingCartCheckoutModule } from "../shopping-cart-checkout/shopping-cart-checkout.module";
+import type { EnvironmentVariables } from "../config/environment.js";
+import { DatabaseService } from "../database/database.service.js";
+import { CatalogImageRecoveryService } from "../product-catalog/image-storage/catalog-image-recovery.service.js";
+import { ImageStorageModule } from "../product-catalog/image-storage/image-storage.module.js";
+import { AnonymousCartCleanupService } from "../shopping-cart-checkout/anonymous-cart-cleanup.service.js";
+import { ShoppingCartCheckoutModule } from "../shopping-cart-checkout/shopping-cart-checkout.module.js";
 
 @ApiExcludeController()
 @Controller("internal/jobs")
