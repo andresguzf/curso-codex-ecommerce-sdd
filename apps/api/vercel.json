@@ -4,11 +4,5 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
   "ignoreCommand": "test \"$VERCEL_ENV\" != \"production\"",
-  "regions": ["iad1"],
-  "functions": {
-    "src/main.ts": {
-      "maxDuration": 300,
-      "includeFiles": "{src,dist}/product-catalog/image-storage/bundled-assets/*.png"
-    }
-  }
+  "regions": ["iad1"]
 }

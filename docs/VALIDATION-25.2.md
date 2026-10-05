@@ -6,7 +6,8 @@ Fecha: 2026-10-05. Estado: completada la preparación; **no se desplegó**.
 
 - Tres `vercel.json`, raíces independientes `apps/api`, `apps/storefront` y
   `apps/backoffice`, frameworks nativos, región `iad1`, instalación congelada
-  y builds pnpm. API: 300 segundos y archivo histórico explícitamente incluido.
+  y builds pnpm. Configuración inicial API: 300 segundos y archivo histórico
+  explícitamente incluido; corregida durante 25.3 como se describe abajo.
 - Tres inventarios `.env.vercel.example` con placeholders, secretos solo API.
   Guía de workspace externo/Node 22.x, variables, dominios, migración controlada,
   presupuesto por instancia y retorno en `docs/vercel-course-deployment.md`.
@@ -62,6 +63,22 @@ Fecha: 2026-10-05. Estado: completada la preparación; **no se desplegó**.
 - `docs/vercel-course-deployment.md`, este informe y OpenSpec `tasks.md`.
 
 ## Límites
+
+### Corrección durante 25.3 — 2026-10-05
+
+El primer build remoto de `612605e` falló en CLI 62.1.0 antes de compilar:
+`functions["src/main.ts"]` produjo `unmatched-function-pattern`. La validación
+JSON de 25.2 no detectaba esta incompatibilidad del detector de Functions.
+Se retiró únicamente el bloque `functions`, manteniendo framework NestJS,
+región, instalación/build y restricción de previews. Hobby con Fluid Compute
+usa 300 segundos por defecto; verificar el valor efectivo en el panel antes
+de habilitar cron. El análisis local Node File Trace del módulo compilado
+incluye el PNG histórico sin advertencias ni `includeFiles`; la lectura conserva
+su huella y bytes. Se ajustaron la prueba de configuración y la guía. La tarea
+25.3 sigue pendiente hasta completar/verificar el despliegue real.
+Verificación de la corrección: ocho pruebas focalizadas, build/typecheck/lint
+del API, OpenSpec estricto y diff check correctos; rastreo repetido del módulo
+compilado con el PNG incluido y cero advertencias.
 
 No se modificó `.env`, conexión activa, Supabase Auth/Storage, registros ni assets.
 No migración, seed, compra, upload, reconciliación, corte de workers, cron activo,

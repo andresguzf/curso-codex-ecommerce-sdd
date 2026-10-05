@@ -49,7 +49,8 @@ describe("course Vercel configuration", () => {
       expect(config.buildCommand).toBe("pnpm build");
       expect(config.ignoreCommand).toContain("production");
       expect(config.crons).toBeUndefined();
-      if (app === "api") expect(config.functions["src/main.ts"].maxDuration).toBe(300);
+      // Native NestJS resolves its entrypoint; CLI 62.1 rejects this block.
+      if (app === "api") expect(config.functions).toBeUndefined();
     }
   });
 

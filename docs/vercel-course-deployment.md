@@ -20,6 +20,14 @@ Seleccionar Node.js **22.x**. Cada `vercel.json` fija instalación con
 manual ni crear otro backend. El API conserva `src/main.ts` y soporte nativo
 [NestJS](https://vercel.com/docs/frameworks/backend/nestjs).
 
+No añadir `functions["src/main.ts"]`: la validación de CLI 62.1.0 lo rechaza
+con `unmatched-function-pattern` antes de compilar NestJS. Mantener Root Directory
+`apps/api` y framework NestJS. Con Fluid Compute, Hobby tiene 300 segundos por
+defecto; comprobar ese valor en Settings → Functions antes de activar el cron.
+El rastreo del módulo compilado incluye el PNG histórico sin `includeFiles`.
+La entrega efectiva se verificará en el despliegue, no solo con el build local.
+[Duración de Functions](https://vercel.com/docs/functions/configuring-functions/duration).
+
 `iad1` está cerca de la región Supabase us-east-1 indicada por el usuario;
 no implica cambiar la región de Supabase. Consultar [regiones de Functions](https://vercel.com/docs/functions/configuring-functions/region).
 
