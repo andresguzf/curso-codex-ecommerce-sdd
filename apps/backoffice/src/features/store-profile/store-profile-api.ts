@@ -1,5 +1,5 @@
 import { createApiClient } from "@technology-ecommerce/api-client";
-import { storeProfileSchema, uploadedStoreLogoSchema, type StoreProfile, type UploadedStoreLogo } from "@technology-ecommerce/api-schemas";
+import { storeProfileSchema, type StoreProfile } from "@technology-ecommerce/api-schemas";
 import type { paths } from "@technology-ecommerce/api-client";
 import { z } from "zod";
 
@@ -8,7 +8,6 @@ const client = createApiClient({
   credentials: "include",
 });
 export type StoreProfilePatch = paths["/api/v1/store-profile"]["patch"]["requestBody"]["content"]["application/json"];
-type UploadedStoreLogoResponse = paths["/api/v1/store-profile/logo"]["post"]["responses"][201]["content"]["application/json"];
 const errorCodeSchema = z.object({ code: z.string() });
 
 export class StoreProfileApiError extends Error {
@@ -43,19 +42,4 @@ export async function saveStoreProfile(accessToken: string, input: StoreProfileP
   });
   if (!result.data) throw failure(result);
   return storeProfileSchema.parse(result.data);
-}
-
-export async function uploadStoreLogo(accessToken: string, file: File): Promise<UploadedStoreLogo> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001"}/api/v1/store-profile/logo`, {
-    method: "POST",
-    credentials: "include",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": file.type },
-    body: file,
-  });
-  if (!response.ok) {
-    const error = errorCodeSchema.safeParse(await response.json().catch(() => null));
-    throw new StoreProfileApiError(response.status, error.success ? error.data.code : undefined);
-  }
-  const logo = uploadedStoreLogoSchema.parse(await response.json());
-  return logo satisfies UploadedStoreLogoResponse;
 }

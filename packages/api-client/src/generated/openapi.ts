@@ -246,23 +246,6 @@ export interface paths {
         patch: operations["changeInvoiceStatus"];
         trace?: never;
     };
-    "/api/v1/store-profile/logo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload an immutable store logo version */
-        post: operations["uploadStoreLogo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/store-profile": {
         parameters: {
             query?: never;
@@ -1074,15 +1057,6 @@ export interface components {
             shippingTotal: string;
             lines: components["schemas"]["ManualInvoiceLineRequestDto"][];
         };
-        UploadedStoreLogoDto: {
-            storageKey: string;
-            /** Format: uri */
-            url: string;
-            sha256: string;
-            /** @enum {string} */
-            mimeType: "image/png" | "image/jpeg" | "image/webp";
-            size: number;
-        };
         StoreAddressDto: {
             line1: string;
             line2: string | null;
@@ -1129,16 +1103,12 @@ export interface components {
             email?: string | null;
             phone?: string | null;
         };
-        StoreLogoReferenceDto: {
-            storageKey: string;
-        };
         PatchStoreProfileDto: {
             tradeName?: string;
             legalName?: string;
             taxIdentifier?: string;
             address?: components["schemas"]["PatchStoreAddressDto"];
             contact?: components["schemas"]["PatchStoreContactDto"];
-            logo?: components["schemas"]["StoreLogoReferenceDto"] | null;
         };
         InventoryAdjustmentRequestDto: {
             /**
@@ -1934,6 +1904,7 @@ export interface operations {
                     "image/jpeg": string;
                     "image/png": string;
                     "image/webp": string;
+                    "image/svg+xml": string;
                 };
             };
             /** @description Image not found */
@@ -2690,54 +2661,6 @@ export interface operations {
             };
             /** @description Invalid invoice state transition */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    uploadStoreLogo: {
-        parameters: {
-            query?: never;
-            header: {
-                "content-type": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "image/png": string;
-                "image/jpeg": string;
-                "image/webp": string;
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadedStoreLogoDto"];
-                };
-            };
-            /** @description Invalid image type, signature or size */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Authentication required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Role is not permitted */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };

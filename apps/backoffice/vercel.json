@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "ignoreCommand": "test \"$VERCEL_ENV\" != \"production\"",
+  "regions": ["iad1"]
+}

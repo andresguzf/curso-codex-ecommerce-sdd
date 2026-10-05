@@ -8,6 +8,7 @@ import { ImageStorageService } from "../product-catalog/image-storage/image-stor
 import { ImageStorageNotFoundError, ImageStorageValidationError } from "../product-catalog/image-storage/image-storage.port";
 import { invoiceDocumentTemplate, orderDocumentTemplate } from "./document-templates";
 import { PDF_RENDERER, type PdfRenderer } from "./pdf-renderer.port";
+import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../billing-invoicing/company-logo";
 
 @Injectable()
 export class DocumentExportService {
@@ -33,7 +34,9 @@ export class DocumentExportService {
       throw new InternalServerErrorException({ code: "DOCUMENT_LOGO_INVALID", message: "The historical logo reference is invalid" });
     }
     try {
-      const image = await this.images.read(logo.storageKey);
+      const image = logo.storageKey === COMPANY_LOGO_KEY
+        ? { data: COMPANY_LOGO_BYTES, mimeType: "image/svg+xml" as const }
+        : await this.images.read(logo.storageKey);
       if (createHash("sha256").update(image.data).digest("hex") !== logo.sha256) {
         throw new InternalServerErrorException({ code: "DOCUMENT_LOGO_TAMPERED", message: "The historical logo does not match its snapshot" });
       }

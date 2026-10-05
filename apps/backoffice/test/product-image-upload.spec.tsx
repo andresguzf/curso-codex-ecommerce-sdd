@@ -58,6 +58,15 @@ describe("product image upload", () => {
   });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+  it("rejects oversized files before preview or REST upload", async () => {
+    show();
+    const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.png", { type: "image/png" });
+    fireEvent.change(await screen.findByLabelText("Archivo de imagen"), { target: { files: [file] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("La imagen supera el máximo");
+    expect(createPreview).not.toHaveBeenCalled();
+    expect(uploadProductImage).not.toHaveBeenCalled();
+  });
+
   it.each(["image/jpeg", "image/png", "image/webp"])("previews and uploads one %s file and refreshes the authoritative gallery", async (type) => {
     vi.mocked(getAdministrativeProductGallery).mockResolvedValueOnce(detail()).mockResolvedValue(detail([image]));
     const { pending, invalidation } = show();

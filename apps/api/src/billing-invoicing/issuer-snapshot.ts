@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import type { DatabaseTransaction } from "../database/database.service";
 import { storeProfiles, type StoreProfile } from "../database/schema";
+import { companyLogoReference } from "./company-logo";
 
 export type IssuerSnapshot = Readonly<{
   tradeName: string;
@@ -34,9 +35,7 @@ export function issuerSnapshotFromProfile(profile: StoreProfile): IssuerSnapshot
       countryCode: profile.addressCountryCode,
     },
     contact: { email: profile.contactEmail, phone: profile.contactPhone },
-    logo: profile.logoStorageKey && profile.logoUrl && profile.logoSha256
-      ? { storageKey: profile.logoStorageKey, url: profile.logoUrl, sha256: profile.logoSha256 }
-      : null,
+    logo: companyLogoReference(),
   };
 }
 

@@ -21,6 +21,7 @@ import {
   ImageStorageValidationError,
 } from "./image-storage.port";
 import { ImageStorageService } from "./image-storage.service";
+import { COMPANY_LOGO_BYTES, COMPANY_LOGO_KEY } from "../../billing-invoicing/company-logo";
 
 @ApiTags("catalog-media")
 @Controller("media/images")
@@ -35,7 +36,7 @@ export class ImageMediaController {
     summary: "Read an image from the configured catalog storage",
   })
   @ApiParam({ name: "storageKey" })
-  @ApiProduces("image/jpeg", "image/png", "image/webp")
+  @ApiProduces("image/jpeg", "image/png", "image/webp", "image/svg+xml")
   @ApiOkResponse({
     description: "Stored image bytes",
     schema: { type: "string", format: "binary" },
@@ -46,6 +47,12 @@ export class ImageMediaController {
     @Res() reply: FastifyReply,
   ): Promise<FastifyReply> {
     try {
+      if (storageKey === COMPANY_LOGO_KEY) {
+        return reply.type("image/svg+xml")
+          .header("Cache-Control", "public, max-age=31536000, immutable")
+          .header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
+          .send(COMPANY_LOGO_BYTES);
+      }
       const image = await this.images.read(storageKey);
       return reply
         .type(image.mimeType)

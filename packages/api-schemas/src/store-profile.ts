@@ -33,21 +33,7 @@ export const storeProfileFormSchema = z.object({
   countryCode: z.string().trim().regex(/^[A-Z]{2}$/, "Usa un código de país de dos letras, por ejemplo CL."),
   email: z.union([z.email("Ingresa un correo válido."), z.literal("")]),
   phone: z.string().trim().max(40),
-  logoMode: z.enum(["none", "reference"]),
-  logoStorageKey: z.string().trim().max(512),
-}).superRefine((value, context) => {
-  if (value.logoMode !== "reference") return;
-  if (!value.logoStorageKey) context.addIssue({ code: "custom", path: ["logoStorageKey"], message: "Carga un logo antes de seleccionarlo." });
-});
-
-export const uploadedStoreLogoSchema = z.object({
-  storageKey: z.string().min(1).max(512),
-  url: z.url().max(2048),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
-  size: z.number().int().positive(),
-  sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
 export type StoreProfile = z.infer<typeof storeProfileSchema>;
 export type StoreProfileFormValues = z.infer<typeof storeProfileFormSchema>;
-export type UploadedStoreLogo = z.infer<typeof uploadedStoreLogoSchema>;

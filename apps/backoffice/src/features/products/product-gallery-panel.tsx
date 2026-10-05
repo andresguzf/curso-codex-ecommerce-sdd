@@ -15,7 +15,8 @@ function imageSource(source: string): string | null {
   // The legacy placeholder belongs to the storefront, not this application.
   if (source === "/images/product-placeholder.svg") return null;
   try {
-    const url = new URL(source, process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001");
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || (typeof window === "undefined" ? "http://localhost:3001" : window.location.origin);
+    const url = new URL(source, base);
     return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : null;
   } catch { return null; }
 }

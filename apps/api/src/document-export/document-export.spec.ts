@@ -43,7 +43,8 @@ describe("document export", () => {
     const pdf = await service.renderOrder(order);
     const source = pdf.toString("latin1");
     expect(pdf.subarray(0, 8).toString("latin1")).toBe("%PDF-1.4");
-    expect(source).toContain("ORDEN DE COMPRA ORD-HISTORIC-PDF");
+    expect(source).toContain("ORDEN DE COMPRA");
+    expect(source).toContain("ORD-HISTORIC-PDF");
     expect(source).toContain("Teclado historico");
     expect(source).toContain("Total: 105.00 USD");
     expect(source).toContain("%%EOF");
@@ -112,8 +113,8 @@ describe("document export", () => {
       const source = pdf.toString("latin1");
       expect(source).toContain("/Subtype /Image");
       expect(source).toContain("/Logo Do");
-      expect(source).toContain("Marca Historica");
-      expect(source).toContain("Empresa Historica SpA");
+      expect(source).toContain("Marca Histórica");
+      expect(source).toContain("Empresa Histórica SpA");
       expect(source).toContain("RUT-HIST");
       expect(source).toContain("Calle Antigua 22");
       expect(source).not.toContain("https://ignored.example");

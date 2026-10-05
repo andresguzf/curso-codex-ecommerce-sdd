@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, Patch, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, Patch, UseGuards } from "@nestjs/common";
 import {
-  ApiBadRequestResponse, ApiBearerAuth, ApiBody, ApiConsumes, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse,
+  ApiBadRequestResponse, ApiBearerAuth, ApiForbiddenResponse, ApiNotFoundResponse,
   ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
@@ -9,7 +9,6 @@ import type { AuthenticatedUser } from "../identity-access/auth.types";
 import { AuthenticationGuard, CurrentUser, Roles, RolesGuard } from "../identity-access/authorization";
 import { storeProfilePatchSchema } from "./store-profile.domain";
 import { StoreProfileService, type StoreProfileResponse } from "./store-profile.service";
-import { StoreLogoService } from "./store-logo.service";
 
 class StoreAddressDto {
   @ApiProperty({ maxLength: 250 }) line1!: string;
@@ -27,13 +26,6 @@ class StoreLogoDto {
   @ApiProperty({ maxLength: 512 }) storageKey!: string;
   @ApiProperty({ format: "uri", maxLength: 2048 }) url!: string;
   @ApiProperty({ pattern: "^[0-9a-f]{64}$" }) sha256!: string;
-}
-class UploadedStoreLogoDto extends StoreLogoDto {
-  @ApiProperty({ enum: ["image/png", "image/jpeg", "image/webp"] }) mimeType!: string;
-  @ApiProperty({ minimum: 1 }) size!: number;
-}
-class StoreLogoReferenceDto {
-  @ApiProperty({ maxLength: 512 }) storageKey!: string;
 }
 class StoreProfileDto {
   @ApiProperty({ enum: [1] }) id!: 1;
@@ -64,7 +56,6 @@ class PatchStoreProfileDto {
   @ApiPropertyOptional({ maxLength: 80 }) taxIdentifier?: string;
   @ApiPropertyOptional({ type: PatchStoreAddressDto }) address?: PatchStoreAddressDto;
   @ApiPropertyOptional({ type: PatchStoreContactDto }) contact?: PatchStoreContactDto;
-  @ApiPropertyOptional({ type: StoreLogoReferenceDto, nullable: true }) logo?: StoreLogoReferenceDto | null;
 }
 
 @ApiTags("store-profile")
@@ -76,19 +67,7 @@ class PatchStoreProfileDto {
 export class StoreProfileController {
   constructor(
     @Inject(StoreProfileService) private readonly profile: StoreProfileService,
-    @Inject(StoreLogoService) private readonly logos: StoreLogoService,
   ) {}
-
-  @Post("logo")
-  @Roles("ADMIN")
-  @ApiOperation({ operationId: "uploadStoreLogo", summary: "Upload an immutable store logo version" })
-  @ApiConsumes("image/png", "image/jpeg", "image/webp")
-  @ApiBody({ schema: { type: "string", format: "binary" } })
-  @ApiCreatedResponse({ type: UploadedStoreLogoDto })
-  @ApiBadRequestResponse({ description: "Invalid image type, signature or size" })
-  upload(@CurrentUser() actor: AuthenticatedUser, @Body() data: unknown, @Headers("content-type") mimeType?: string) {
-    return this.logos.upload(actor, data, mimeType);
-  }
 
   @Get()
   @Roles("ADMIN", "BILLING")
@@ -105,6 +84,7 @@ export class StoreProfileController {
   @ApiOkResponse({ type: StoreProfileDto })
   @ApiBadRequestResponse({ description: "Invalid profile or missing required fields on first save" })
   update(@CurrentUser() actor: AuthenticatedUser, @Body() body: PatchStoreProfileDto): Promise<StoreProfileResponse> {
+    if (body && "logo" in body) throw new BadRequestException({ code: "STORE_LOGO_FIXED", message: "The company logo is fixed and cannot be changed" });
     const parsed = storeProfilePatchSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException({
       code: "REQUEST_VALIDATION_FAILED",

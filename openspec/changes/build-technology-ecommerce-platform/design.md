@@ -167,9 +167,13 @@ La cancelación requiere `ADMIN` o `BILLING`, motivo y una orden `PROCESSING` o 
 
 El backend generará PDFs de órdenes y facturas desde sus snapshots y comprobará propiedad o rol antes de entregar el archivo. Los borradores se marcarán visiblemente y las facturas emitidas recibirán un número único dentro de una transacción.
 
-El logo empresarial se cargará por un endpoint REST exclusivo de `ADMIN`, con límite de tamaño, comprobación de firma de archivo y formatos raster admitidos PNG, JPEG y WebP. Un adaptador de almacenamiento conservará cada carga bajo una clave nueva e inmutable y registrará su MIME, tamaño y huella SHA-256; no se aceptarán URLs arbitrarias ni claves inventadas en el perfil. El back office seleccionará la referencia devuelta por la carga, y el API derivará la URL pública sin confiar en una URL enviada por el navegador. Reemplazar o quitar el logo vigente no borrará un asset usado por una orden o factura histórica.
+La revisión confirmada de fase 25 sustituye nuevas cargas manuales por un SVG empresarial fijo generado, confiable y versionado con SHA-256, incluido en el artefacto del API y entregado para su vista previa. No tendrá scripts ni referencias externas. La identidad de la versión será estable y no sobrescribible; versiones futuras conservarán los recursos de versiones históricas. No requiere Cloudinary, uploads ni escrituras en el disco de Functions. El formulario mostrará el logo sin controles de carga, sustitución o eliminación; los demás datos empresariales seguirán editables por ADMIN. El contrato REST retirará la carga manual y no aceptará SVG, URL o clave arbitrarios para cambiar la referencia fija. Regenerar OpenAPI, cliente y Zod cuando se ajuste el contrato. La implementación raster anterior se mantiene sólo como compatibilidad de lectura histórica; no borrar sus assets ni registros.
 
-Los nuevos `issuerSnapshot` de órdenes y facturas conservarán clave y huella de la versión elegida. La factura derivada copiará ambos datos de la orden. Al generar un PDF, `document-export` leerá únicamente el snapshot y el asset inmutable por su clave, verificará la huella y entregará los bytes al adaptador PDF para incrustar visualmente la imagen, sin consultar el perfil actual ni solicitar la URL remota. Un logo ausente se omite sin invalidar el documento; un asset declarado pero perdido o alterado produce un error explícito y nunca se sustituye silenciosamente por el logo vigente. Los documentos anteriores a esta capacidad, que carecen de snapshot o asset administrado, se conservan como legados sin inventar una identidad visual retroactiva.
+Los nuevos `issuerSnapshot` de órdenes y facturas manuales conservarán identidad y huella del SVG fijo determinadas por el API. La factura derivada copiará ambos datos de la orden, incluso cuando contenga un raster anterior o no tenga logo. Al generar un PDF, `document-export` leerá únicamente el snapshot y resolverá la versión inmutable incluida o el asset histórico por su clave, verificará su huella y entregará los bytes al adaptador PDF para incrustarlo visualmente. La conversión interna de un SVG confiable a raster para incrustación es válida, sin guardar una carga local ni descargar URLs. No consultar el perfil actual. Un logo ausente se omite sin invalidar el documento; un asset declarado pero perdido o alterado produce un error explícito y nunca se sustituye por el logo vigente. No asignar el SVG retroactivamente a documentos antiguos ni ejecutar seed/backfill al desplegar.
+
+Las plantillas entregarán datos estructurados al puerto PDF, no frases concatenadas como representación exclusiva de líneas. Órdenes y facturas compartirán un sistema visual de fondo claro, acentos azul oscuro, tipografía legible y márgenes constantes: cabecera de empresa/logo y metadatos; bloque de cliente/dirección disponible; tabla producto/SKU, cantidad, unitario, impuestos e importe; totales alineados a la derecha y pie numerado. Incluir pago/envío en órdenes y origen/borrador en facturas. Usar importes USD guardados y envío donde corresponda, sin inventar campos ausentes ni recalcular impuestos o totales comerciales.
+
+El renderer medirá/anclará columnas y altura del texto, ajustará nombres/direcciones largos y soportará caracteres españoles. Paginará en función del espacio, repetirá cabeceras de tabla y numerará páginas; eliminar los recortes silenciosos de filas/textos del renderer actual. Totales y pie nunca se superpondrán con la tabla; textos mayores que una página continuarán sin pérdida. Conservar autorización y endpoints de descarga. Verificar extracción de todas las líneas/importes y renderizar muestras de orden/factura cortas, largas, borrador y texto extenso para inspección visual. Mejorar la presentación de documentos existentes no altera sus snapshots ni exige reproducir bytes del renderer anterior; la regeneración será estable con los mismos datos y versión de renderer/assets.
 
 La primera versión generará el documento bajo demanda mediante un adaptador de renderizado. Si el costo o volumen lo exige, el mismo adaptador permitirá persistir archivos en almacenamiento de objetos y generarlos mediante un worker sin cambiar el contrato REST.
 
@@ -232,11 +236,11 @@ Alternativa considerada: guardar categorías y etiquetas como texto o arrays den
 
 ### 15. Perfil único de tienda y snapshots empresariales
 
-Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada, datos de contacto opcionales y referencia a un logo administrado e inmutable. Solo `ADMIN` podrá modificarlo o cargar un logo; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados.
+Se añadirá un agregado `StoreProfile` único con nombre comercial, razón social, identificador fiscal, dirección física estructurada y datos de contacto opcionales. Solo `ADMIN` podrá modificar esos datos; `ADMIN` y `BILLING` podrán consultarlo dentro de sus flujos autorizados. Desde fase 25, la referencia del logo es el SVG fijo versionado determinado por el servidor, no un campo editable ni una carga. Conservar campos/registros de logos anteriores para lectura de documentos históricos, sin migración destructiva.
 
 El seed explícito podrá crear un perfil inicial con valores visiblemente ficticios marcados `DEMO` en desarrollo y pruebas. Lo insertará solo si el perfil único está ausente; las reejecuciones conservarán cualquier perfil existente, incluidos los cambios administrativos. El perfil DEMO no incluirá un logo ni identificadores fiscales reales, y el seed deberá detenerse antes de escribir en producción para que estos datos no lleguen a órdenes o facturas productivas.
 
-Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente, incluida la clave y huella del logo administrado cuando exista. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento y la versión inmutable del asset referenciado. De este modo, editar la empresa no reescribe órdenes, facturas ni PDFs históricos.
+Al confirmar una orden se copiará un `issuerSnapshot` del perfil vigente, incluida la identidad y huella del SVG fijo desde fase 25. Una factura derivada de orden tomará el snapshot de la orden; una factura manual tomará el perfil vigente al crearse o emitirse según su estado. Los PDFs leerán únicamente el snapshot del documento y la versión inmutable referenciada. De este modo, editar la empresa no reescribe órdenes, facturas ni la identidad empresarial de los PDFs históricos.
 
 Alternativa considerada: consultar siempre el perfil vigente al renderizar. Se descarta porque produciría documentos históricos distintos después de una modificación empresarial.
 
@@ -279,6 +283,8 @@ GET    /store-profile
 PATCH  /store-profile
 POST   /store-profile/logo
 ```
+
+La ruta de carga `POST /store-profile/logo` corresponde a la entrega histórica de fase 15. La revisión de fase 25 la retira del contrato de carga manual; no crea una alternativa para uploads de logo. La lectura del SVG fijo incluido y su referencia determinada por el API siguen independientes de Cloudinary y preservan la compatibilidad de snapshots anteriores.
 
 Los endpoints existentes `GET /products` y `GET /users` admitirán consultas limitadas para autocomplete mediante `search`, `page`, `pageSize` y filtros autorizados; no se crearán endpoints que devuelvan catálogos o clientes completos. `GET /products` añadirá filtros por categoría, etiquetas, disponibilidad y rango de precio. Para `view=admin`, también aceptará `createdFrom` y `createdTo` con formato `YYYY-MM-DD`, inclusivos en UTC; validará que sean fechas reales y que el inicio no sea posterior al fin, y aplicará el intervalo antes del conteo y la paginación. Estos parámetros de creación no se admitirán en consultas públicas. El detalle público podrá resolverse por slug sin eliminar el acceso administrativo por identificador. Todas las rutas conservarán validación Zod en la frontera frontend, validación autoritativa en NestJS, autorización, errores uniformes y cliente generado.
 
@@ -522,19 +528,23 @@ y logout en ambos frontends; no debilitar cookies ni sustituirlas por localStora
 de los servicios existentes mediante endpoint interno protegido y cron compatible
 con el plan confirmado. Mantener journal, gracia, backoff, límites y coordinación;
 no depender del tráfico ni de timers en instancias que pueden pausarse. Rechazar
-invocación no autenticada y tolerar concurrencia. Hobby permite cron diario y
-Pro cada minuto: 25.1 debe acordar la cadencia de esta demo, sin prometer 30 s
-en serverless ni contratar Pro automáticamente. Hasta entonces no declarar
-equivalencia del worker remoto ni desactivar silenciosamente su recuperación.
+invocación no autenticada y tolerar concurrencia. El usuario confirmó ejecución
+diaria para esta demo en Hobby: recuperación y limpieza comparten una invocación
+protegida, sin prometer 30 s en serverless ni contratar Pro. Se desactivan timers
+solo cuando VERCEL=1; el corte del ejecutor local y la programación remota
+pertenecen al despliegue 25.3, no a la preparación 25.1.
 
 **Archivos/cargas.** Cloudinary continúa para nuevas imágenes del catálogo,
 Picsum y referencias externas existentes no se sustituyen. Vercel no será un
-almacén durable de archivos locales. Inventariar sólo imágenes locales y logos,
-acordar destino durable/entrega con el usuario y verificar bytes/huellas históricas
-antes de implementar o trasladar assets. Logos quedan separados del proveedor
-de catálogo y no se suben a codex-storefront. No borrar originales ni modificar
-snapshots históricos. La portabilidad es condición del despliegue funcional,
-no una excusa para ocultar o deshabilitar esas capacidades.
+almacén durable de archivos locales. El usuario confirmó sustituir nuevas cargas
+de logo por el SVG fijo versionado incluido en el despliegue, sin Cloudinary ni
+almacenamiento mutable. Conservar lectura histórica, bytes/huellas y snapshots:
+el SVG fijo no resuelve ni oculta assets locales anteriores. Inventariar sólo
+referencias locales históricas y acordar entrega durable antes de trasladarlas;
+no mover imágenes Cloudinary, ejecutar seed ni borrar originales. La portabilidad
+histórica sigue siendo condición de la exportación funcional, no una excusa para
+sustituir identidades. El diseño PDF tabular multipágina de la decisión 10 se
+implementará dentro de 25.1 y verificará visualmente antes de cerrar la entrega.
 
 Mantener las cargas pasando por REST NestJS; configurar en Vercel un máximo
 de 4194304 bytes (4 MiB), inferior al límite de payload de 4,5 MB, con validación

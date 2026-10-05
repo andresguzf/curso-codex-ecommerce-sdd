@@ -6,6 +6,7 @@ node_modules/
 
 # Next.js and application builds
 .next/
+.next-*/
 .next-invoice-e2e/
 out/
 dist/

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AuthRole, CatalogImage, ProductDetail } from "@technology-ecommerce/api-schemas";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionStore } from "../src/features/auth/session";
 import { ProductGalleryPanel } from "../src/features/products/product-gallery-panel";
@@ -37,6 +37,7 @@ function show(product = productId, theme = "light") {
 }
 
 describe("administrative product gallery panel", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => { vi.clearAllMocks(); session(); vi.mocked(getAdministrativeProductGallery).mockResolvedValue(detail([image(0)])); });
 
   it("does not query before the product is created", () => {
@@ -44,6 +45,17 @@ describe("administrative product gallery panel", () => {
     expect(screen.getByText(/Guarda primero el producto/)).toBeInTheDocument();
     expect(getAdministrativeProductGallery).not.toHaveBeenCalled();
     expect(screen.queryByText(/\/4 imágenes/)).not.toBeInTheDocument();
+  });
+
+  it("resolves same-origin media when the public API base is empty", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
+    const key = "a1bad9a3-59e8-491c-a0cd-ffa76c3ec8ef.png";
+    vi.mocked(getAdministrativeProductGallery).mockResolvedValue(detail([
+      { ...image(0), storageKey: key, url: `/api/v1/media/images/${key}` },
+    ]));
+    show();
+    const thumbnail = await screen.findByRole("img", { name: "Vista 1" });
+    expect(thumbnail).toHaveAttribute("src", `${window.location.origin}/api/v1/media/images/${key}`);
   });
 
   it.each(["light", "dark"])("shows ordered miniatures and the selected cover using semantic tokens in %s", async (theme) => {

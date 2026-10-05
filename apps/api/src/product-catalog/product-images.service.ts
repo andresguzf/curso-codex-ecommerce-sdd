@@ -6,6 +6,7 @@ import { CatalogImageStorageService } from "./image-storage/catalog-image-storag
 import { ProductImagesRepository, type ImagePatch } from "./product-images.repository";
 import { CloudinaryStorageError } from "./image-storage/cloudinary-image-storage";
 import { catalogAssetProvider } from "./image-storage/catalog-asset-key";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
 import { CatalogImageRecoveryService } from "./image-storage/catalog-image-recovery.service";
 
 @Injectable()
@@ -56,8 +57,8 @@ export class ProductImagesService {
     }
   }
 
-  edit(productId: string, imageId: string, actorId: string, patch: ImagePatch) {
-    return this.repository.mutate(productId, actorId, { kind: "edit", imageId, patch });
+  async edit(productId: string, imageId: string, actorId: string, patch: ImagePatch) {
+    return deliveredCatalogImage(await this.repository.mutate(productId, actorId, { kind: "edit", imageId, patch }));
   }
 
   async delete(productId: string, imageId: string, actorId: string): Promise<void> {

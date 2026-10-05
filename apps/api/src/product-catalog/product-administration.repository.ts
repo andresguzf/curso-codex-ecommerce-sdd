@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
 import {
   and,
   asc,
@@ -275,7 +276,7 @@ export class ProductAdministrationRepository {
         width: productImages.width, height: productImages.height, mimeType: productImages.mimeType,
       }).from(productImages).where(eq(productImages.productId, row.id))
         .orderBy(asc(productImages.sortOrder), asc(productImages.id));
-      return { ...product, images, ...(administrative ? { isFeatured: row.isFeatured, featuredAt: row.featuredAt } : {}),
+      return { ...product, images: images.map(deliveredCatalogImage), ...(administrative ? { isFeatured: row.isFeatured, featuredAt: row.featuredAt } : {}),
         availability: product.stockAvailable > 0 ? "IN_STOCK" : "OUT_OF_STOCK" };
     }, { isolationLevel: "repeatable read", accessMode: "read only" });
   }
@@ -665,7 +666,7 @@ export class ProductAdministrationRepository {
       description: row.description,
       price: row.price,
       currency: SYSTEM_CURRENCY,
-      image: { storageKey: row.imageStorageKey ?? `products/${row.id}/placeholder`, url: row.imageUrl ?? "/images/product-placeholder.svg" },
+      image: deliveredCatalogImage({ storageKey: row.imageStorageKey ?? `products/${row.id}/placeholder`, url: row.imageUrl ?? "/images/product-placeholder.svg" }),
       status: row.status,
       isFeatured: row.isFeatured,
       featuredAt: row.featuredAt,
@@ -693,11 +694,11 @@ export class ProductAdministrationRepository {
       image: product.image,
       status: product.status,
       stockAvailable: row.stockAvailable,
-      coverImage: row.imageId ? {
+      coverImage: row.imageId ? deliveredCatalogImage({
         id: row.imageId, storageKey: row.imageStorageKey!, url: row.imageUrl!,
         altText: row.imageAltText!, isPrimary: row.imageIsPrimary!, sortOrder: row.imageSortOrder!,
         width: row.imageWidth, height: row.imageHeight, mimeType: row.imageMimeType,
-      } : null,
+      }) : null,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };

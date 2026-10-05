@@ -11,6 +11,7 @@ export class AnonymousCartCleanupService implements OnModuleInit, OnModuleDestro
   constructor(private readonly carts: CartRepository) {}
 
   onModuleInit(): void {
+    if (process.env.VERCEL === "1") return;
     this.timer = setInterval(() => {
       void this.run().catch(() => {
         // Request-time expiration remains authoritative if a scheduled cleanup

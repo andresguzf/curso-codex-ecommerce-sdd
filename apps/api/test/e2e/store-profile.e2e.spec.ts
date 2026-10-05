@@ -11,10 +11,10 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { FastifyInstance } from "fastify";
 import { Pool } from "pg";
-import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { configureApplication } from "../../src/application";
+import { COMPANY_LOGO_KEY, companyLogoReference } from "../../src/billing-invoicing/company-logo";
 import { auditEntries, roleAssignments, storeLogoAssets, storeProfiles, users } from "../../src/database/schema";
 import * as schema from "../../src/database/schema";
 import { hashPassword } from "../../src/identity-access/password/password";
@@ -170,7 +170,7 @@ describe("store profile REST permissions and audit", () => {
       taxIdentifier: completeProfile.taxIdentifier,
       address: { line1: completeProfile.address.line1, city: "Valparaíso", countryCode: "CL" },
       contact: { email: completeProfile.contact.email, phone: null },
-      logo: null,
+      logo: companyLogoReference(),
     });
     expect(await database.select().from(storeProfiles)).toHaveLength(1);
     const audit = await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"));
@@ -195,35 +195,30 @@ describe("store profile REST permissions and audit", () => {
     expect(await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"))).toEqual(beforeAudit);
   });
 
-  it("uploads immutable logo versions only for Admin and rejects invented references", async () => {
+  it("rejects unauthenticated maintenance through the real REST route", async () => {
+    const response = await server.inject({ method: "GET", url: "/api/v1/internal/jobs/daily" });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ code: "JOB_UNAUTHORIZED" });
+  });
+
+  it("serves the bundled SVG and does not expose manual logo uploads", async () => {
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=", "base64");
     const upload = (role: "ADMIN" | "BILLING" | "CUSTOMER", payload: Buffer, mime = "image/png") => server.inject({
       method: "POST", url: "/api/v1/store-profile/logo",
       headers: { ...authorization(role), "content-type": mime }, payload,
     });
-    expect((await upload("BILLING", png)).statusCode).toBe(403);
-    expect((await upload("CUSTOMER", png)).statusCode).toBe(403);
-    expect((await upload("ADMIN", png, "image/jpeg")).statusCode).toBe(400);
-    expect((await upload("ADMIN", Buffer.concat([png, Buffer.alloc(5 * 1024 * 1024)]))).statusCode).toBe(413);
+    for (const role of ["ADMIN", "BILLING", "CUSTOMER"] as const) {
+      expect((await upload(role, png)).statusCode).toBe(404);
+    }
     expect(await database.select().from(storeLogoAssets)).toHaveLength(0);
     for (const logo of [{ storageKey: "invented.png" }, { storageKey: "invented.png", url: "https://evil.example/logo.png" }]) {
       expect((await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { logo } })).statusCode).toBe(400);
     }
-    const first = await upload("ADMIN", png);
-    const second = await upload("ADMIN", png);
-    expect(first.statusCode).toBe(201);
-    expect(second.statusCode).toBe(201);
-    const firstLogo = first.json<{ storageKey: string; url: string; mimeType: string; size: number; sha256: string }>();
-    const secondLogo = second.json<typeof firstLogo>();
-    expect(firstLogo.storageKey).not.toBe(secondLogo.storageKey);
-    expect(firstLogo).toMatchObject({ mimeType: "image/png", size: png.length });
-    expect(firstLogo.sha256).toMatch(/^[0-9a-f]{64}$/);
-    for (const logo of [firstLogo, secondLogo]) {
-      const selected = await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"), payload: { logo: { storageKey: logo.storageKey } } });
-      expect(selected.statusCode).toBe(200);
-      expect(selected.json()).toMatchObject({ logo: { storageKey: logo.storageKey, sha256: logo.sha256, url: logo.url } });
-    }
-    expect(await database.select().from(storeLogoAssets)).toHaveLength(2);
+    const svg = await server.inject({ method: "GET", url: `/api/v1/media/images/${COMPANY_LOGO_KEY}` });
+    expect(svg.statusCode).toBe(200);
+    expect(svg.headers["content-type"]).toContain("image/svg+xml");
+    expect(svg.body).toContain("TECH STORE");
+    expect(await database.select().from(storeLogoAssets)).toHaveLength(0);
   });
 
   it("serializes simultaneous partial updates so neither field is lost", async () => {
@@ -239,23 +234,14 @@ describe("store profile REST permissions and audit", () => {
     expect(await database.select().from(auditEntries).where(eq(auditEntries.entityType, "STORE_PROFILE"))).toHaveLength(auditBefore.length + 2);
   });
 
-  it("keeps invoice snapshots and PDFs unchanged after Admin replaces the profile and logo", async () => {
-    const logoBefore = await sharp({ create: { width: 90, height: 45, channels: 3, background: "#164a83" } }).png().toBuffer();
-    const logoAfter = await sharp({ create: { width: 90, height: 45, channels: 3, background: "#ca6d24" } }).png().toBuffer();
-    const upload = (role: "ADMIN" | "BILLING", data: Buffer) => server.inject({
-      method: "POST", url: "/api/v1/store-profile/logo",
-      headers: { ...authorization(role), "content-type": "image/png" }, payload: data,
-    });
-    const firstUpload = await upload("ADMIN", logoBefore);
-    expect(firstUpload.statusCode).toBe(201);
-    const firstLogo = firstUpload.json<{ storageKey: string; url: string; sha256: string }>();
-    const firstLogoReference = { storageKey: firstLogo.storageKey, url: firstLogo.url, sha256: firstLogo.sha256 };
+  it("keeps invoice snapshots and PDFs unchanged after Admin replaces the profile", async () => {
+    const firstLogoReference = companyLogoReference();
     const oldProfile = await server.inject({
       method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"),
       payload: {
         tradeName: "Nexo Original", legalName: "Nexo Original SpA", taxIdentifier: "TAX-OLD",
         address: { line1: "Calle Antigua 1", city: "Santiago", countryCode: "CL" },
-        contact: { email: "old@example.com" }, logo: { storageKey: firstLogo.storageKey },
+        contact: { email: "old@example.com" },
       },
     });
     expect(oldProfile.statusCode).toBe(200);
@@ -263,7 +249,6 @@ describe("store profile REST permissions and audit", () => {
     expect((await server.inject({ method: "GET", url: "/api/v1/store-profile", headers: authorization("BILLING") })).json())
       .toMatchObject({ logo: firstLogoReference, legalName: "Nexo Original SpA" });
     expect((await server.inject({ method: "PATCH", url: "/api/v1/store-profile", headers: authorization("BILLING"), payload: { legalName: "Unauthorized" } })).statusCode).toBe(403);
-    expect((await upload("BILLING", logoAfter)).statusCode).toBe(403);
 
     const createInvoice = (role: "ADMIN" | "BILLING") => server.inject({
       method: "POST", url: "/api/v1/invoices", headers: authorization(role),
@@ -283,16 +268,12 @@ describe("store profile REST permissions and audit", () => {
     expect(firstPdf.rawPayload.toString("latin1")).toContain("/Subtype /Image");
     expect(firstPdf.rawPayload.toString("latin1")).toContain("Nexo Original SpA");
 
-    const secondUpload = await upload("ADMIN", logoAfter);
-    expect(secondUpload.statusCode).toBe(201);
-    const secondLogo = secondUpload.json<typeof firstLogo>();
-    const secondLogoReference = { storageKey: secondLogo.storageKey, url: secondLogo.url, sha256: secondLogo.sha256 };
-    expect(secondLogo.storageKey).not.toBe(firstLogo.storageKey);
+    const secondLogoReference = companyLogoReference();
     const updated = await server.inject({
       method: "PATCH", url: "/api/v1/store-profile", headers: authorization("ADMIN"),
       payload: {
         tradeName: "Nexo Nuevo", legalName: "Nexo Nuevo SpA", taxIdentifier: "TAX-NEW",
-        address: { line1: "Calle Nueva 2" }, logo: { storageKey: secondLogo.storageKey },
+        address: { line1: "Calle Nueva 2" },
       },
     });
     expect(updated.statusCode).toBe(200);
@@ -307,7 +288,7 @@ describe("store profile REST permissions and audit", () => {
     expect(regenerated.statusCode).toBe(200);
     expect(regenerated.rawPayload.equals(firstPdf.rawPayload)).toBe(true);
     expect(regenerated.rawPayload.toString("latin1")).not.toContain("Nexo Nuevo SpA");
-    expect(await database.select().from(storeLogoAssets).where(eq(storeLogoAssets.storageKey, firstLogo.storageKey))).toHaveLength(1);
+    expect(await database.select().from(storeLogoAssets)).toHaveLength(0);
 
     const next = await createInvoice("ADMIN");
     expect(next.statusCode).toBe(201);

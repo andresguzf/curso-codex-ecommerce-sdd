@@ -9,6 +9,7 @@ import type { useProductImageMutations } from "./use-product-image-mutations";
 
 const metadataSchema = z.object({ altText: z.string().trim().min(1, "Describe la imagen antes de subirla.").max(500, "La descripción admite hasta 500 caracteres.") });
 const fileMetadataSchema = z.object({ size: z.number().positive(), type: z.enum(["image/jpeg", "image/png", "image/webp"]) });
+const MAX_IMAGE_BYTES = (process.env.NODE_ENV === "production" ? 4 : 5) * 1_024 * 1_024;
 
 export function ProductImageUpload({ upload, disabled, full }: Readonly<{
   upload: ReturnType<typeof useProductImageMutations>;
@@ -42,6 +43,11 @@ export function ProductImageUpload({ upload, disabled, full }: Readonly<{
     clearFile(false);
     clearErrors();
     if (!selected) return;
+    if (selected.size > MAX_IMAGE_BYTES) {
+      clearFile();
+      setError("root.file", { message: `La imagen supera el máximo de ${MAX_IMAGE_BYTES / 1_024 / 1_024} MiB.` });
+      return;
+    }
     if (!fileMetadataSchema.safeParse(selected).success) {
       clearFile();
       setError("root.file", { message: "Selecciona un archivo JPEG, PNG o WebP que no esté vacío." });
@@ -79,7 +85,7 @@ export function ProductImageUpload({ upload, disabled, full }: Readonly<{
         <label className="grid min-w-0 gap-2 text-sm font-semibold" htmlFor={`${id}-file`}>Archivo de imagen
           <input accept="image/jpeg,image/png,image/webp" aria-describedby={`${id}-formats ${id}-file-error`} className={`${controlClass} file:mr-3 file:rounded-md file:border-0 file:bg-[var(--ds-accent-soft)] file:px-3 file:py-1 file:text-[var(--ds-text)]`} id={`${id}-file`} onChange={(event) => selectFile(event.currentTarget.files?.[0])} ref={fileInput} type="file" />
         </label>
-        <p className="m-0 text-xs text-[var(--ds-text-muted)]" id={`${id}-formats`}>JPEG, PNG o WebP. El tamaño y el contenido se comprueban al subir.</p>
+        <p className="m-0 text-xs text-[var(--ds-text-muted)]" id={`${id}-formats`}>JPEG, PNG o WebP. Máximo {MAX_IMAGE_BYTES / 1_024 / 1_024} MiB. El contenido se comprueba al subir.</p>
         {file ? <p className="m-0 break-all text-xs text-[var(--ds-text-muted)]">{file.name} · Vista previa sin guardar</p> : null}
         <p className="m-0 text-sm text-[var(--ds-danger)]" id={`${id}-file-error`} role={formState.errors.root?.file ? "alert" : undefined}>{formState.errors.root?.file?.message}</p>
         <label className="grid gap-2 text-sm font-semibold" htmlFor={`${id}-alt`}>Texto alternativo de la nueva imagen

@@ -59,6 +59,9 @@ const environmentSchema = z
       .default("development"),
     HOST: z.string().trim().min(1).default("0.0.0.0"),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
+    VERCEL: z.enum(["0", "1"]).optional(),
+    VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+    CRON_SECRET: optionalPrivateString,
     DATABASE_URL: z
       .string()
       .trim()
@@ -132,6 +135,12 @@ const environmentSchema = z
     SIMULATED_SHIPPING_EXPRESS_COST: fixedMoneySchema.default("15.00"),
   })
   .superRefine((environment, context) => {
+    if (environment.VERCEL === "1" && environment.IMAGE_STORAGE_CATALOG_PROVIDER !== "cloudinary") {
+      context.addIssue({ code: "custom", path: ["IMAGE_STORAGE_CATALOG_PROVIDER"], message: "Vercel catalog uploads require Cloudinary; local disk is not durable" });
+    }
+    if (environment.VERCEL === "1" && environment.VERCEL_ENV === "production" && (!environment.CRON_SECRET || environment.CRON_SECRET.length < 32)) {
+      context.addIssue({ code: "custom", path: ["CRON_SECRET"], message: "A private CRON_SECRET of at least 32 characters is required on Vercel production" });
+    }
     try {
       databaseConnectionOptions(environment.DATABASE_URL, environment.DATABASE_TLS_VERIFY_SERVER);
     } catch (error) {
@@ -191,6 +200,7 @@ const environmentSchema = z
   })
   .transform((environment) => ({
     ...environment,
+    IMAGE_STORAGE_MAX_BYTES: environment.VERCEL === "1" ? Math.min(environment.IMAGE_STORAGE_MAX_BYTES, 4 * 1_024 * 1_024) : environment.IMAGE_STORAGE_MAX_BYTES,
     AUTH_ACCESS_TOKEN_SECRET:
       environment.AUTH_ACCESS_TOKEN_SECRET ?? DEVELOPMENT_ACCESS_TOKEN_SECRET,
     AUTH_COOKIE_SECURE:

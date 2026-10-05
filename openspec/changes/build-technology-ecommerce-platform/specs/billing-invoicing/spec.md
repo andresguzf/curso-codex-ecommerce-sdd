@@ -70,7 +70,7 @@ El sistema SHALL permitir que `ADMIN` y `BILLING` listen, busquen, filtren y con
 - **THEN** el sistema devuelve las facturas autorizadas que coinciden con el filtro y sus datos de paginación
 
 ### Requirement: Perfil de la empresa emisora
-El sistema SHALL mantener un único perfil vigente de la tienda con al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo administrado, SHALL permitir que solo `ADMIN` lo modifique y SHALL permitir que `ADMIN` y `BILLING` lo consulten para facturación.
+El sistema SHALL mantener un único perfil vigente de la tienda con al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia del logo SVG empresarial fijo. SHALL permitir que solo `ADMIN` modifique los datos empresariales y SHALL permitir que `ADMIN` y `BILLING` lo consulten para facturación. El logo SHALL ser determinado por el servidor y no editable desde el formulario.
 
 #### Scenario: Administrador actualiza la empresa
 - **WHEN** un administrador guarda datos empresariales válidos
@@ -95,19 +95,27 @@ El seed explícito de desarrollo y pruebas SHALL crear un perfil empresarial con
 - **WHEN** se intenta ejecutar el seed en producción
 - **THEN** el proceso falla antes de escribir el perfil empresarial DEMO o cualquier otro dato de ejemplo
 
-### Requirement: Logo empresarial administrado e inmutable
-El sistema SHALL permitir exclusivamente a `ADMIN` cargar un logo PNG, JPEG o WebP con límites de tamaño y validación de firma, SHALL guardar cada versión bajo una clave nueva que no se sobrescriba y SHALL asociar al perfil únicamente una referencia emitida por el API. La referencia SHALL incluir MIME y huella SHA-256 verificable. El sistema MUST conservar los assets referenciados por órdenes o facturas históricas y MUST NOT confiar en URLs o claves arbitrarias proporcionadas en `PATCH /store-profile`.
+### Requirement: Logo empresarial SVG fijo e inmutable
+El sistema SHALL usar un SVG empresarial fijo generado e incluido en el despliegue, con identidad versionada y huella SHA-256 verificable, sin cargas manuales, disco mutable ni Cloudinary. El SVG SHALL ser un recurso confiable del proyecto, sin scripts, referencias externas ni contenido enviado por usuarios. El API SHALL determinar su referencia para nuevas órdenes y facturas manuales; la factura desde orden MUST copiar el logo del snapshot de esa orden. El sistema MUST conservar los assets y snapshots anteriores y MUST NOT aceptar URLs, claves o SVG arbitrarios en `PATCH /store-profile` para cambiar el logo.
 
-#### Scenario: Administrador sustituye el logo
-- **WHEN** `ADMIN` carga una imagen válida y selecciona la referencia recibida en el formulario empresarial
-- **THEN** el perfil usa la versión nueva y las órdenes y facturas anteriores continúan referenciando la versión previa sin sobrescribirla ni eliminarla
+#### Scenario: Formulario empresarial sin carga de archivos
+- **WHEN** ADMIN o BILLING consulta el perfil empresarial
+- **THEN** ve el logo fijo; ADMIN puede editar los demás datos, pero no existen controles de subir, sustituir ni eliminar el logo
 
-#### Scenario: Archivo inválido o rol no autorizado
-- **WHEN** se carga un archivo sobredimensionado, con MIME distinto de su firma, o un usuario `BILLING` intenta cargar un logo
-- **THEN** el API rechaza la operación sin modificar el perfil ni crear una referencia utilizable
+#### Scenario: Nuevo documento usa el SVG incluido
+- **WHEN** se confirma una orden nueva o se crea una factura manual después de implementar esta revisión
+- **THEN** su snapshot conserva identidad y huella del SVG fijo sin upload, seed ni dependencia del proveedor de catálogo
+
+#### Scenario: Intento de sustituir el logo mediante REST
+- **WHEN** un cliente intenta cargar un logo o asignar una referencia arbitraria, incluso como ADMIN
+- **THEN** el API no permite la sustitución y mantiene el logo fijo y los datos históricos; el contrato publicado deja de ofrecer la carga manual
+
+#### Scenario: Factura de una orden anterior
+- **WHEN** se convierte en factura una orden cuyo snapshot contiene otro logo o carece de logo
+- **THEN** la factura conserva exactamente el snapshot empresarial de la orden sin asignarle retroactivamente el SVG vigente
 
 ### Requirement: Snapshot empresarial de la factura
-El sistema SHALL copiar en cada factura los datos vigentes del perfil de la empresa al crearla o emitirla, incluida la clave y huella del logo administrado cuando exista, y MUST mantener ese snapshot independiente de cambios posteriores del perfil.
+El sistema SHALL copiar en cada factura manual los datos vigentes del perfil de la empresa al crearla o emitirla, incluida la identidad y huella del SVG fijo; la factura derivada SHALL reutilizar el snapshot de la orden. MUST mantener cada snapshot independiente de cambios posteriores del perfil o de la versión del SVG.
 
 #### Scenario: Factura después de cambiar la empresa
 - **WHEN** se modifica el perfil de la tienda después de crear o emitir una factura

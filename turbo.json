@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
+      "env": ["NEXT_PUBLIC_*", "API_REST_ORIGIN", "E2E_NEXT_DIST_DIR", "VERCEL", "VERCEL_ENV"],
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },

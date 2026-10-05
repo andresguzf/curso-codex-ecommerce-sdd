@@ -43,12 +43,12 @@ export class DatabaseService
       application_name: "technology-ecommerce-api",
       ...connection,
       connectionTimeoutMillis: 5_000,
-      idleTimeoutMillis: 30_000,
-      max: 5,
+      idleTimeoutMillis: config.get("VERCEL", { infer: true }) === "1" ? 10_000 : 30_000,
+      max: config.get("VERCEL", { infer: true }) === "1" ? 2 : 5,
     });
     this.client = drizzle({ client: this.pool, schema });
     // Dedicated connections prevent uploads from starving the query pool.
-    this.coordinationPool = new Pool({ ...connection, max: 5, connectionTimeoutMillis: 5_000 });
+    this.coordinationPool = new Pool({ ...connection, max: config.get("VERCEL", { infer: true }) === "1" ? 2 : 5, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 5_000 });
     this.coordinationPool.on("error", () => this.logger.warn("Image coordination connection lost"));
 
     this.pool.on("error", () => {

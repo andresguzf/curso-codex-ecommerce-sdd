@@ -34,7 +34,6 @@ export const storeProfilePatchSchema = z.object({
   taxIdentifier: storeProfileInputSchema.shape.taxIdentifier.optional(),
   address: addressSchema.partial().optional(),
   contact: contactSchema.partial().optional(),
-  logo: logoSchema.nullable().optional(),
 }).strict().refine((input) => Object.keys(input).length > 0, "At least one field is required");
 
 export type StoreProfilePatch = z.infer<typeof storeProfilePatchSchema>;

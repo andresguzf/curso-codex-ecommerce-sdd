@@ -23,17 +23,19 @@ export class CatalogImageRecoveryService implements OnApplicationBootstrap, OnMo
   private timer?: ReturnType<typeof setInterval>;
   private running?: Promise<void>;
   private stopping = false;
+  private readonly serverless: boolean;
 
   constructor(@Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(ConfigService) config: ConfigService<EnvironmentVariables, true>,
     @Inject(ImageReferenceLookup) private readonly references: ImageReferenceLookup) {
+    this.serverless = config.get("VERCEL", { infer: true }) === "1";
     this.selected = config.get("IMAGE_STORAGE_CATALOG_PROVIDER", { infer: true }) === "cloudinary";
     const keys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_FOLDER_MODE"] as const;
     if (keys.every((key) => config.get(key, { infer: true }))) this.provider = new CloudinaryImageStorage(config);
   }
 
   onApplicationBootstrap(): void {
-    if (!this.cloud) return;
+    if (!this.cloud || this.serverless) return;
     // Delayed and bounded: bootstrap never performs a remote request.
     this.timer = setInterval(() => {
       if (this.running || this.stopping) return;
@@ -74,12 +76,13 @@ export class CatalogImageRecoveryService implements OnApplicationBootstrap, OnMo
 
   async reconcile(now = new Date()): Promise<void> {
     if (!this.cloud) return;
+    const deadline = Date.now() + 150_000;
     const due = await this.database.client.select().from(catalogImageOperations).where(and(
       eq(catalogImageOperations.cloudName, this.cloud.configuredCloudName),
       inArray(catalogImageOperations.state, ["UPLOADING", "PENDING"]), lte(catalogImageOperations.nextAttemptAt, now),
     )).orderBy(catalogImageOperations.nextAttemptAt).limit(20);
     for (const candidate of due) {
-      if (this.stopping) break;
+      if (this.stopping || Date.now() >= deadline) break;
       await this.database.withImageOperationLock(candidate.id, async () => {
         const [row] = await this.database.client.select().from(catalogImageOperations).where(eq(catalogImageOperations.id, candidate.id));
         if (!row || !["UPLOADING", "PENDING"].includes(row.state) || row.nextAttemptAt > now) return;

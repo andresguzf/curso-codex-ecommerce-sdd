@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, asc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 
 import { DatabaseService } from "../database/database.service";
 import {
@@ -10,6 +10,7 @@ import {
   products,
 } from "../database/schema";
 import { SYSTEM_CURRENCY } from "../shared/system-currency";
+import { deliveredCatalogImage } from "../product-catalog/image-storage/bundled-catalog-image";
 import { calculateCartTotals } from "./cart-totals";
 import type {
   ActiveCart,
@@ -74,6 +75,9 @@ export class CartRepository {
   }
 
   async deleteExpiredAnonymousCarts(now = new Date()): Promise<number> {
+    const expired = this.database.client.select({ id: carts.id }).from(carts)
+      .where(and(isNull(carts.customerId), eq(carts.status, "ACTIVE"), lte(carts.expiresAt, now)))
+      .orderBy(asc(carts.expiresAt)).limit(500);
     const deleted = await this.database.client
       .delete(carts)
       .where(
@@ -81,6 +85,7 @@ export class CartRepository {
           isNull(carts.customerId),
           eq(carts.status, "ACTIVE"),
           lte(carts.expiresAt, now),
+          inArray(carts.id, expired),
         ),
       )
       .returning({ id: carts.id });
@@ -567,11 +572,11 @@ export class CartRepository {
       product: {
         currency: SYSTEM_CURRENCY,
         id: row.productId,
-        image: {
+        image: deliveredCatalogImage({
           storageKey:
             row.imageStorageKey ?? `defaults/products/${row.productId}/placeholder.svg`,
           url: row.imageUrl ?? "/images/product-placeholder.svg",
-        },
+        }),
         isAvailable:
           row.productStatus === "ACTIVE" &&
           row.productDeletedAt === null &&

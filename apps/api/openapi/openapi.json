@@ -35,6 +35,12 @@
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           },
@@ -985,74 +991,6 @@
         "summary": "Transition an invoice status as Admin or Billing",
         "tags": [
           "invoices"
-        ]
-      }
-    },
-    "/api/v1/store-profile/logo": {
-      "post": {
-        "operationId": "uploadStoreLogo",
-        "parameters": [
-          {
-            "name": "content-type",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "image/png": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "image/jpeg": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "image/webp": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadedStoreLogoDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid image type, signature or size"
-          },
-          "401": {
-            "description": "Authentication required"
-          },
-          "403": {
-            "description": "Role is not permitted"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Upload an immutable store logo version",
-        "tags": [
-          "store-profile"
         ]
       }
     },
@@ -4780,43 +4718,6 @@
           "lines"
         ]
       },
-      "UploadedStoreLogoDto": {
-        "type": "object",
-        "properties": {
-          "storageKey": {
-            "type": "string",
-            "maxLength": 512
-          },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "maxLength": 2048
-          },
-          "sha256": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "mimeType": {
-            "type": "string",
-            "enum": [
-              "image/png",
-              "image/jpeg",
-              "image/webp"
-            ]
-          },
-          "size": {
-            "type": "number",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "storageKey",
-          "url",
-          "sha256",
-          "mimeType",
-          "size"
-        ]
-      },
       "StoreAddressDto": {
         "type": "object",
         "properties": {
@@ -5003,18 +4904,6 @@
           }
         }
       },
-      "StoreLogoReferenceDto": {
-        "type": "object",
-        "properties": {
-          "storageKey": {
-            "type": "string",
-            "maxLength": 512
-          }
-        },
-        "required": [
-          "storageKey"
-        ]
-      },
       "PatchStoreProfileDto": {
         "type": "object",
         "properties": {
@@ -5035,15 +4924,6 @@
           },
           "contact": {
             "$ref": "#/components/schemas/PatchStoreContactDto"
-          },
-          "logo": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/StoreLogoReferenceDto"
-              }
-            ]
           }
         }
       },

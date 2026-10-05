@@ -9,8 +9,10 @@ import "reflect-metadata";
 import { AppModule } from "./app.module";
 import { configureApplication } from "./application";
 import type { EnvironmentVariables } from "./config/environment";
+import { assertDeploymentRuntime } from "./config/deployment-runtime";
 
 async function bootstrap(): Promise<void> {
+  assertDeploymentRuntime(process.env);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),

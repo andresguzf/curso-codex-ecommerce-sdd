@@ -6,6 +6,22 @@ const databaseUrl = "postgresql://postgres:password@localhost:5432/ecommerce";
 const productionSecret = "production-test-secret-at-least-32-characters";
 
 describe("HTTP security environment", () => {
+  const vercelConfig = {
+    DATABASE_URL: databaseUrl, VERCEL: "1", VERCEL_ENV: "production",
+    AUTH_ACCESS_TOKEN_SECRET: productionSecret,
+    CRON_SECRET: "test-cron-secret-of-at-least-32-characters",
+    IMAGE_STORAGE_CATALOG_PROVIDER: "cloudinary", CLOUDINARY_FOLDER_MODE: "dynamic",
+    CLOUDINARY_CLOUD_NAME: "test-cloud", CLOUDINARY_API_KEY: "test-key", CLOUDINARY_API_SECRET: "test-secret",
+  };
+  it("caps Vercel binary uploads at 4 MiB while retaining smaller limits", () => {
+    expect(validateEnvironment(vercelConfig).IMAGE_STORAGE_MAX_BYTES).toBe(4 * 1024 * 1024);
+    expect(validateEnvironment({ ...vercelConfig, IMAGE_STORAGE_MAX_BYTES: 2048 }).IMAGE_STORAGE_MAX_BYTES).toBe(2048);
+  });
+  it("rejects mutable local storage and missing production cron credentials on Vercel", () => {
+    expect(() => validateEnvironment({ ...vercelConfig, IMAGE_STORAGE_CATALOG_PROVIDER: "local" })).toThrow("local disk is not durable");
+    expect(() => validateEnvironment({ ...vercelConfig, CRON_SECRET: "" })).toThrow("CRON_SECRET");
+    expect(() => validateEnvironment({ ...vercelConfig, VERCEL_ENV: "preview", CRON_SECRET: "" })).not.toThrow();
+  });
   it("keeps catalog local by default and fixes the Cloudinary destination", () => {
     const environment = validateEnvironment({ DATABASE_URL: databaseUrl });
     expect(environment.IMAGE_STORAGE_CATALOG_PROVIDER).toBe("local");

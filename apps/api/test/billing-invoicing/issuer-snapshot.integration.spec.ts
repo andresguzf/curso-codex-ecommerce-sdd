@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { insertProductFixtures } from "../product-fixtures";
 import { resolve } from "node:path";
 
@@ -7,7 +7,6 @@ import { eq } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { InvoiceFromOrderService } from "../../src/billing-invoicing/invoice-from-order.service";
@@ -17,7 +16,8 @@ import { currentIssuerSnapshot } from "../../src/billing-invoicing/issuer-snapsh
 import { DocumentExportService } from "../../src/document-export/document-export.service";
 import { SimplePdfAdapter } from "../../src/document-export/simple-pdf.adapter";
 import type { DatabaseService } from "../../src/database/database.service";
-import { invoices, orders, payments, roleAssignments, storeLogoAssets, users } from "../../src/database/schema";
+import { invoices, orders, payments, roleAssignments, users } from "../../src/database/schema";
+import { companyLogoReference } from "../../src/billing-invoicing/company-logo";
 import * as schema from "../../src/database/schema";
 import type { AuthenticatedUser } from "../../src/identity-access/auth.types";
 import { CustomerOrdersService } from "../../src/order-management/customer-orders.service";
@@ -88,17 +88,13 @@ describe("historical issuer snapshots", () => {
     await expect(database.transaction((transaction) => currentIssuerSnapshot(transaction)))
       .rejects.toMatchObject({ response: { code: "STORE_PROFILE_NOT_CONFIGURED" } });
 
-    const logoData = await sharp({ create: { width: 40, height: 20, channels: 3, background: "#164a83" } }).png().toBuffer();
-    const logoSha = createHash("sha256").update(logoData).digest("hex");
-    await database.insert(storeLogoAssets).values({ storageKey: "managed-logo.png", url: "http://localhost:3001/api/v1/media/images/managed-logo.png", mimeType: "image/png", size: logoData.length, sha256: logoSha });
     const documents = new DocumentExportService(new SimplePdfAdapter(), {
-      read: async () => ({ data: logoData, mimeType: "image/png" }),
+      read: async () => { throw new Error("Fixed SVG must not read local storage"); },
     } as unknown as ImageStorageService);
     await profile.update(admin, {
       tradeName: "Nexo Original", legalName: "Nexo Original SpA", taxIdentifier: "TAX-OLD",
       address: { line1: "Calle Antigua 1", city: "Santiago", countryCode: "CL" },
       contact: { email: "old@example.com" },
-      logo: { storageKey: "managed-logo.png" },
     });
     const confirmed = await database.transaction(async (transaction) => {
       const issuerSnapshot = await currentIssuerSnapshot(transaction);
@@ -119,12 +115,12 @@ describe("historical issuer snapshots", () => {
       return order.snapshot;
     });
     expect(confirmed.issuerSnapshot?.legalName).toBe("Nexo Original SpA");
-    expect(confirmed.issuerSnapshot?.logo).toMatchObject({ storageKey: "managed-logo.png", sha256: logoSha });
+    expect(confirmed.issuerSnapshot?.logo).toEqual(companyLogoReference());
     const orderPdfBefore = await documents.renderOrder(confirmed);
 
     await profile.update(admin, {
       tradeName: "Nexo Nueva", legalName: "Nexo Nueva SpA", taxIdentifier: "TAX-NEW",
-      address: { line1: "Calle Nueva 2" }, logo: null,
+      address: { line1: "Calle Nueva 2" },
     });
     const persistedOrder = await orderQuery.detail(customer, confirmed.id);
     expect(persistedOrder.issuerSnapshot).toEqual(confirmed.issuerSnapshot);
@@ -144,7 +140,7 @@ describe("historical issuer snapshots", () => {
       customerId: customer.id, shippingTotal: "0.00",
       lines: [{ productId: null, sku: "SERVICE", name: "Servicio", description: "Servicio técnico", quantity: 1, unitPrice: "25.00", taxRate: "0.0000" }],
     });
-    expect(manualInvoice.issuerSnapshot).toMatchObject({ tradeName: "Nexo Nueva", legalName: "Nexo Nueva SpA", taxIdentifier: "TAX-NEW", address: { line1: "Calle Nueva 2" }, logo: null });
+    expect(manualInvoice.issuerSnapshot).toMatchObject({ tradeName: "Nexo Nueva", legalName: "Nexo Nueva SpA", taxIdentifier: "TAX-NEW", address: { line1: "Calle Nueva 2" }, logo: companyLogoReference() });
     expect((await orderQuery.detail(customer, confirmed.id)).issuerSnapshot).toEqual(confirmed.issuerSnapshot);
   }, 30_000);
 });

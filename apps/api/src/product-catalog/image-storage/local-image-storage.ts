@@ -16,6 +16,7 @@ import {
   type SupportedImageMimeType,
 } from "./image-storage.port";
 import { detectImageMimeType, extensionFor } from "./image-signature";
+import { readBundledCatalogImage } from "./bundled-catalog-image";
 
 const STORAGE_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|png|webp)$/;
@@ -66,6 +67,8 @@ export class LocalImageStorage extends ImageStorage {
 
   async read(storageKey: string): Promise<StoredImageContent> {
     const path = this.pathFor(storageKey);
+    const bundled = await readBundledCatalogImage(storageKey);
+    if (bundled) return { ...this.metadata(storageKey, "image/png", bundled.byteLength), data: bundled };
     let data: Buffer;
 
     try {

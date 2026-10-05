@@ -3,7 +3,8 @@ import { eq, sql } from "drizzle-orm";
 
 import { createAuditEntry } from "../audit-observability/audit-entry";
 import { DatabaseService } from "../database/database.service";
-import { auditEntries, storeLogoAssets, storeProfiles, type StoreProfile } from "../database/schema";
+import { auditEntries, storeProfiles, type StoreProfile } from "../database/schema";
+import { companyLogoReference } from "./company-logo";
 import type { AuthenticatedUser } from "../identity-access/auth.types";
 import {
   storeProfileInputSchema,
@@ -45,9 +46,7 @@ function responseFor(row: StoreProfile): StoreProfileResponse {
       countryCode: row.addressCountryCode,
     },
     contact: { email: row.contactEmail, phone: row.contactPhone },
-    logo: row.logoStorageKey && row.logoUrl && row.logoSha256
-      ? { storageKey: row.logoStorageKey, url: row.logoUrl, sha256: row.logoSha256 }
-      : null,
+    logo: companyLogoReference(),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -61,7 +60,6 @@ function mergeProfile(current: StoreProfile | undefined, patch: StoreProfilePatc
     taxIdentifier: patch.taxIdentifier ?? previous?.taxIdentifier,
     address: { ...previous?.address, ...patch.address },
     contact: { ...previous?.contact, ...patch.contact },
-    logo: patch.logo === undefined ? previous?.logo ? { storageKey: previous.logo.storageKey } : null : patch.logo,
   };
   const parsed = storeProfileInputSchema.safeParse(candidate);
   if (!parsed.success) {
@@ -87,17 +85,12 @@ export class StoreProfileService {
 
   async update(actor: AuthenticatedUser, patch: StoreProfilePatch): Promise<StoreProfileResponse> {
     if (actor.role !== "ADMIN") throw this.forbidden();
+    if ("logo" in patch) throw new BadRequestException({ code: "STORE_LOGO_FIXED", message: "The company logo is fixed and cannot be changed" });
     return this.database.client.transaction(async (transaction) => {
       // Serializes creation and partial updates of the singleton, including the initially empty table.
       await transaction.execute(sql`select pg_advisory_xact_lock(739138, 1)`);
       const [current] = await transaction.select().from(storeProfiles).where(eq(storeProfiles.id, 1)).limit(1);
       const input = mergeProfile(current, patch);
-      const [logoAsset] = input.logo
-        ? await transaction.select().from(storeLogoAssets).where(eq(storeLogoAssets.storageKey, input.logo.storageKey)).limit(1)
-        : [];
-      if (input.logo && !logoAsset) throw new BadRequestException({
-        code: "STORE_LOGO_UNKNOWN", message: "Select a logo uploaded through this API",
-      });
       const now = new Date();
       const values = {
         tradeName: input.tradeName,
@@ -111,9 +104,6 @@ export class StoreProfileService {
         addressCountryCode: input.address.countryCode,
         contactEmail: input.contact?.email ?? null,
         contactPhone: input.contact?.phone ?? null,
-        logoStorageKey: logoAsset?.storageKey ?? null,
-        logoUrl: logoAsset?.url ?? null,
-        logoSha256: logoAsset?.sha256 ?? null,
         updatedAt: now,
       };
       const [saved] = current

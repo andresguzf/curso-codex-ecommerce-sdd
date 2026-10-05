@@ -5,15 +5,37 @@ Define documentos PDF consistentes y protegidos para representar órdenes y fact
 ## ADDED Requirements
 
 ### Requirement: Logos y documentos históricos portables en Vercel
-El sistema SHALL preservar carga/lectura del logo empresarial y generación PDF mediante almacenamiento durable acordado antes de implementar el despliegue, independiente de los assets de catálogo y del disco efímero de Functions. MUST preservar bytes, claves, huellas y snapshots históricos; no subir logos a codex-storefront, sustituirlos por el logo vigente, truncar documentos o borrar originales. Una transferencia de archivos existentes MUST ser autorizada específicamente. MUST comprobar entrega PDF dentro de límites de Function y no declarar la feature desplegada si depende de archivos sólo presentes en la máquina local.
+El sistema SHALL generar PDF con el SVG empresarial fijo versionado incluido en el artefacto para los nuevos snapshots, sin carga manual ni almacenamiento mutable o Cloudinary. MUST resolverlo por identidad histórica y verificar su huella, conservando versiones incluidas cuando cambie el diseño. Para documentos anteriores MUST preservar bytes, claves, huellas y snapshots; no subir logos a codex-storefront, sustituirlos por el logo vigente, truncar documentos o borrar originales. Una transferencia de archivos históricos existentes MUST ser autorizada específicamente. MUST comprobar entrega PDF dentro de límites de Function y no declarar la exportación histórica funcional si depende de archivos sólo presentes en la máquina local.
 
 #### Scenario: PDF histórico después de cambiar de instancia
 - **WHEN** se exporta una orden o factura cuyo snapshot contiene un logo administrado y el runtime es una instancia nueva
-- **THEN** obtiene los bytes históricos del almacenamiento durable mediante su referencia y verifica la huella, sin consultar el logo actual ni depender de una carga local anterior
+- **THEN** obtiene los bytes por su referencia y verifica la huella: del recurso versionado incluido para el SVG fijo o del almacenamiento histórico preservado para un logo anterior, sin consultar el logo actual ni depender de archivos creados en otra instancia
 
 #### Scenario: Portabilidad incompleta no se oculta
 - **WHEN** faltan assets históricos o la estrategia durable aún no está resuelta
-- **THEN** se conserva el error explícito y el despliegue no se marca completado ocultando el logo o deshabilitando su administración
+- **THEN** se conserva el error explícito y el despliegue no se marca completado ocultando ni sustituyendo el logo histórico; la retirada autorizada de la carga manual no elimina la obligación de preservar documentos anteriores
+
+### Requirement: Diseño empresarial tabular de órdenes y facturas PDF
+Los PDF SHALL presentar un layout empresarial legible con paleta azul oscuro, fondo claro, márgenes y jerarquía tipográfica consistentes, independiente del tema de la UI. SHALL incluir cabecera con logo histórico cuando exista, datos de empresa, tipo de documento, número, fecha y estado; un bloque separado de cliente/dirección disponible en el snapshot; y una tabla con encabezados, columnas y filas para producto/SKU, cantidad, precio unitario, impuestos e importe. Los importes SHALL alinearse a la derecha y los textos largos SHALL ajustarse sin superposición. SHALL mostrar subtotal, impuestos, envío cuando corresponda y total en USD en un bloque destacado, junto con pago/envío u origen según el documento. MUST usar exclusivamente valores históricos, sin recalcular la operación comercial, inventar impuestos, direcciones, descuentos o datos fiscales. DRAFT MUST seguir identificándose visiblemente como borrador sin número definitivo.
+
+#### Scenario: Factura con tabla y totales
+- **WHEN** un actor autorizado exporta una factura manual o derivada
+- **THEN** obtiene un PDF con cabecera, cliente, tabla de todas sus líneas e importes históricos alineados, estado/origen y totales legibles, no una lista de texto corrido
+
+#### Scenario: Orden con envío y pago
+- **WHEN** un actor autorizado exporta una orden
+- **THEN** obtiene el mismo sistema visual con tabla de productos, dirección, pago/envío y desglose que incluye el costo de envío histórico sin añadirlo dos veces
+
+### Requirement: Tablas PDF multipágina sin pérdida de contenido
+El generador SHALL paginar según el espacio disponible y la altura real del texto, repetir los encabezados de tabla en continuaciones y numerar páginas. MUST conservar todas las líneas y sus textos, sin límites de recorte ni omisión silenciosa. SHALL separar tablas, totales y pie, evitando solapamientos; los textos o filas que excedan una página MUST continuar de forma legible sin perder datos. La implementación SHALL verificarse mediante extracción de contenido y revisión visual de PDFs renderizados, incluyendo órdenes/facturas cortas, largas y nombres extensos.
+
+#### Scenario: Documento con muchos ítems
+- **WHEN** una orden o factura tiene más filas que las que caben en una página
+- **THEN** se generan todas las páginas necesarias con encabezados repetidos, números de página y todos los ítems/totales sin cortes, omisiones ni superposiciones
+
+#### Scenario: Texto largo o caracteres españoles
+- **WHEN** nombres, SKU o direcciones requieren varias líneas o contienen caracteres españoles
+- **THEN** el PDF mantiene texto legible, columnas alineadas y alturas ajustadas sin invadir otras celdas, totales o pie
 
 ### Requirement: Documentos históricos independientes del alojamiento PostgreSQL
 El sistema SHALL preservar snapshots empresariales, referencias y huellas de logos al migrar a Supabase. Los archivos locales y sus volúmenes MUST conservarse; generar PDFs MUST seguir usando snapshots y bytes históricos, sin Supabase Storage ni sustitución por el perfil vigente.

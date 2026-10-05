@@ -24,7 +24,8 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Incorporar una lista de deseos persistente para cada cliente, con acciones para agregar o retirar productos y mover productos disponibles al carrito.
 - Ampliar el catálogo con slugs únicos, categorías administrables y etiquetas asociables a productos.
 - Permitir en el formulario administrativo de productos seleccionar etiquetas existentes o crear y asignar etiquetas nuevas por nombre, como chips o mediante entrada separada por comas, sin salir del formulario; ofrecer un slug de producto opcional y editable. Las categorías se crean exclusivamente en su administración y se seleccionan desde un desplegable de categorías existentes.
-- Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal, dirección física y logo administrado como archivo inmutable, configurable desde el back office y preservado como referencia verificable en los snapshots de órdenes y facturas; los PDF incrustarán visualmente la versión histórica del logo cuando exista.
+- Incorporar un perfil único de la empresa con nombre comercial, razón social, identificador fiscal y dirección física configurables desde el back office. La revisión de fase 25 sustituye la carga manual del logo por un SVG empresarial fijo generado, versionado e incluido en el despliegue; las nuevas órdenes y facturas conservarán su referencia y huella verificable. Los documentos anteriores mantendrán sus logos y snapshots históricos, sin sustitución retroactiva.
+- Presentar órdenes y facturas PDF mediante una plantilla empresarial azul oscuro con cabecera, datos del cliente, tabla de producto/SKU, cantidad, precio unitario, impuestos e importe, bloque de totales y envío cuando corresponda. Admitir varias páginas con encabezados de tabla repetidos y numeración, sin recortar ítems ni alterar importes históricos.
 - Incorporar autocompletado remoto y paginado de clientes y productos al crear facturas manuales.
 - Diferenciar por completo la identidad visual del storefront y del back office: el storefront tendrá una experiencia comercial propia de una tienda online y el back office una experiencia administrativa minimalista, elegante y empresarial.
 - Incorporar un dashboard inicial del back office con indicadores y accesos operativos adaptados a los permisos de `ADMIN` y `BILLING`.
@@ -66,7 +67,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 - `order-management`: búsqueda y paginación administrativa, gestión de estados por `ADMIN` y `BILLING` y snapshots del perfil de empresa.
 - `inventory-control`: búsqueda, filtros y paginación administrativa de balances y movimientos.
 - `billing-invoicing`: perfil de empresa, perfil empresarial `DEMO` precargado únicamente en entornos no productivos, autocompletado remoto y experiencia administrativa paginada.
-- `document-export`: datos de empresa y logo visual preservados en PDFs históricos sin consultar el perfil vigente ni descargar imágenes remotas al regenerar.
+- `document-export`: datos de empresa y logo visual preservados en PDFs históricos sin consultar el perfil vigente ni descargar imágenes remotas al regenerar; SVG fijo versionado para documentos nuevos y layout tabular multipágina para órdenes y facturas.
 
 ### Modified Capabilities
 
@@ -87,6 +88,12 @@ mantener advisory locks de sesión, con secretos sólo en el API.
 No basta cambiar variables: adaptar ejecución periódica al runtime serverless,
 resolver persistencia/entrega de archivos locales y logos históricos, configurar
 sesión HTTPS entre aplicaciones y limitar cargas al presupuesto de Vercel.
+Revisión confirmada el 2026-10-05: sustituir las nuevas cargas de logo empresarial
+por un SVG fijo incluido en el artefacto, independiente de Cloudinary y del disco
+mutable; conservar referencias históricas. Rediseñar ambos PDFs con tablas,
+columnas, totales y paginación real, verificando visualmente muestras cortas y
+largas. Estos cambios se incluyen en 25.1 y su validación final en 25.4,
+sin añadir una fase ni marcar código pendiente como implementado.
 La primera tarea confirmará plan Hobby/Pro y estrategia de almacenamiento/cadencia
 con el usuario antes de implementarlas; no contratar planes ni trasladar assets
 automáticamente. Desplegar primero API y luego frontends, probar lo básico y
@@ -110,7 +117,7 @@ código, datos, assets o proyectos remotos y no hace commit/push ni archivo.
 - Nuevas dependencias de frontend para React/Next.js, TypeScript, Tailwind, Zustand, Zod, React Hook Form y TanStack Query; y dependencias de backend para REST, persistencia, autenticación, OpenAPI y generación PDF.
 - Nuevas suites de pruebas unitarias, integración, contrato y flujos end-to-end para seguridad, catálogo, checkout, concurrencia de inventario y facturación.
 - Nuevas entidades y contratos REST para categorías, etiquetas, lista de deseos y perfil de empresa, además de búsquedas remotas para autocompletado.
-- Un endpoint administrativo de carga de logo y almacenamiento de versiones inmutables con huella verificable; el perfil referenciará solo assets gestionados por el API y las versiones usadas en documentos históricos no se eliminarán.
+- Sustitución, en fase 25, del endpoint/control administrativo de carga de logo por una referencia SVG fija generada por el servidor y versionada con huella verificable; no aceptar cargas ni claves/URLs arbitrarias para cambiarla. Conservar las versiones previamente usadas por documentos históricos y regenerar OpenAPI/cliente/esquemas al revisar el contrato.
 - Ampliación de las mutaciones REST de productos para resolver o crear etiquetas por nombre junto con sus asociaciones en una sola operación, sin creación de categorías en línea.
 - Nuevos componentes UI compartidos para shells, navegación, sidebars, buscadores, filtros, mensajes flash, badges y modales de confirmación accesibles.
 - Nuevos sistemas de tokens visuales separados por aplicación, infraestructura de temas y contrato REST agregado para el resumen autorizado del dashboard.

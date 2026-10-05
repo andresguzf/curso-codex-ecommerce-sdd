@@ -32,9 +32,9 @@ function issuerHeader(snapshot: unknown): string[] {
     ? issuer.address as Readonly<Record<string, unknown>> : issuer;
   return [
     `Nombre comercial: ${snapshotText(issuer, "tradeName", "commercialName", "legalName")}`,
-    `Razon social: ${snapshotText(issuer, "legalName", "businessName")}`,
+    `Razón social: ${snapshotText(issuer, "legalName", "businessName")}`,
     `Identificador fiscal: ${snapshotText(issuer, "taxIdentifier", "taxId")}`,
-    `Direccion del emisor: ${address(nestedAddress)}`,
+    `Dirección del emisor: ${address(nestedAddress)}`,
   ];
 }
 
@@ -49,15 +49,17 @@ export function orderDocumentTemplate(order: OrderSnapshot): PdfDocument {
       `Fecha: ${date(order.createdAt)}`,
       `Cliente: ${snapshotText(customer, "displayName")}`,
       `Email: ${snapshotText(customer, "email")}`,
-      `Direccion de entrega: ${address(order.shippingAddressSnapshot)}`,
-      `Envio: ${snapshotText(order.shippingMethodSnapshot, "name", "method")} · ${money(order.shippingTotal)}`,
+      `Dirección de entrega: ${address(order.shippingAddressSnapshot)}`,
+      `Envío: ${snapshotText(order.shippingMethodSnapshot, "name", "method")} · ${money(order.shippingTotal)}`,
       `Pago: ${snapshotText(payment, "status")} · ${snapshotText(payment, "method")}`,
-      "PRODUCTOS",
-      ...order.items.map((item) => `${item.name} | SKU ${item.sku} | Cantidad ${item.quantity} | Unitario ${money(item.unitPrice)} | Total ${money(item.lineTotal)}`),
+    ],
+    table: { headers: ["Producto / SKU", "Cantidad", "Unitario", "Impuestos", "Importe"],
+      rows: order.items.map((item) => [ `${item.name}\nSKU ${item.sku}`, String(item.quantity), item.unitPrice, item.taxAmount, item.lineTotal ]) },
+    totals: [
       `Subtotal: ${money(order.subtotal)}`,
       `Impuestos: ${money(order.taxTotal)}`,
+      `Envío: ${money(order.shippingTotal)}`,
       `Total: ${money(order.total)}`,
-      "Documento generado desde los snapshots historicos de la orden.",
     ],
   };
 }
@@ -65,7 +67,7 @@ export function orderDocumentTemplate(order: OrderSnapshot): PdfDocument {
 export function invoiceDocumentTemplate(invoice: InvoiceSnapshot): PdfDocument {
   const issuer = invoice.issuerSnapshot;
   const customer = invoice.customerSnapshot;
-  const draftLabel = invoice.status === "DRAFT" ? "BORRADOR · sin numero definitivo" : `Numero: ${invoice.number ?? "No registrado"}`;
+  const draftLabel = invoice.status === "DRAFT" ? "BORRADOR · sin número definitivo" : `Número: ${invoice.number ?? "No registrado"}`;
   return {
     title: `FACTURA ${invoice.number ?? "BORRADOR"}`,
     issuerLines: issuerHeader(issuer),
@@ -76,12 +78,14 @@ export function invoiceDocumentTemplate(invoice: InvoiceSnapshot): PdfDocument {
       `Fecha: ${date(invoice.createdAt)}`,
       `Cliente: ${snapshotText(customer, "displayName")}`,
       `Email: ${snapshotText(customer, "email")}`,
-      "LINEAS",
-      ...invoice.lines.map((line) => `${line.nameSnapshot} | ${line.skuSnapshot ?? "Linea manual"} | Cantidad ${line.quantity} | Unitario ${money(line.unitPrice)} | Impuesto ${money(line.taxAmount)} | Total ${money(line.lineTotal)}`),
+    ],
+    table: { headers: ["Producto / SKU", "Cantidad", "Unitario", "Impuestos", "Importe"],
+      rows: invoice.lines.map((line) => [ `${line.nameSnapshot}\n${line.skuSnapshot ?? "Línea manual"}`, String(line.quantity), line.unitPrice, line.taxAmount, line.lineTotal ]) },
+    totals: [
       `Subtotal: ${money(invoice.subtotal)}`,
       `Impuestos: ${money(invoice.taxTotal)}`,
+      ...(invoice.shippingTotal !== "0.00" ? [`Envío: ${money(invoice.shippingTotal)}`] : []),
       `Total: ${money(invoice.total)}`,
-      "Documento generado desde los snapshots historicos de la factura.",
     ],
   };
 }

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { deliveredCatalogImage } from "./image-storage/bundled-catalog-image";
 import { and, asc, count, desc, eq, gt, ilike, isNull, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 
 import { DatabaseService } from "../database/database.service";
@@ -122,7 +123,7 @@ export class WishlistRepository {
           price: row.price,
           currency: "USD" as const,
           image: row.imageStorageKey && row.imageUrl
-            ? { storageKey: row.imageStorageKey, url: row.imageUrl }
+            ? deliveredCatalogImage({ storageKey: row.imageStorageKey, url: row.imageUrl })
             : null,
           stockAvailable: row.stockAvailable ?? 0,
           isAvailable: row.productStatus === "ACTIVE" && row.productDeletedAt === null && (row.stockAvailable ?? 0) > 0,

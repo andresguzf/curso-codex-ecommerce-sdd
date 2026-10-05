@@ -532,7 +532,7 @@ La selección `local|cloudinary` SHALL afectar únicamente nuevas cargas del cat
 - **THEN** el backend rechaza su configuración con diagnóstico seguro sin revelar secretos ni seleccionar otro proveedor
 
 #### Scenario: Preservación de logos empresariales
-- **WHEN** se activa Cloudinary para catálogo, se carga un logo o se regenera un PDF histórico
+- **WHEN** se activa Cloudinary para catálogo o se regenera un PDF histórico
 - **THEN** las operaciones empresariales conservan almacenamiento, bytes y huellas previos sin subir logos a `codex-storefront` ni depender del proveedor de catálogo
 
 ### Requirement: Compatibilidad de imágenes anteriores

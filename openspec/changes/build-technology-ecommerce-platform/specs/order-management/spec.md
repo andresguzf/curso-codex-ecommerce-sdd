@@ -76,7 +76,7 @@ El sistema SHALL paginar desde el backend las listas de órdenes con `items`, `p
 - **THEN** la interfaz vuelve a la primera página y conserva los criterios en la URL
 
 ### Requirement: Snapshot del emisor en la orden
-El sistema SHALL copiar en cada orden confirmada los datos vigentes de la empresa emisora necesarios para su representación comercial, incluida la clave y huella del logo administrado cuando exista, y MUST conservar ese snapshot aunque el perfil de la tienda cambie posteriormente.
+El sistema SHALL copiar en cada orden confirmada los datos vigentes de la empresa emisora necesarios para su representación comercial, incluida la identidad y huella del SVG empresarial fijo tras la revisión de fase 25, y MUST conservar ese snapshot aunque el perfil de la tienda o la versión del logo cambien posteriormente. Las órdenes anteriores SHALL mantener sus referencias históricas o ausencia de logo sin sustitución retroactiva.
 
 #### Scenario: Cambio posterior de empresa
 - **WHEN** un administrador modifica los datos de la empresa después de confirmar una orden
