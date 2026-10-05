@@ -4,6 +4,17 @@ Define el carrito público y persistente para visitantes o clientes autenticados
 
 ## ADDED Requirements
 
+### Requirement: Carritos persistentes sin timers permanentes en Vercel
+El sistema SHALL conservar los carritos anónimos/autenticados y sus cookies seguras mediante REST en Vercel, con PostgreSQL como autoridad. La expiración SHALL seguir validándose en cada solicitud; la limpieza periódica SHALL reutilizar el servicio existente mediante ejecución protegida acotada compatible con el plan acordado, no setInterval permanente. MUST NOT reservar stock, borrar carritos vigentes o exigir login para agregar productos al adaptar el despliegue.
+
+#### Scenario: Reiniciar la función no pierde el carrito
+- **WHEN** un visitante o cliente vuelve a consultar su carrito tras un cambio de instancia
+- **THEN** recupera el mismo carrito vigente mediante su identidad/cookie sin depender de memoria o archivos del runtime
+
+#### Scenario: Expiración no depende de la frecuencia del cron
+- **WHEN** un visitante usa una cookie de carrito ya expirado antes de la siguiente limpieza programada
+- **THEN** el API aplica la expiración existente en la solicitud sin reactivar ese carrito ni modificar inventario
+
 ### Requirement: Continuidad de carritos y checkout en Supabase
 El sistema SHALL conservar propietarios, hashes de identificadores anónimos, expiración, líneas y resultados idempotentes al migrar. El checkout MUST mantener sus transacciones y permisos REST sin reservar stock desde el carrito ni repetir descuentos.
 

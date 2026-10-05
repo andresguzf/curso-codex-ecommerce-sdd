@@ -4,6 +4,17 @@ Define documentos PDF consistentes y protegidos para representar órdenes y fact
 
 ## ADDED Requirements
 
+### Requirement: Logos y documentos históricos portables en Vercel
+El sistema SHALL preservar carga/lectura del logo empresarial y generación PDF mediante almacenamiento durable acordado antes de implementar el despliegue, independiente de los assets de catálogo y del disco efímero de Functions. MUST preservar bytes, claves, huellas y snapshots históricos; no subir logos a codex-storefront, sustituirlos por el logo vigente, truncar documentos o borrar originales. Una transferencia de archivos existentes MUST ser autorizada específicamente. MUST comprobar entrega PDF dentro de límites de Function y no declarar la feature desplegada si depende de archivos sólo presentes en la máquina local.
+
+#### Scenario: PDF histórico después de cambiar de instancia
+- **WHEN** se exporta una orden o factura cuyo snapshot contiene un logo administrado y el runtime es una instancia nueva
+- **THEN** obtiene los bytes históricos del almacenamiento durable mediante su referencia y verifica la huella, sin consultar el logo actual ni depender de una carga local anterior
+
+#### Scenario: Portabilidad incompleta no se oculta
+- **WHEN** faltan assets históricos o la estrategia durable aún no está resuelta
+- **THEN** se conserva el error explícito y el despliegue no se marca completado ocultando el logo o deshabilitando su administración
+
 ### Requirement: Documentos históricos independientes del alojamiento PostgreSQL
 El sistema SHALL preservar snapshots empresariales, referencias y huellas de logos al migrar a Supabase. Los archivos locales y sus volúmenes MUST conservarse; generar PDFs MUST seguir usando snapshots y bytes históricos, sin Supabase Storage ni sustitución por el perfil vigente.
 

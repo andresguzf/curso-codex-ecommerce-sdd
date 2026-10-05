@@ -54,7 +54,7 @@ export class CloudinarySdkTransport implements CloudinaryTransport {
         chunks.push(Buffer.from(next.value));
       }
     } finally {
-      await reader.cancel().catch(() => undefined);
+      await reader.cancel().catch((): undefined => undefined);
       reader.releaseLock();
     }
     return Buffer.concat(chunks);

@@ -58,7 +58,7 @@ export class LocalImageStorage extends ImageStorage {
       await writeFile(temporary, input.data, { flag: "wx", mode: 0o600 });
       await rename(temporary, destination);
     } finally {
-      await unlink(temporary).catch(() => undefined);
+      await unlink(temporary).catch((): undefined => undefined);
     }
 
     return this.metadata(storageKey, detectedMimeType, input.data.byteLength);

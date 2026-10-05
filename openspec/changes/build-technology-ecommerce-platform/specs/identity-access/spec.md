@@ -4,6 +4,17 @@ Define el acceso seguro al e-commerce, las sesiones de usuario y la autorizació
 
 ## ADDED Requirements
 
+### Requirement: Sesión HTTPS estable en las aplicaciones Vercel
+El sistema SHALL conservar login, refresh, logout, CSRF y autorización propia en ambos frontends desplegados. SHALL usar rewrites de infraestructura REST al API bajo el origen del frontend para evitar dependencia de cookies de terceros entre dominios vercel.app, sin crear lógica comercial en Next.js. Cookies MUST ser HttpOnly/Secure, access tokens sólo en memoria y CORS una allowlist exacta sin wildcard con credenciales. PostgreSQL/JWT/Cloudinary/secretos del trabajo programado MUST permanecer privados del backend, nunca NEXT_PUBLIC ni artefactos/logs de build.
+
+#### Scenario: Refresh conserva la sesión sin almacenar tokens persistentes
+- **WHEN** un usuario inicia sesión por HTTPS en storefront o backoffice y recarga la página
+- **THEN** recupera la identidad/rol mediante refresh protegido y puede cerrar sesión, sin exponer el refresh token al JavaScript ni persistir el access token en localStorage
+
+#### Scenario: Dominio o rol no autorizado sigue rechazado
+- **WHEN** una petición proviene de un origen ajeno a la allowlist o solicita un recurso prohibido para el rol
+- **THEN** el API la rechaza y el despliegue no omite CORS, CSRF ni propiedad para permitirla
+
 ### Requirement: Identidad propia y frontera de acceso tras migrar a Supabase
 El sistema SHALL conservar usuarios, IDs, hashes de contraseña, roles CUSTOMER/ADMIN/BILLING y sesiones existentes al trasladar PostgreSQL a Supabase. NestJS MUST seguir siendo la única frontera de acceso de la aplicación; las credenciales PostgreSQL MUST permanecer privadas y la Data API SHALL permanecer habilitada pero no consumida por la app. Las tablas de aplicación MUST tener RLS habilitado sin políticas públicas y permisos actuales/por defecto restringidos para impedir acceso de anon/authenticated/PUBLIC a tablas, secuencias y funciones de aplicación. La protección MUST aplicarse antes de importar datos; no se alteran Auth/Storage ni se fuerza RLS contra el propietario del backend.
 

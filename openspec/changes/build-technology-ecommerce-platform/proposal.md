@@ -76,11 +76,31 @@ La fase 24 extiende las siete capacidades declaradas con escenarios de continuid
 
 ## Impact
 
+### Despliegue sencillo en Vercel — fase 25
+
+Añadir cuatro tareas para desplegar tres proyectos independientes del mismo
+monorepo: storefront Next.js, backoffice Next.js y API NestJS como Vercel
+Function. Conservar UI, REST, autenticación propia, Drizzle y la base Supabase
+activa; no repetir migración ni seed. Usar Session pooler real en 5432 para
+mantener advisory locks de sesión, con secretos sólo en el API.
+
+No basta cambiar variables: adaptar ejecución periódica al runtime serverless,
+resolver persistencia/entrega de archivos locales y logos históricos, configurar
+sesión HTTPS entre aplicaciones y limitar cargas al presupuesto de Vercel.
+La primera tarea confirmará plan Hobby/Pro y estrategia de almacenamiento/cadencia
+con el usuario antes de implementarlas; no contratar planes ni trasladar assets
+automáticamente. Desplegar primero API y luego frontends, probar lo básico y
+documentar URLs/operación, sin añadir una fase extensa de certificación.
+
+Fases 1–24 completadas (164 tareas); fase 25 pendiente (cuatro nuevas tareas,
+168 en total). Esta revisión sólo actualiza planificación: no modifica env,
+código, datos, assets o proyectos remotos y no hace commit/push ni archivo.
+
 - Simplificación docente aprobada: fase 24 en cuatro tareas (conexión, configuración, respaldo/copia y activación/prueba básica/documentación). Se retiran los ensayos extensos, harness genérico y validaciones exhaustivas como entregables de migración; no se eliminan requisitos funcionales previos ni seguridad de roles. Las comprobaciones se limitan a compatibilidad básica, conteos y registros representativos, con respaldo y origen conservado.
 
 - Excepción autorizada para el curso, incluido su despliegue demo con NODE_ENV=production: se permite TLS cifrado sin verificar certificado/hostname del servidor ni proporcionar CA mediante opt-in privado explícito DATABASE_TLS_VERIFY_SERVER=false. La verificación sigue siendo el valor por defecto; no se desactiva TLS ni se aplica fallback automático. La excepción afecta únicamente PostgreSQL del backend, no HTTPS de otros servicios. Se reconoce riesgo de suplantación; el despliegue docente no constituye certificación de seguridad para una producción real.
 
-- Fase 24 pendiente: conexión/configuración privada del API para Supabase, uso de herramientas PostgreSQL existentes para respaldo/copia de datos e historial Drizzle, activación y guía breve de recuperación. Mantener pools compatibles con locks de sesión; mantener Data API habilitada sin consumirla y proteger nuestras tablas con RLS sin políticas públicas y privilegios restringidos actuales/por defecto para impedir eludir NestJS. No se construirán herramientas genéricas ni ensayos dedicados.
+- Fase 24 completada: conexión/configuración privada del API para Supabase, respaldo/copia de datos e historial Drizzle, activación y guía breve de recuperación, con evidencia en docs/VALIDATION-24.4.md. Se mantienen pools compatibles con locks de sesión, Data API habilitada sin consumirla y tablas de aplicación protegidas con RLS sin políticas públicas y privilegios restringidos actuales/por defecto. La fase 25 no repite esta migración ni introduce herramientas genéricas o ensayos dedicados.
 - Se preservan IDs, hashes, sesiones vigentes, fechas, importes USD, relaciones, auditoría y operaciones de imágenes. No se ejecuta seed, no se crean proyectos remotos automáticamente y no se trasladan assets a Supabase Storage. Las copias no podrán ejecutar limpieza remota de Cloudinary; el corte detendrá escrituras y workers de origen antes de habilitar destino.
 - Esta aprobación cubre planificación; credenciales se introducirán privadamente cuando corresponda. Pruebas reales, copia de datos, corte y rollback operativo requieren autorización específica del destino y alcance. PostgreSQL local y sus volúmenes se conservarán; no se promete migración sin interrupción.
 

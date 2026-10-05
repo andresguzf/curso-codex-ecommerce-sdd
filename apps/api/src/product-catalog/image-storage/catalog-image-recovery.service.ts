@@ -64,7 +64,7 @@ export class CatalogImageRecoveryService implements OnApplicationBootstrap, OnMo
         // If DB is down, the durable UPLOADING row remains recoverable after restart.
         await this.database.client.update(catalogImageOperations).set({ state: "PENDING", updatedAt: new Date() })
           .where(and(eq(catalogImageOperations.id, id), eq(catalogImageOperations.state, "UPLOADING")))
-          .catch(() => undefined);
+          .catch((): undefined => undefined);
         throw error;
       }
     });

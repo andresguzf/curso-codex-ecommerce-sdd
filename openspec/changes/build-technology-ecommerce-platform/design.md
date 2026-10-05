@@ -486,6 +486,76 @@ La fase se reduce a cuatro tareas: conexión/preflight básico; configuración p
 
 Referencias: [conexiones](https://supabase.com/docs/guides/database/connecting-to-postgres), [migración PostgreSQL](https://supabase.com/docs/guides/platform/migrating-to-supabase/postgres) y [Data API](https://supabase.com/docs/guides/api/securing-your-api). El informe previo 24.1 es evidencia histórica; no demuestra conexión ni copia completadas.
 
+### 26. Tres aplicaciones en Vercel — fase 25 del curso
+
+Tres proyectos asociados al mismo repositorio, con Root Directory
+apps/storefront, apps/backoffice y apps/api; mantener acceso a paquetes del
+workspace fuera de esas raíces y builds pnpm/Turborepo reproducibles. Next.js
+permanece frontend; NestJS mantiene Fastify, /api/v1 y Swagger como una Function
+Node.js mediante soporte oficial Vercel. No crear backend comercial dentro de
+Next.js, microservicios, otro ORM o Supabase Auth/Storage. La fase 24 no autorizó
+este despliegue: la fase 25 es la revisión posterior confirmada.
+
+**Conexión/entornos.** En Vercel usar URI real de Session pooler 5432 copiada
+de Connect; nunca inferir host/usuario de aws-0-us-east-1. 6543 es Transaction
+pooler e incompatible con los locks de sesión actuales. Reutilizar pools por
+instancia, reducir su presupuesto para serverless y verificar exclusión/liberación
+de locks. Migraciones Drizzle como paso controlado antes de activar, no por
+petición ni por cold start; no seed ni nuevas copias de datos. Mantener TLS
+por defecto y opt-in privado del curso explícito, sin desactivar HTTPS global.
+Elegir región disponible próxima a Supabase us-east-1 y verificar límites reales.
+
+Secrets PostgreSQL/JWT/Cloudinary/cron sólo en API. Frontends reciben únicamente
+URLs públicas; las URLs finales y dominios permitidos se configuran explícitamente.
+No habilitar previews que escriban en la base o ejecuten recuperación contra
+assets activos sin autorización. La prueba local sigue funcionando; el corte
+remoto debe dejar un solo ejecutor programado de recuperación.
+
+**Sesión.** Preferir rewrites de infraestructura /api/v1 hacia el proyecto API
+desde cada frontend, usando REST bajo su propio origen para evitar depender de
+cookies de terceros entre dominios vercel.app. No usar Route Handlers/Server
+Actions para lógica comercial. Mantener HttpOnly, Secure, CSRF, Bearer en memoria
+y allowlist CORS exacta, sin wildcard con credenciales. Probar login, refresh/F5
+y logout en ambos frontends; no debilitar cookies ni sustituirlas por localStorage.
+
+**Trabajos.** Desactivar timers permanentes en Vercel y exponer ejecución acotada
+de los servicios existentes mediante endpoint interno protegido y cron compatible
+con el plan confirmado. Mantener journal, gracia, backoff, límites y coordinación;
+no depender del tráfico ni de timers en instancias que pueden pausarse. Rechazar
+invocación no autenticada y tolerar concurrencia. Hobby permite cron diario y
+Pro cada minuto: 25.1 debe acordar la cadencia de esta demo, sin prometer 30 s
+en serverless ni contratar Pro automáticamente. Hasta entonces no declarar
+equivalencia del worker remoto ni desactivar silenciosamente su recuperación.
+
+**Archivos/cargas.** Cloudinary continúa para nuevas imágenes del catálogo,
+Picsum y referencias externas existentes no se sustituyen. Vercel no será un
+almacén durable de archivos locales. Inventariar sólo imágenes locales y logos,
+acordar destino durable/entrega con el usuario y verificar bytes/huellas históricas
+antes de implementar o trasladar assets. Logos quedan separados del proveedor
+de catálogo y no se suben a codex-storefront. No borrar originales ni modificar
+snapshots históricos. La portabilidad es condición del despliegue funcional,
+no una excusa para ocultar o deshabilitar esas capacidades.
+
+Mantener las cargas pasando por REST NestJS; configurar en Vercel un máximo
+de 4194304 bytes (4 MiB), inferior al límite de payload de 4,5 MB, con validación
+backend y feedback coherente del formulario existente. No cambiar estética,
+número de imágenes ni añadir upload directo del navegador. Verificar también
+PDFs/respuestas frente a límites de Function, sin truncar documentos.
+
+**Entrega.** Cuatro tareas: adaptación API/decisiones mínimas; configuración de
+proyectos/variables; despliegue API y frontends; smoke/documentación. Conservar
+datos activos y backups privados. Publicación real requiere sesión Vercel y
+equipo/proyectos identificados por el usuario; no asumir acceso o gasto. Smoke
+de login, sesión, catálogo/galería, carrito, órdenes/facturas/PDF y trabajo
+programado acotado; no compras, seed ni nuevos smoke destructivos Cloudinary
+sin autorización específica. README/AGENTS se actualizarán en la entrega,
+sin commit/push ni archivo automático.
+
+Fuentes verificadas al planificar: [NestJS Vercel](https://vercel.com/docs/frameworks/backend/nestjs),
+[conexiones Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres),
+[límites Functions](https://vercel.com/docs/functions/limitations) y
+[cron por plan](https://vercel.com/docs/cron-jobs/usage-and-pricing).
+
 ## Risks / Trade-offs
 
 - [Pool transaccional pierde estado de sesión] → Usar conexión directa/sesión y probar exclusión advisory entre procesos antes del corte.

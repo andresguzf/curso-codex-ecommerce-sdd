@@ -4,6 +4,32 @@ Define el catálogo tecnológico público y administrativo, incluyendo productos
 
 ## ADDED Requirements
 
+### Requirement: Despliegue independiente de las tres aplicaciones en Vercel
+El sistema SHALL desplegar storefront, backoffice y API como tres proyectos del mismo monorepo en Vercel, manteniendo UI, REST /api/v1, NestJS/Fastify, Drizzle, Supabase activo y requisitos anteriores. Las credenciales MUST permanecer exclusivas del API y la conexión remota SHALL usar Session pooler real en 5432 compatible con los advisory locks; MUST NOT usar Transaction pooler 6543, ejecutar seed, recopiado automático o migraciones por petición/cold start. Previews MUST NOT escribir sobre datos ni reconciliar assets activos sin autorización.
+
+#### Scenario: Tres proyectos conservan la frontera REST
+- **WHEN** se publican los tres proyectos con URLs y variables finales
+- **THEN** ambos frontends consumen exclusivamente NestJS, health confirma Supabase y el catálogo mantiene datos/imágenes existentes sin acceso directo del navegador a PostgreSQL
+
+#### Scenario: Configuración incompatible impide publicar el API
+- **WHEN** faltan secretos privados o se configura un pool transaccional para la coordinación de sesión
+- **THEN** la verificación falla sin debilitar TLS/locks ni sustituir datos o proveedores silenciosamente
+
+### Requirement: Imágenes y recuperación compatibles con Vercel Functions
+El sistema SHALL conservar galería, portada, máximo de cuatro y carga por REST usando Cloudinary para nuevos assets de catálogo. En Vercel SHALL aplicar máximo de 4194304 bytes (4 MiB), con rechazo seguro y feedback coherente, sin carga directa desde el navegador. MUST resolver entrega durable de imágenes locales antes de declarar el despliegue funcional; conservar Picsum/Cloudinary, metadatos y originales. Transferir assets existentes MUST requerir autorización específica, no se deduce de esta planificación. La recuperación SHALL ejecutarse como trabajo protegido acotado con cadencia compatible con el plan acordado, sin timers permanentes ni depender de tráfico, manteniendo journal, backoff, propiedad, mutex y límites existentes.
+
+#### Scenario: Carga demasiado grande no altera la galería
+- **WHEN** ADMIN intenta subir más de 4 MiB en el despliegue Vercel
+- **THEN** el formulario/API rechazan la carga con mensaje claro, sin crear referencias ni anunciar éxito
+
+#### Scenario: Recuperación programada segura sin proceso permanente
+- **WHEN** una ejecución autorizada procesa trabajos pendientes, incluso con invocaciones concurrentes
+- **THEN** respeta gracia/backoff y exclusión, conserva seguimiento durable y nunca borra assets ajenos/referenciados; una solicitud no autenticada no ejecuta el trabajo
+
+#### Scenario: Archivos locales no se pierden tras una reinvocación
+- **WHEN** el runtime se reinicia o cambia de instancia después de resolver portabilidad con la estrategia autorizada
+- **THEN** las referencias locales anteriores siguen entregando sus imágenes sin depender del disco efímero ni reemplazar Picsum/Cloudinary
+
 ### Requirement: Migración verificable de persistencia a Supabase
 El sistema SHALL trasladar la base de aplicación a PostgreSQL gestionado en Supabase sin cambiar UI, contratos REST, Drizzle ni requisitos existentes. Para el curso SHALL ejecutar una migración simplificada en cuatro tareas, con conexión/compatibilidad básica, configuración, respaldo/copia y activación/prueba básica. MUST preservar esquema, datos, IDs, relaciones, secuencias e historial Drizzle, comprobar conteos y registros representativos sin exponer secretos y respaldar solo esquemas de aplicación. MUST NOT sobrescribir esquemas gestionados, ejecutar seed ni limpiar un destino no vacío automáticamente. No se exige harness genérico, ensayo exhaustivo ni comparación determinista de todos los valores como condición de esta fase.
 
