@@ -56,8 +56,32 @@ No se editaron archivos privados `.env`, conexiones activas, datos, assets
 remotos, seed, migraciones o ejecutores periódicos. El usuario autorizó commit
 y push de esta corrección, para activar el despliegue automático existente.
 
-Quedan pendientes el health del nuevo despliegue, los dominios y despliegues
+El health del API se verificó posteriormente con HTTP 200, base `up`, catálogo
+HTTP 200 y OpenAPI HTTP 200 (47 paths). El error ESM dejó de aparecer; el usuario
+configuró las variables de autenticación que faltaban en Vercel.
+
+Quedan pendientes los dominios y despliegues
 storefront/backoffice, URLs/CORS definitivos y corte del ejecutor local antes
 de habilitar el cron remoto. No activar limpieza ni probar compras sin la
 autorización correspondiente. El placeholder compartido de CRON_SECRET debe
 reemplazarse por un secreto aleatorio privado antes de habilitar el cron.
+
+## Corrección del empaquetado frontend — 2026-10-06
+
+El log del storefront mostró Next.js 16.3.4, compilación y TypeScript correctos,
+pero `onBuildComplete` de Vercel falló por ausencia de
+`.next/next-server.js.nft.json`. Ambos `next.config.ts` forzaban standalone.
+La corrección autorizada conserva ese modo fuera de Vercel y lo desactiva
+cuando `VERCEL=1`, sin alterar rewrites, tracing root, imágenes, rutas o UI.
+Incidente relacionado: https://github.com/vercel/next.js/issues/96646.
+
+Archivos: `apps/storefront/next.config.ts`, `apps/backoffice/next.config.ts`,
+`apps/api/test/deployment/vercel-config.spec.ts`, guía de despliegue, este informe
+y evidencia de tasks OpenSpec. Ocho pruebas de configuración pasaron, incluidos
+los dos modos de output en ambas apps y los rewrites REST. Typecheck y lint de
+ambos frontends correctos. Builds Next.js con `VERCEL=1`, REST same-origin y
+directorio aislado `.next-vercel-validation` correctos en ambas aplicaciones.
+Esta prueba local no incluye el hook propietario `onBuildComplete` de Vercel;
+el build y la accesibilidad remotos quedan por verificar tras el push autorizado.
+No se modificaron `.env`, dependencias, datos ni assets y no se activó cron.
+25.3 sigue pendiente y 25.4 no se inicia.

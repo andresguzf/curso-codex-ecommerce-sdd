@@ -6,7 +6,8 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const nextConfig: NextConfig = {
   distDir: process.env.E2E_NEXT_DIST_DIR ?? ".next",
-  output: "standalone",
+  // Vercel packages its own functions; standalone is for self-hosted builds.
+  output: process.env.VERCEL === "1" ? undefined : "standalone",
   outputFileTracingRoot: workspaceRoot,
   async rewrites() {
     const origin = process.env.API_REST_ORIGIN;

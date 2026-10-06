@@ -40,6 +40,13 @@ El rastreo del módulo compilado incluye el PNG histórico sin `includeFiles`.
 La entrega efectiva se verificará en el despliegue, no solo con el build local.
 [Duración de Functions](https://vercel.com/docs/functions/configuring-functions/duration).
 
+Los dos frontends usan `output: undefined` cuando `VERCEL=1`: el adaptador Next.js
+de Vercel empaqueta sus propias Functions. Fuera de Vercel se conserva
+`output: "standalone"` para self-hosting. Forzar standalone en el build remoto
+provocó `ENOENT .next/next-server.js.nft.json` al ejecutar `onBuildComplete`,
+después de compilar y pasar TypeScript; no es un error de variables REST.
+No crear un archivo NFT vacío ni desactivar el tracing del monorepo.
+
 `iad1` está cerca de la región Supabase us-east-1 indicada por el usuario;
 no implica cambiar la región de Supabase. Consultar [regiones de Functions](https://vercel.com/docs/functions/configuring-functions/region).
 

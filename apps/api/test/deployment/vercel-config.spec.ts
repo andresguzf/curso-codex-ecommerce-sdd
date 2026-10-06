@@ -55,6 +55,17 @@ describe("course Vercel configuration", () => {
   });
 
   for (const app of ["storefront", "backoffice"] as const) {
+    it(`${app}: standalone is disabled only for the Vercel adapter`, async () => {
+      const configPath = resolve(process.cwd(), `../${app}/next.config.ts`);
+      for (const [vercel, expected] of [["0", "standalone"], ["1", undefined]] as const) {
+        vi.stubEnv("VERCEL", vercel);
+        vi.resetModules();
+        const config = (await import(configPath)).default;
+        expect(config.output).toBe(expected);
+        expect(config.outputFileTracingRoot).toBe(resolve(process.cwd(), "../.."));
+      }
+    });
+
     it(`${app}: REST rewrites preserve local behavior and reject invalid origins`, async () => {
       const configPath = resolve(process.cwd(), `../${app}/next.config.ts`);
       const config = (await import(configPath)).default as {
