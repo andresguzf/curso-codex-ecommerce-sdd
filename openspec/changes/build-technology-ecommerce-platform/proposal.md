@@ -102,16 +102,23 @@ automáticamente. Desplegar primero API y luego frontends, probar lo básico y
 documentar URLs/operación, sin añadir una fase extensa de certificación.
 
 Fases 1–24 completadas (164 tareas); 25.1–25.2 completadas y 25.3–25.4
-pendientes. La fase 26 contiene cinco tareas completadas: 26.1–26.5.
-Estado tras 26.5: 173 tareas en total, 171 completadas y dos
+pendientes. La fase 26 contiene seis tareas completadas: 26.1–26.6.
+Estado tras 26.6: 174 tareas en total, 172 completadas y dos
 pendientes. La planificación del rediseño fue aprobada antes de implementar
 sus tokens, tipografía, shell/hero, catálogo/detalle y flujos del cliente; evidencia en
 `docs/VALIDATION-26.1.md`, `docs/VALIDATION-26.2.md`, `docs/VALIDATION-26.3.md` y
-`docs/VALIDATION-26.4.md` y `docs/VALIDATION-26.5.md`. La regresión final y
+`docs/VALIDATION-26.4.md`, `docs/VALIDATION-26.5.md` y `docs/VALIDATION-26.6.md`. La regresión final y
 README/AGENTS distinguen el rediseño completado del despliegue pendiente. Esta entrega
 no modifica env, datos o proyectos remotos y no hace commit/push ni archivo.
 
 ### Rediseño exclusivo del storefront — fase 26
+
+Revisión confirmada del hero (26.6): no pausar al pasar el puntero sobre la
+fotografía; seleccionar cualquiera de sus tres fotos inicia automáticamente su movimiento,
+sin exigir reanudar, incluso tras pausa manual. Conservar pausa explícita,
+búsqueda, pestaña oculta y movimiento reducido; no cambiar ProductGallery.
+La tercera escena solicitada como sorpresa es audio premium con audífonos,
+generada e integrada localmente, sin personas y con la misma estética oscura.
 
 Referencia visual: [Tailwind Animations](https://tailwind-animations.com/) y su
 [repositorio](https://github.com/midudev/tailwind-animations), respaldados por las

@@ -2,13 +2,13 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: 171/173 tareas OpenSpec completas. Fases 1–24 y 26 finalizadas; 25.1–25.2 implementadas y 25.3–25.4 de despliegue pendientes. Supabase y Cloudinary conservan su configuración existente. Completar las pruebas no certifica preparación para producción.
+> Estado actual: 172/174 tareas OpenSpec completas. Fases 1–24 y 26 finalizadas; 25.1–25.2 implementadas y 25.3–25.4 de despliegue pendientes. Supabase y Cloudinary conservan su configuración existente. Completar las pruebas no certifica preparación para producción.
 
 La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación completa e implementación en curso, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
 
 ### Implementación actual y alcance verificado
 
-Actualizado en la tarea 26.5 (7 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 26.6 (7 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea. La [revisión del hero](docs/VALIDATION-26.6.md) incorpora tres escenas, movimiento sin pausa por hover y reanudación al seleccionarlas.
 
 - Fase 26: rediseño exclusivo de toda la tienda pública, claro blanco/lavanda y oscuro carbón/violeta, fuentes locales, hero panorámico de hardware con movimiento controlable, catálogo/detalle y área cliente coherentes. Backoffice, contratos REST, sesión y reglas comerciales se conservan. La [validación final](docs/VALIDATION-26.5.md) registra 140 pruebas unitarias, 141 de frontend, ocho de temas, siete de tokens y 19 focalizadas de hero/cliente, con fixtures aisladas; no verifica el despliegue remoto.
 - Fase 25: preparación de Vercel en 25.1–25.2, logo empresarial SVG fijo y PDFs tabulares implementados. 25.3–25.4 siguen pendientes; la publicación parcial no certifica los tres proyectos ni los cron. Consultar [la guía de Vercel](docs/vercel-course-deployment.md) y las tareas antes de operar; esta revisión no autoriza despliegues ni cambios de entorno.
@@ -87,7 +87,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | 171/173 completadas; 25.3–25.4 pendientes | 173 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | 172/174 completadas; 25.3–25.4 pendientes | 174 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -741,7 +741,7 @@ El storefront tiene una apariencia comercial típica de un e-commerce tecnológi
 
 En claro usa fondo blanco, superficies lavanda muy suaves y acento violeta `#6554ae`; en oscuro, fondo carbón `#0d0d12`, superficies violeta oscuro y acento `#bca7ef`, con azul secundario. Source Sans 3 y Space Grotesk se sirven localmente. Los estilos de landing y cliente están limitados al storefront, incluidos flash y modales, sin alterar las primitivas administrativas.
 
-El hero presenta dos fotos locales sin personas: teclado RGB y gráfica NVIDIA. Su paneo tarda 40 segundos por dirección y alterna imágenes cada 14 segundos con fundido de un segundo. Permite pausa y selección manual; interacción, foco y pestaña oculta pausan el movimiento. Con movimiento reducido permanece estático, sin autoplay. Reserva espacio responsive, prioriza la primera imagen, difiere la segunda y ofrece fallback sin bloquear el buscador. Sin JavaScript conserva una imagen estática y la búsqueda nativa; no promete que toda la aplicación sea operable sin JavaScript. La galería de productos sigue siendo manual.
+El hero presenta tres fotos locales sin personas: teclado RGB, gráfica NVIDIA y audífonos premium. Su paneo recorre lateralmente un 16% en 20 segundos por dirección, de ida y vuelta, y alterna imágenes cada 14 segundos con fundido de un segundo. El hover sobre la fotografía no pausa. Seleccionar una imagen reanuda automáticamente el movimiento, incluso tras pausa manual, sin retirar foco/cursor del control. Se conserva la pausa manual, por foco en controles antes de activarlos, búsqueda y pestaña oculta. El paneo comienza al cargar la primera foto, sin esperar las otras; la alternancia espera las tres. Con movimiento reducido permanece estático, sin autoplay. Reserva espacio responsive, prioriza la primera imagen, difiere las restantes y ofrece fallback sin bloquear el buscador. Sin JavaScript conserva una imagen estática y la búsqueda nativa; no promete que toda la aplicación sea operable sin JavaScript. La galería de productos sigue siendo manual.
 
 El backoffice tiene una apariencia minimalista, elegante y empresarial: paleta basada en slate, navy y azul, mayor densidad operativa, tablas compactas, tarjetas KPI, navegación sobria y colores semánticos para estados.
 
@@ -984,9 +984,9 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 25. Preparación y despliegue docente en Vercel: 25.1–25.2 implementadas; 25.3–25.4 pendientes.
 26. Rediseño minimalista del storefront, hero panorámico y regresión completa, sin cambios del backoffice.
 
-Cada una de las 173 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+Cada una de las 174 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-171/173 tareas completadas: fases 1–24 y 26 cerradas, 25.1–25.2 implementadas, 25.3–25.4 pendientes. El cambio sigue sin archivar. La activación de Supabase se documenta en [VALIDATION-24.4](docs/VALIDATION-24.4.md); las fases anteriores conservan su evidencia histórica. PostgreSQL local y sus volúmenes se conservan, pero Supabase es la autoridad activa: no iniciar un segundo API/worker sobre la copia antigua ni volver a ella sin reconciliar cambios. Ejecutar seed, repetir copias, cambiar proveedores, hacer commit/push o archivar requiere autorización específica.
+172/174 tareas completadas: fases 1–24 y 26 cerradas, 25.1–25.2 implementadas, 25.3–25.4 pendientes. El cambio sigue sin archivar. La activación de Supabase se documenta en [VALIDATION-24.4](docs/VALIDATION-24.4.md); las fases anteriores conservan su evidencia histórica. PostgreSQL local y sus volúmenes se conservan, pero Supabase es la autoridad activa: no iniciar un segundo API/worker sobre la copia antigua ni volver a ella sin reconciliar cambios. Ejecutar seed, repetir copias, cambiar proveedores, hacer commit/push o archivar requiere autorización específica.
 
 ## Fuera del alcance inicial
 

@@ -19,10 +19,7 @@ export function CatalogHero({
   }
 
   return (
-    <section data-slot="catalog-hero" className="storefront-hero" aria-labelledby="catalog-hero-title"
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onFocusCapture={() => setFocused(true)}
-      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+    <section data-slot="catalog-hero" className="storefront-hero" aria-labelledby="catalog-hero-title">
       <div className="hero-introduction">
         <div>
           <p className="mb-4 mt-0 text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Tecnología seleccionada</p>
@@ -33,7 +30,10 @@ export function CatalogHero({
             Notebooks, monitores y periféricos para trabajar, crear y jugar. Encuentra tu próximo equipo.
           </p>
         </div>
-          <form className="hero-search" action="/products" method="get" onSubmit={handleSubmit} role="search">
+          <form className="hero-search" action="/products" method="get" onSubmit={handleSubmit} role="search"
+            onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+            onFocusCapture={() => setFocused(true)}
+            onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
             <input type="hidden" name="page" value="1" />
             <label className="mb-3 block text-sm font-semibold" htmlFor="catalog-search">Buscar en el catálogo</label>
             <input

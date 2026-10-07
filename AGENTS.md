@@ -2,11 +2,11 @@
 
 Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado revisado en la tarea 26.5, el 7 de octubre de 2026:
+Estado revisado en la tarea 26.6, el 7 de octubre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 173 tareas verificables; 171 completadas y dos pendientes (25.3–25.4).
+- Existen propuesta, diseño, siete especificaciones y 174 tareas verificables; 172 completadas y dos pendientes (25.3–25.4).
 - Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
 - Fases 1–23 completadas: 160 tareas, incluidos controles editoriales, seed, landing, gestor de imágenes y adaptador Cloudinary con recuperación durable. Tras autorización posterior a 23.8, Cloudinary está seleccionado en `.env` local con modo dynamic y migraciones aplicadas; no se ejecutó seed ni migración de imágenes. Evidencia: `e2e/VALIDATION-22.7.md`, `docs/VALIDATION-23.7.md` y `docs/VALIDATION-23.8.md`. El cambio sigue sin archivar. Esta autorización no habilita operaciones futuras de seed, nuevos smoke reales, archivo o ampliaciones de alcance.
 - La revisión 18.5 y los informes de fases 18–20 son evidencia histórica. La consolidación final está en `e2e/VALIDATION-21.8.md`; los controles y la composición editorial se documentan en `docs/backoffice-featured-products.md`, `docs/backoffice-landing-categories.md` y `docs/landing-editorial.md`. Las pruebas automatizadas no equivalen a certificación de producción ni a auditoría manual completa de accesibilidad.
@@ -168,7 +168,7 @@ BackofficeShell
 
 - Fuentes locales: Source Sans 3 Variable para texto, Space Grotesk Variable para títulos y monospace del sistema para datos. Paleta clara `#ffffff`/`#faf9fe`, texto `#252737`, acento `#6554ae`; oscura `#0d0d12`/`#1c1726`, texto `#f3f1f7`, acento `#bca7ef`. Los tokens semánticos son la autoridad; no copiar una apariencia a `packages/ui` que afecte al backoffice.
 - `storefront-landing.css` y `storefront-customer.css` están scoped al storefront y cubren también portales. Formularios, checkout, cuenta, wishlist y documentos deben conservar borradores al alternar tema y mostrar estados sin esperas de animación añadidas.
-- Hero: dos assets locales `hero-rgb-keyboard-v2.png` y `hero-nvidia-gpu-v2.png`, fotografía ilustrativa sin garantía de SKU. Marco 21:9 desktop/16:9 móvil; primera imagen eager/high y segunda diferida/lazy. Pan de 40 s por sentido, alternancia de 14 s y fundido de 1 s; pausa explícita, foco/puntero, búsqueda y visibilidad detienen movimiento. Selección manual pausa; movimiento reducido elimina pan/autoplay/fundido. No confundir con ProductGallery, que sigue sin autoplay.
+- Hero: tres assets locales `hero-rgb-keyboard-v2.png`, `hero-nvidia-gpu-v2.png` y `hero-premium-headphones-v1.png`, fotografías ilustrativas sin garantía de SKU. Marco 21:9 desktop/16:9 móvil; primera imagen eager/high y restantes diferidas/lazy. Pan de ±8% con escala 1.22, 20 s por sentido, alternancia de 14 s y fundido de 1 s. El paneo comienza con la primera foto cargada; la alternancia espera las tres. El hover sobre la foto no pausa. Seleccionar cualquier escena limpia pausa manual/foco e inicia movimiento sin reanudar ni retirar foco/cursor. Mantener pausa manual, foco en controles antes de activarlos, formulario de búsqueda y página oculta; movimiento reducido elimina pan/autoplay/fundido incluso al seleccionar. No confundir con ProductGallery, que sigue sin autoplay. Evidencia: `docs/VALIDATION-26.6.md`.
 - Mantener fallback y búsqueda operativos cuando falle una imagen, dimensiones reservadas y entrega local de fuentes. No cargar fotos del hero en Cloudinary ni cambiar imágenes de productos automáticamente.
 - Regresión 26.5: 140 pruebas unitarias, 141 frontend, siete de tokens y ocho de temas; 16 referencias existentes de las cuatro combinaciones. Revisar capturas a 375/1440 px; no regenerar referencias administrativas para aceptar cambios públicos. Las nuevas suites `storefront-hero.spec.ts` y `storefront-customer.spec.ts` usan fixtures aisladas, nunca la base activa.
 
@@ -593,7 +593,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 173 tareas distribuidas en 26 grupos: fases 1–24 y 26 completas, 25.1–25.2 completas y 25.3–25.4 pendientes. La fase 26 no acredita cierre de Vercel. Verifica siempre el estado real y no infieras activación por existir credenciales.
+- El plan contiene 174 tareas distribuidas en 26 grupos: fases 1–24 y 26 completas, 25.1–25.2 completas y 25.3–25.4 pendientes. La fase 26 no acredita cierre de Vercel. Verifica siempre el estado real y no infieras activación por existir credenciales.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.

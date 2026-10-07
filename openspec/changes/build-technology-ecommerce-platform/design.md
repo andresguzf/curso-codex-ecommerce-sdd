@@ -629,8 +629,17 @@ orientación inicial: ciclo de unos 30–45 segundos, sin zoom agresivo. Alterna
 fotografías aproximadamente cada 12–15 segundos con fundido cercano a un segundo,
 sin video y sin desplazar texto/controles. El tiempo y el encuadre se ajustan tras
 revisión visual. Mostrar controles accesibles para pausar/reanudar todo el
-movimiento y seleccionar imagen; pausar al interactuar con teclado/puntero y
-mientras la página no esté visible. Con `prefers-reduced-motion: reduce`, iniciar
+movimiento y seleccionar imagen. Revisión confirmada posterior a 26.5: el hover
+sobre la fotografía no pausa el movimiento. Seleccionar una imagen limpia la
+pausa manual y del foco del control para iniciar su desplazamiento sin exigir
+reanudar. El formulario de búsqueda y la página oculta conservan su pausa;
+el foco en controles puede pausar hasta activarlos o salir de ellos. La
+corrección visual usa pan de ±8% con escala 1.22 y 20 segundos por sentido,
+manteniendo el marco responsive y la alternancia cada 14 segundos. El paneo
+de la foto visible no espera las cargas secundarias; la alternancia espera
+las tres escenas: teclado RGB, gráfica NVIDIA y audífonos premium. El nuevo
+asset panorámico local mantiene la estética, sin subirlo a Cloudinary.
+Con `prefers-reduced-motion: reduce`, iniciar
 estático, sin desplazamiento, autoplay ni fundidos; selección manual inmediata.
 Si JavaScript, animación o una imagen fallan, título/buscador y un respaldo
 estático siguen disponibles. Evitar anuncios aria-live continuos y cargar con

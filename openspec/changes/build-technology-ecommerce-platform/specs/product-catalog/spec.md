@@ -135,7 +135,7 @@ La página principal SHALL mostrar un hero con fotografía tecnológica panorám
 
 #### Scenario: Hardware panorámico sin personas
 - **WHEN** se presenta la landing rediseñada
-- **THEN** el hero ofrece imágenes hiperrealistas de un teclado mecánico RGB y una tarjeta gráfica NVIDIA, sin personas y en escenografía oscura elegante, con un marco panorámico amplio adaptable a móvil sin deformación ni desbordamiento horizontal
+- **THEN** el hero ofrece tres imágenes hiperrealistas: teclado mecánico RGB, tarjeta gráfica NVIDIA y audífonos premium, sin personas y en escenografía oscura elegante, con un marco panorámico amplio adaptable a móvil sin deformación ni desbordamiento horizontal
 
 #### Scenario: Movimiento ambiental controlable
 - **WHEN** una persona sin preferencia de movimiento reducido visualiza el hero
@@ -145,9 +145,17 @@ La página principal SHALL mostrar un hero con fotografía tecnológica panorám
 - **WHEN** está activa la preferencia de movimiento reducido o la animación no puede ejecutarse
 - **THEN** el hero muestra un estado estático legible sin alternancia automática ni desplazamiento y la búsqueda sigue funcionando; con movimiento reducido la selección manual no anima la transición
 
-#### Scenario: Pausa durante interacción o página oculta
-- **WHEN** el foco o puntero interactúa con el hero o la página deja de estar visible
-- **THEN** su movimiento automático se pausa sin cambiar el foco ni anunciar continuamente las imágenes, y una pausa explícita no se revoca automáticamente
+#### Scenario: Imagen sin pausa por hover
+- **WHEN** una persona coloca el puntero sobre la fotografía del hero
+- **THEN** el desplazamiento y la alternancia continúan sin pausar por hover
+
+#### Scenario: Selección con movimiento automático
+- **WHEN** una persona selecciona cualquiera de las tres fotografías sin preferencia de movimiento reducido
+- **THEN** la imagen elegida inicia su desplazamiento al estar cargada, incluso si antes se pausó manualmente, sin exigir reanudar, retirar el cursor ni quitar el foco del botón
+
+#### Scenario: Pausa manual, búsqueda o página oculta
+- **WHEN** se activa pausa manual, se interactúa con el formulario de búsqueda o la página deja de estar visible
+- **THEN** su movimiento automático se pausa sin cambiar el foco ni anunciar continuamente las imágenes; la pausa manual permanece hasta reanudar o seleccionar otra imagen, y movimiento reducido siempre prevalece
 
 ### Requirement: Coherencia visual del storefront en fase 26
 El storefront SHALL usar una identidad tecnológica minimalista de neutros grises y acentos azules/violetas con un tema claro coherentemente claro y un tema oscuro coherentemente oscuro en shell, catálogo y flujos del cliente. SHALL conservar contraste WCAG AA, foco visible, preferencia independiente de tema y aplicación antes de la primera presentación visible. Fotografías oscuras conservan su color natural; no justifican franjas inversas obligatorias en header, formularios o secciones del tema claro.

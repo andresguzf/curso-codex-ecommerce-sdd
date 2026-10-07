@@ -8,7 +8,6 @@ export const HERO_INTERVAL_MS = 14_000;
 export function useHeroMotion(count: number, ready: boolean, interacting = false) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [reduced, setReduced] = useState(true);
   const [visible, setVisible] = useState(false);
@@ -25,12 +24,21 @@ export function useHeroMotion(count: number, ready: boolean, interacting = false
       document.removeEventListener("visibilitychange", updateVisibility);
     };
   }, []);
-  const running = ready && visible && !reduced && !paused && !hovered && !focused && !interacting;
+  const running = ready && visible && !reduced && !paused && !focused && !interacting;
   useEffect(() => {
     if (!running || count < 2) return;
     const timer = window.setInterval(() => setIndex((current) => (current + 1) % count), HERO_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [count, running]);
-  function select(nextIndex: number) { setIndex(nextIndex); setPaused(true); }
-  return { index, paused, reduced, running, select, setHovered, setFocused, toggle: () => setPaused((current) => !current) };
+  function select(nextIndex: number) {
+    setIndex(nextIndex);
+    setPaused(false);
+    setFocused(false);
+  }
+  function toggle() {
+    // Explicit resume works while the activating button retains focus.
+    if (paused) setFocused(false);
+    setPaused((current) => !current);
+  }
+  return { index, paused, reduced, running, select, setFocused, toggle };
 }

@@ -24,11 +24,8 @@ describe("ambient hero motion", () => {
     hook.unmount();
     expect(vi.getTimerCount()).toBe(0);
   });
-  it("pauses for pointer, focus and search interaction", () => {
+  it("pauses for focus and search interaction", () => {
     const hook = renderHook(({ interacting }) => useHeroMotion(2, true, interacting), { initialProps: { interacting: false } });
-    act(() => hook.result.current.setHovered(true));
-    expect(hook.result.current.running).toBe(false);
-    act(() => hook.result.current.setHovered(false));
     act(() => hook.result.current.setFocused(true));
     expect(hook.result.current.running).toBe(false);
     act(() => hook.result.current.setFocused(false));
@@ -38,18 +35,19 @@ describe("ambient hero motion", () => {
     hook.rerender({ interacting: false });
     expect(hook.result.current.running).toBe(true);
   });
-  it("keeps explicit pause after interaction ends; manual selection pauses", () => {
+  it("keeps explicit pause until resume or manual selection", () => {
     const { result } = renderHook(() => useHeroMotion(2, true));
     act(() => result.current.toggle());
-    act(() => result.current.setHovered(true));
-    act(() => result.current.setHovered(false));
     expect(result.current.running).toBe(false);
     act(() => result.current.toggle());
     expect(result.current.running).toBe(true);
+    act(() => { result.current.toggle(); result.current.setFocused(true); });
     act(() => result.current.select(1));
-    act(() => vi.advanceTimersByTime(HERO_INTERVAL_MS * 3));
     expect(result.current.index).toBe(1);
-    expect(result.current.paused).toBe(true);
+    expect(result.current.paused).toBe(false);
+    expect(result.current.running).toBe(true);
+    act(() => vi.advanceTimersByTime(HERO_INTERVAL_MS));
+    expect(result.current.index).toBe(0);
   });
   it("stops while the document is hidden and resumes without revoking explicit pause", () => {
     const visibility = vi.spyOn(document, "visibilityState", "get");
@@ -65,6 +63,15 @@ describe("ambient hero motion", () => {
     expect(result.current.paused).toBe(true);
     expect(result.current.running).toBe(false);
   });
+  it("explicit resume clears focus pause without requiring blur", () => {
+    const { result } = renderHook(() => useHeroMotion(2, true));
+    act(() => { result.current.setFocused(true); result.current.toggle(); });
+    expect(result.current.running).toBe(false);
+    act(() => result.current.toggle());
+    expect(result.current.running).toBe(true);
+    act(() => result.current.setFocused(true));
+    expect(result.current.running).toBe(false);
+  });
   it("respects initial and live reduced-motion preferences", () => {
     media.matches = true;
     const { result } = renderHook(() => useHeroMotion(2, true));
@@ -73,7 +80,6 @@ describe("ambient hero motion", () => {
     expect(result.current.running).toBe(false);
     act(() => result.current.select(1));
     expect(result.current.index).toBe(1);
-    act(() => result.current.toggle());
     media.matches = false;
     act(() => media.dispatchEvent(new Event("change")));
     expect(result.current.running).toBe(true);

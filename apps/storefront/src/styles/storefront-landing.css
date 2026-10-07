@@ -128,8 +128,8 @@ html[data-design-system="storefront"][data-theme] .hero-scene {
 html[data-design-system="storefront"][data-theme] .hero-scene[data-active="true"] { opacity: 1; }
 html[data-design-system="storefront"][data-theme] .hero-photo {
   object-fit: cover;
-  transform: scale(1.06);
-  animation: storefront-hardware-pan 40s ease-in-out infinite alternate;
+  transform: scale(1.22);
+  animation: storefront-hardware-pan 20s linear infinite alternate;
   animation-play-state: paused;
 }
 html[data-design-system="storefront"][data-theme] [data-running="true"] .hero-photo { animation-play-state: running; }
@@ -159,8 +159,8 @@ html[data-design-system="storefront"][data-theme] .hero-dot { width: 6px; height
 html[data-design-system="storefront"][data-theme] [data-slot="landing-featured"] { background: var(--ds-surface-subtle); border-color: var(--ds-border-subtle); }
 html[data-design-system="storefront"][data-theme] [data-slot="landing-category"] { border-color: var(--ds-border-subtle); }
 @keyframes storefront-hardware-pan {
-  from { transform: scale(1.06) translateX(1.5%); }
-  to { transform: scale(1.06) translateX(-1.5%); }
+  from { transform: scale(1.22) translateX(8%); }
+  to { transform: scale(1.22) translateX(-8%); }
 }
 @media (max-width: 767px) {
   html[data-design-system="storefront"][data-theme] .hero-introduction { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }

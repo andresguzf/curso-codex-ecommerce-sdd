@@ -7,6 +7,7 @@ import { useHeroMotion } from "./use-hero-motion";
 const scenes = [
   { src: "/images/hero-rgb-keyboard-v2.png", label: "Teclado RGB", alt: "Teclado mecánico RGB iluminado en un escritorio oscuro y elegante" },
   { src: "/images/hero-nvidia-gpu-v2.png", label: "Gráfica NVIDIA", alt: "Tarjeta gráfica de estilo NVIDIA con iluminación azul y violeta en un estudio oscuro" },
+  { src: "/images/hero-premium-headphones-v1.png", label: "Audio premium", alt: "Audífonos inalámbricos premium sobre un soporte en un escritorio oscuro con iluminación azul y violeta" },
 ] as const;
 
 export function HeroShowcase({ interacting = false }: Readonly<{ interacting?: boolean }>) {
@@ -14,7 +15,9 @@ export function HeroShowcase({ interacting = false }: Readonly<{ interacting?: b
   const [loadNext, setLoadNext] = useState(false);
   const [loaded, setLoaded] = useState<readonly number[]>([]);
   const [failed, setFailed] = useState<readonly number[]>([]);
-  const motion = useHeroMotion(scenes.length, loaded.length === scenes.length && failed.length === 0, interacting);
+  // Pan as soon as the priority photo is available; secondary lazy loading
+  // must not hold the visible photo still. Alternate when all scenes are ready.
+  const motion = useHeroMotion(loaded.length === scenes.length ? scenes.length : 1, loaded.length > 0, interacting);
   // Defer the secondary asset until the priority image settles; cleanup on exit.
   useEffect(() => {
     if (!settled) return;
@@ -25,7 +28,6 @@ export function HeroShowcase({ interacting = false }: Readonly<{ interacting?: b
   return (
     <div data-slot="hero-showcase" data-running={motion.running} data-active={motion.index}
       data-reduced-motion={motion.reduced} data-paused={motion.paused}
-      onMouseEnter={() => motion.setHovered(true)} onMouseLeave={() => motion.setHovered(false)}
       onFocusCapture={() => motion.setFocused(true)}
       onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) motion.setFocused(false); }}>
       <div className="hero-frame" role="group" aria-label="Fotografías de hardware, selección de imagen">

@@ -27,6 +27,12 @@ for (const theme of ["light", "dark"] as const) {
       const second = hero.getByRole("img", { name: /Tarjeta gráfica/ });
       await expect.poll(() => second.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
       await expect(second).toHaveAttribute("loading", "lazy");
+      await hero.getByRole("button", { name: "Mostrar Audio premium" }).click();
+      await expect(hero).toHaveAttribute("data-active", "2");
+      await expect(hero).toHaveAttribute("data-running", "false");
+      const third = hero.getByRole("img", { name: /Audífonos inalámbricos/ });
+      await expect.poll(() => third.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+      await expect(third).toHaveAttribute("loading", "lazy");
       await expect(hero.locator('[data-slot="hero-scene"][data-active="true"]')).toHaveCSS("transition-duration", "0s");
       await expectAccessible(page);
       await expectNoPageOverflow(page);
@@ -49,10 +55,26 @@ test("hero autoplay, pause, interaction and live reduced motion", async ({ page 
   await installCatalogApiFixture(page, "ANONYMOUS");
   await page.goto("/");
   const hero = page.locator('[data-slot="hero-showcase"]');
-  await expect(hero.locator('[data-loaded="true"]')).toHaveCount(2);
+  await expect(hero.locator('[data-loaded="true"]')).toHaveCount(3);
   await page.mouse.move(0, 0);
   await expect(hero).toHaveAttribute("data-running", "true");
   await expect(hero.locator("img").first()).toHaveCSS("animation-play-state", "running");
+  // Inspect the actual CSS trajectory rather than only a running-state flag.
+  const positions = await hero.locator("img").first().evaluate((image) => {
+    const animation = image.getAnimations()[0];
+    if (!animation) throw new Error("Hero pan animation missing");
+    animation.pause();
+    const result = [0, 10_000, 20_000, 30_000, 40_000].map((time) => {
+      animation.currentTime = time;
+      return new DOMMatrix(getComputedStyle(image).transform).m41;
+    });
+    animation.currentTime = 0;
+    animation.play();
+    return result;
+  });
+  expect(positions[0]! - positions[2]!).toBeGreaterThan(100);
+  expect(positions[1]).toBeCloseTo(positions[3]!, 0);
+  expect(positions[0]).toBeCloseTo(positions[4]!, 0);
   await page.clock.runFor(14_050);
   await expect(hero).toHaveAttribute("data-active", "1");
   await hero.getByRole("button", { name: "Pausar movimiento del hero" }).click();
@@ -62,6 +84,8 @@ test("hero autoplay, pause, interaction and live reduced motion", async ({ page 
   await expect(hero).toHaveAttribute("data-active", "1");
   await expect(hero).toHaveAttribute("data-paused", "true");
   await hero.getByRole("button", { name: "Reanudar movimiento del hero" }).click();
+  await expect(hero).toHaveAttribute("data-running", "true");
+  await expect(hero.locator("img").first()).toHaveCSS("animation-duration", "20s");
   await page.mouse.move(0, 0);
   await page.getByRole("searchbox", { name: "Buscar en el catálogo" }).focus();
   await expect(hero).toHaveAttribute("data-running", "false");
@@ -70,7 +94,22 @@ test("hero autoplay, pause, interaction and live reduced motion", async ({ page 
   await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
   await expect(hero).toHaveAttribute("data-running", "true");
   await hero.hover();
+  await expect(hero).toHaveAttribute("data-running", "true");
+  await hero.getByRole("button", { name: "Pausar movimiento del hero" }).click();
   await expect(hero).toHaveAttribute("data-running", "false");
+  await hero.getByRole("button", { name: "Mostrar Teclado RGB" }).click();
+  await expect(hero).toHaveAttribute("data-active", "0");
+  await expect(hero).toHaveAttribute("data-running", "true");
+  await expect(hero.getByRole("button", { name: "Mostrar Teclado RGB" })).toBeFocused();
+  await hero.getByRole("button", { name: "Mostrar Gráfica NVIDIA" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(hero).toHaveAttribute("data-active", "1");
+  await expect(hero).toHaveAttribute("data-paused", "false");
+  await expect(hero).toHaveAttribute("data-running", "true");
+  await expect(hero.locator('[data-slot="hero-scene"][data-active="true"] img')).toHaveCSS("animation-play-state", "running");
+  await hero.getByRole("button", { name: "Mostrar Audio premium" }).click();
+  await expect(hero).toHaveAttribute("data-active", "2");
+  await expect(hero).toHaveAttribute("data-running", "true");
   await page.mouse.move(0, 0);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(hero).toHaveAttribute("data-running", "false");
