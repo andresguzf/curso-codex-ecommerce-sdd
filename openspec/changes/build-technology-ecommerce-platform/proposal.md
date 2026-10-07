@@ -17,7 +17,7 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Permitir la consulta y exportación PDF de órdenes y facturas con controles de acceso según propiedad y rol.
 - Añadir auditoría para operaciones sensibles sobre usuarios, roles, productos, inventario, órdenes y facturas.
 - Incorporar shells y plantillas reutilizables para storefront y back office, con header, navegación, footer, logo SVG y layouts responsive.
-- Incorporar en el storefront una navegación superior con enlaces de sesión y badge de cantidad del carrito, además de un hero tecnológico con imagen de fondo semitransparente y buscador.
+- Incorporar en el storefront una navegación superior con enlaces de sesión y badge de cantidad del carrito, además de un hero tecnológico con buscador. La revisión de fase 26 sustituye su tratamiento de fondo anterior por fotografía panorámica de hardware en un marco amplio integrado al tema, con movimiento lento y alternancia accesible de imágenes.
 - Incorporar filtros colapsables en un sidebar izquierdo del catálogo público completo —no en la landing— y, en el back office, navegación colapsable a la izquierda, búsqueda sobre cada listado y filtros colapsables a la derecha; la gestión de productos permitirá filtrar por rango de precio, categoría principal, etiquetas y rango inclusivo de fecha de creación.
 - Estandarizar todas las colecciones potencialmente grandes con búsqueda, filtros, ordenamiento y paginación ejecutados por el backend usando la navegación numérica ya definida.
 - Incorporar mensajes flash reutilizables para autenticación, operaciones de catálogo y mutaciones del carrito, además de confirmación modal para toda acción destructiva.
@@ -38,6 +38,8 @@ El proyecto necesita una base completa y coherente para operar un e-commerce de 
 - Incorporar en el formulario de productos del backoffice un gestor de galería exclusivo de `ADMIN`: subir archivos JPEG, PNG o WebP con vista previa, editar texto alternativo, elegir portada, ordenar mediante arrastre o teclado y eliminar con confirmación. Cada producto admitirá como máximo cuatro imágenes en total: una portada y hasta tres adicionales. El límite se aplicará también en el backend ante solicitudes concurrentes; compresión y ajustes de calidad quedan fuera de esta revisión.
 - Añadir una fase 23 para almacenar las nuevas cargas de imágenes del catálogo en Cloudinary, exclusivamente en la carpeta `codex-storefront`, mediante el backend REST y sin modificar el formulario, la UI, el gestor de galería ni los endpoints existentes. Conservar las imágenes locales y de Picsum actuales sin migración ni ejecución automática del seed; los logos empresariales y los documentos históricos quedan fuera de esta integración.
 - Configurar credenciales exclusivamente en el backend, mantener un proveedor local seleccionable y coordinar carga, persistencia y eliminación remota con recuperación de fallos, sin sobrescribir assets ni eliminar archivos todavía referenciados.
+- Añadir una fase 26 de cinco tareas para modernizar exclusivamente todo el storefront: tema claro coherentemente claro y tema oscuro coherentemente oscuro, neutros grises con acentos azules/violetas, tipografía y espaciado minimalistas, navegación translúcida y fotografía tecnológica protagonista. Preservar íntegramente el backoffice, contratos REST y reglas de negocio.
+- Renovar el hero con dos imágenes hiperrealistas panorámicas, sin personas: teclado mecánico RGB y tarjeta gráfica NVIDIA en escenografía oscura elegante. Usar desplazamiento horizontal muy lento y alternancia con fundido, controles de pausa y selección, y modo estático con movimiento reducido. Una tercera fotografía de hardware es opcional; no implica una nueva tarea ni dependencia obligatoria de animaciones.
 
 ## Capabilities
 
@@ -73,7 +75,7 @@ Las capacidades ya declaradas también cubrirán las siguientes ampliaciones sin
 
 La fase 24 extiende las siete capacidades declaradas con escenarios de continuidad: identidad y permisos; catálogo, referencias de imágenes y journal de recuperación; carrito e idempotencia; órdenes y snapshots; inventario concurrente; facturación y numeración; documentos históricos. No crea capacidades ni endpoints paralelos.
 
-- Ninguna; el proyecto todavía no contiene especificaciones funcionales existentes.
+La declaración inicial no modificaba capacidades previas al proyecto. La fase 26 revisa las especificaciones existentes de `product-catalog`, `identity-access`, `shopping-cart-checkout`, `order-management` y `billing-invoicing` únicamente para la presentación del storefront; no añade capacidades, endpoints, cambios de inventario ni cambios de PDFs.
 
 ## Impact
 
@@ -99,9 +101,41 @@ con el usuario antes de implementarlas; no contratar planes ni trasladar assets
 automáticamente. Desplegar primero API y luego frontends, probar lo básico y
 documentar URLs/operación, sin añadir una fase extensa de certificación.
 
-Fases 1–24 completadas (164 tareas); fase 25 pendiente (cuatro nuevas tareas,
-168 en total). Esta revisión sólo actualiza planificación: no modifica env,
-código, datos, assets o proyectos remotos y no hace commit/push ni archivo.
+Fases 1–24 completadas (164 tareas); 25.1–25.2 completadas y 25.3–25.4
+pendientes. La fase 26 contiene cinco tareas completadas: 26.1–26.5.
+Estado tras 26.5: 173 tareas en total, 171 completadas y dos
+pendientes. La planificación del rediseño fue aprobada antes de implementar
+sus tokens, tipografía, shell/hero, catálogo/detalle y flujos del cliente; evidencia en
+`docs/VALIDATION-26.1.md`, `docs/VALIDATION-26.2.md`, `docs/VALIDATION-26.3.md` y
+`docs/VALIDATION-26.4.md` y `docs/VALIDATION-26.5.md`. La regresión final y
+README/AGENTS distinguen el rediseño completado del despliegue pendiente. Esta entrega
+no modifica env, datos o proyectos remotos y no hace commit/push ni archivo.
+
+### Rediseño exclusivo del storefront — fase 26
+
+Referencia visual: [Tailwind Animations](https://tailwind-animations.com/) y su
+[repositorio](https://github.com/midudev/tailwind-animations), respaldados por las
+capturas aportadas el 2026-10-07. Adoptar coherencia claro/oscuro, superficies
+sobrias, bordes discretos y acentos tecnológicos; no copiar marca, textos ni
+assets del sitio, ni instalar automáticamente su biblioteca.
+
+Cubrir shell, landing, catálogo, detalle, acceso, carrito, checkout y área del
+cliente (wishlist, órdenes y facturas). Conservar composición editorial 3/9/3,
+búsqueda del hero hacia catálogo, stock, USD, permisos, sesión y galería de
+producto sin autoplay. La alternancia del hero es independiente de esa galería.
+Las fotografías pueden conservar su escenografía oscura en ambos temas, pero
+header, fondos, formularios y secciones del tema claro no tendrán franjas oscuras
+forzadas. La revisión del hero panorámico reemplaza el planteamiento de fotografía
+en un panel lateral pequeño: tendrá protagonismo y mayor ancho, sin desbordamiento
+horizontal. Generación/selección e integración de sus assets pertenecen a 26.2,
+no a esta actualización documental.
+
+Cambiar tokens y estilos solamente bajo el sistema visual del storefront;
+primitivas compartidas no deben alterar apariencia ni comportamiento del
+backoffice. Verificar ambos temas, móvil/escritorio, teclado, contraste y
+movimiento reducido; revisar únicamente referencias visuales del storefront,
+sin regenerar las del backoffice para ocultar regresiones. No modifica Supabase,
+Cloudinary, despliegue ni datos demo; las tareas pendientes de fase 25 se conservan.
 
 - Simplificación docente aprobada: fase 24 en cuatro tareas (conexión, configuración, respaldo/copia y activación/prueba básica/documentación). Se retiran los ensayos extensos, harness genérico y validaciones exhaustivas como entregables de migración; no se eliminan requisitos funcionales previos ni seguridad de roles. Las comprobaciones se limitan a compatibilidad básica, conteos y registros representativos, con respaldo y origen conservado.
 

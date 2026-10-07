@@ -146,3 +146,14 @@ El storefront SHALL permitir agregar al carrito un producto de la lista de deseo
 #### Scenario: Producto deseado disponible
 - **WHEN** un cliente agrega desde deseos una cantidad válida de un producto activo con stock
 - **THEN** el sistema actualiza el carrito, mantiene el producto en deseos y devuelve los totales e indicador vigentes
+
+### Requirement: Presentación pública de compra en fase 26
+Carrito, wishlist y checkout SHALL adoptar los temas y jerarquía visual del storefront, con líneas, importes USD, acciones, formularios, modales y feedback legibles y responsive. El rediseño MUST NOT alterar carrito anónimo/autenticado, límites de stock, exigencia de sesión para checkout, idempotencia ni confirmación de compra.
+
+#### Scenario: Compra pública y tema
+- **WHEN** un visitante administra el carrito y alterna entre claro y oscuro
+- **THEN** se conservan sus líneas, cantidades y totales; acciones y confirmación de retirada mantienen nombres accesibles, foco visible y contraste en ambos temas
+
+#### Scenario: Envío de checkout y errores
+- **WHEN** un cliente envía el checkout o recibe un error de validación, stock o pago
+- **THEN** se muestran estados pendientes, errores y resultado con texto además de color, conservando bloqueo de envíos duplicados y sin retrasar la operación por transiciones visuales

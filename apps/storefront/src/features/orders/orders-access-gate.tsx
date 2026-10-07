@@ -14,7 +14,7 @@ export function OrdersAccessGate({ children, returnTo }: Readonly<{ children: Re
     if (status === "anonymous") router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }, [returnTo, router, status]);
 
-  return <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 sm:px-8 sm:py-14">
+  return <main data-slot="customer-page" className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 sm:px-8 sm:py-14">
     <div className="mx-auto max-w-5xl">
       {status !== "authenticated" || !session ? <LoadingState message="Validando acceso a tus compras…" />
         : session.user.role !== "CUSTOMER" ? <section><h1 className="text-3xl font-black">Área de clientes</h1><p className="my-4">Para consultar compras propias utiliza una cuenta de cliente.</p><Link href="/" className="font-bold text-blue-700 underline">Volver a la tienda</Link></section>

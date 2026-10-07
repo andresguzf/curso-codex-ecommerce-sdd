@@ -21,7 +21,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", nextTheme);
     await expect(dialog).toHaveCSS("background-color", admin
       ? nextTheme === "dark" ? "rgb(24, 34, 53)" : "rgb(255, 255, 255)"
-      : nextTheme === "dark" ? "rgb(18, 45, 70)" : "rgb(255, 255, 255)");
+      : nextTheme === "dark" ? "rgb(28, 23, 38)" : "rgb(255, 255, 255)");
     await expect(dialog.getByRole("button", { name: "Cancelar" })).toBeFocused();
     await expectAccessible(page);
     await dialog.getByRole("button", { name: admin ? "Eliminar producto" : "Quitar producto", exact: true }).click();
@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(flash).toContainText("Hecho");
     await expect(flash).toHaveCSS("background-color", admin
       ? nextTheme === "dark" ? "rgb(24, 34, 53)" : "rgb(255, 255, 255)"
-      : nextTheme === "dark" ? "rgb(18, 45, 70)" : "rgb(255, 255, 255)");
+      : nextTheme === "dark" ? "rgb(28, 23, 38)" : "rgb(255, 255, 255)");
     await expectAccessible(page);
     await expectNoPageOverflow(page);
     await page.screenshot({ path: testInfo.outputPath("flash-after.png"), fullPage: true });
@@ -46,7 +46,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(email).toBeVisible();
     await expect(email).toHaveCSS("background-color", admin
       ? theme === "dark" ? "rgb(24, 34, 53)" : "rgb(255, 255, 255)"
-      : theme === "dark" ? "rgb(18, 45, 70)" : "rgb(255, 255, 255)");
+      : theme === "dark" ? "rgb(28, 23, 38)" : "rgb(255, 255, 255)");
     await page.getByRole("button", { name: admin ? "Entrar al panel" : "Iniciar sesión", exact: true }).click();
     await expect(email).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByRole("alert").first()).toBeVisible();

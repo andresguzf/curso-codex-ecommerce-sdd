@@ -20,11 +20,12 @@ export function CheckoutAccessGate({ children }: Readonly<{ children: ReactNode 
 
   if (status === "initializing" || !isCustomer) {
     return (
-      <main className="mx-auto min-h-screen max-w-7xl px-6 py-14 lg:px-10">
+      <main data-slot="customer-page" className="mx-auto min-h-screen max-w-7xl px-6 py-14 lg:px-10">
+        <h1 className="mb-6 text-3xl font-semibold">Checkout</h1>
         <LoadingState message="Validando acceso al checkout…" />
       </main>
     );
   }
 
-  return <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950"><div className="mx-auto max-w-6xl">{children}</div></main>;
+  return <main data-slot="customer-page" className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950"><div className="mx-auto max-w-6xl">{children}</div></main>;
 }

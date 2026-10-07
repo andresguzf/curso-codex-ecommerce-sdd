@@ -50,8 +50,8 @@ export function CheckoutForm() {
   const unavailable = cart?.items.some((item) => !item.product.isAvailable || item.quantity > item.product.stockAvailable);
   const locked = mutation.isPending || mutation.isSuccess || uncertain;
 
-  if (cartQuery.isPending || shipping.isPending) return <LoadingState message="Preparando tu compra…" />;
-  if (cartQuery.isError || shipping.isError) return <div role="alert"><p>No se pudo preparar tu compra.</p><button type="button" onClick={() => { void cartQuery.refetch(); void shipping.refetch(); }}>Reintentar carga</button></div>;
+  if (cartQuery.isPending || shipping.isPending) return <><h1 className="mb-6 text-3xl font-semibold">Completa tu compra</h1><LoadingState message="Preparando tu compra…" /></>;
+  if (cartQuery.isError || shipping.isError) return <><h1 className="mb-6 text-3xl font-semibold">Completa tu compra</h1><div role="alert"><p>No se pudo preparar tu compra.</p><button className="min-h-11 font-semibold text-blue-700 underline" type="button" onClick={() => { void cartQuery.refetch(); void shipping.refetch(); }}>Reintentar carga</button></div></>;
   if (!cart || (!cart.items.length && !uncertain && !mutation.isSuccess)) return <section><h1 className="text-3xl font-black">Tu carrito está vacío</h1><Link href="/" className="font-bold text-blue-700 underline">Explorar productos</Link></section>;
 
   return (
@@ -79,7 +79,7 @@ export function CheckoutForm() {
             <label className="flex gap-3 rounded-xl border p-4"><input type="radio" value="SIMULATED_CARD_REJECTED" {...form.register("paymentMethod")} />Tarjeta ficticia · rechazar pago</label>
           </fieldset>
         </div>
-        <aside data-tone-region="inverse" className="rounded-3xl bg-[#081426] p-7 text-white lg:sticky lg:top-8">
+        <aside data-slot="purchase-summary" className="self-start rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface-subtle)] p-7 lg:sticky lg:top-28">
           <h2 className="m-0 text-2xl font-black">Tu pedido</h2>
           <ul className="my-6 grid list-none gap-4 p-0">{cart.items.map((item) => <li key={item.id} className="flex justify-between gap-4 text-sm"><span>{item.product.name} × {item.quantity}</span><span>{formatProductPrice(item.subtotal)}</span></li>)}</ul>
           <dl className="grid gap-4 border-t border-white/20 pt-5"><div className="flex justify-between"><dt>Productos</dt><dd>{formatProductPrice(cart.subtotal)}</dd></div><div className="flex justify-between"><dt>Envío</dt><dd>{shippingCost ? formatProductPrice(shippingCost) : "—"}</dd></div><div className="flex justify-between text-xl font-black"><dt>Total (USD)</dt><dd>{shippingCost ? formatProductPrice(totalWithShipping(cart.subtotal, shippingCost)) : "—"}</dd></div></dl>

@@ -1,5 +1,10 @@
 # Infraestructura de temas — tarea 19.2
 
+La infraestructura descrita se mantiene vigente. Las limitaciones y resultados
+de 19.2 al final son evidencia histórica: la adopción visual ya se completó y
+el storefront se rediseñó en fase 26, sin cambiar preferencias ni backoffice.
+Consultar [tokens actuales](design-tokens.md) y [validación 26.5](VALIDATION-26.5.md).
+
 Cada aplicación activa sus tokens mediante `data-design-system` y `data-theme`
 en `html`. Un script síncrono en el head lee una preferencia válida antes de que
 se cree el body; si no existe, consulta `prefers-color-scheme`. No usa datos de

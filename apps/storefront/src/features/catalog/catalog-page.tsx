@@ -72,7 +72,7 @@ export function CatalogPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[var(--ds-canvas)]">
+    <main data-slot="catalog-page" className="min-h-screen bg-[var(--ds-canvas)]">
       <section className="mx-auto max-w-7xl px-6 py-9 lg:px-10 lg:py-14">
         <nav aria-label="Migas de pan" className="mb-6 text-sm font-semibold text-[var(--ds-text-muted)]">
           <Link className="rounded-sm text-[var(--ds-accent)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href="/">
@@ -82,18 +82,18 @@ export function CatalogPage() {
           <span aria-current="page" className="text-[var(--ds-text)]">Productos</span>
         </nav>
 
-        <header className="mb-8 overflow-hidden rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[0_24px_60px_-50px_rgba(8,20,38,0.7)]">
-          <div className="border-l-4 border-cyan-400 px-6 py-7 sm:px-9 sm:py-9">
+        <header className="mb-10 border-b border-[var(--ds-border-subtle)] pb-9">
+          <div>
             <p className="m-0 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--ds-accent)]">
               Catálogo completo
             </p>
             <div className="mt-3 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)] lg:items-end">
               <div>
-                <h1 className="m-0 max-w-3xl text-3xl font-black leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-4xl">
+                <h1 className="m-0 max-w-3xl text-3xl font-semibold leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-4xl">
                   Encuentra el equipo que va contigo.
                 </h1>
                 <p className="mb-0 mt-3 max-w-2xl text-sm leading-6 text-[var(--ds-text-muted)] sm:text-base">
-                  Explora tecnología para trabajar, crear y jugar. Cada búsqueda y filtro se consulta directamente al catálogo.
+                  Tecnología para trabajar, crear y jugar. Encuentra tu próximo equipo.
                 </p>
               </div>
               <form
@@ -105,7 +105,7 @@ export function CatalogPage() {
               >
                 <label className="sr-only" htmlFor="complete-catalog-search">Buscar en todos los productos</label>
                 <input
-                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 text-sm text-[var(--ds-text)] outline-none placeholder:text-[var(--ds-text-muted)] focus:border-blue-700 focus:ring-4 focus:ring-blue-700/15"
+                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 text-sm text-[var(--ds-text)] outline-none placeholder:text-[var(--ds-text-muted)] focus:border-[var(--ds-focus)] focus:ring-2 focus:ring-[var(--ds-focus)]"
                   defaultValue={query.search ?? ""}
                   id="complete-catalog-search"
                   maxLength={200}
@@ -145,7 +145,7 @@ export function CatalogPage() {
           />
 
           <section aria-label="Resultados del catálogo" className="min-w-0">
-            <div className="mb-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border-b border-[var(--ds-border)] pb-4">
+            <div className="mb-5 flex min-h-11 flex-wrap items-center justify-between gap-3 border-b border-[var(--ds-border-subtle)] pb-4">
               <p aria-live="polite" className="m-0 text-sm font-bold text-[var(--ds-text-muted)]" role="status">
                 {pageData ? `${pageData.totalItems} productos encontrados` : "Consultando productos"}
               </p>
@@ -178,7 +178,7 @@ export function CatalogPage() {
                   <div className="mt-8">
                     <Pagination
                       ariaLabel="Paginación del catálogo"
-                      className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-5 shadow-sm"
+                      className="rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface)] px-3 py-5 sm:px-4"
                       onPageChange={navigateToPage}
                       page={pageData.page}
                       totalPages={pageData.totalPages}

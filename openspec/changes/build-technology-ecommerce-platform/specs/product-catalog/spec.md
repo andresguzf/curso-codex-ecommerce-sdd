@@ -127,11 +127,49 @@ El storefront SHALL usar una plantilla reutilizable con header, navegación supe
 - **THEN** la plantilla mantiene la navegación y el footer entre páginas y muestra las acciones de cuenta y logout correspondientes
 
 ### Requirement: Hero tecnológico con búsqueda
-La página principal SHALL mostrar un hero con una imagen tecnológica de fondo tratada con transparencia para conservar la legibilidad y SHALL incluir un buscador que aplique la consulta al catálogo.
+La página principal SHALL mostrar un hero con fotografía tecnológica panorámica de gran ancho integrada al tema y SHALL incluir un buscador que aplique la consulta al catálogo. La fase 26 sustituye el tratamiento anterior de fondo semitransparente: título, búsqueda y controles SHALL conservar legibilidad estable en ambos temas sin depender de la fotografía ni forzar una franja oscura en el tema claro.
 
 #### Scenario: Búsqueda desde el hero
 - **WHEN** una persona introduce un término válido en el buscador del hero
 - **THEN** la interfaz navega a la página del catálogo completo, muestra su primera página filtrada por ese término y refleja la búsqueda en la URL
+
+#### Scenario: Hardware panorámico sin personas
+- **WHEN** se presenta la landing rediseñada
+- **THEN** el hero ofrece imágenes hiperrealistas de un teclado mecánico RGB y una tarjeta gráfica NVIDIA, sin personas y en escenografía oscura elegante, con un marco panorámico amplio adaptable a móvil sin deformación ni desbordamiento horizontal
+
+#### Scenario: Movimiento ambiental controlable
+- **WHEN** una persona sin preferencia de movimiento reducido visualiza el hero
+- **THEN** las imágenes pueden desplazarse lateralmente muy despacio y alternarse con fundido sin mover el contenido ni bloquear la búsqueda, y existen controles accesibles para pausar todo el movimiento y seleccionar una imagen
+
+#### Scenario: Movimiento reducido y respaldo
+- **WHEN** está activa la preferencia de movimiento reducido o la animación no puede ejecutarse
+- **THEN** el hero muestra un estado estático legible sin alternancia automática ni desplazamiento y la búsqueda sigue funcionando; con movimiento reducido la selección manual no anima la transición
+
+#### Scenario: Pausa durante interacción o página oculta
+- **WHEN** el foco o puntero interactúa con el hero o la página deja de estar visible
+- **THEN** su movimiento automático se pausa sin cambiar el foco ni anunciar continuamente las imágenes, y una pausa explícita no se revoca automáticamente
+
+### Requirement: Coherencia visual del storefront en fase 26
+El storefront SHALL usar una identidad tecnológica minimalista de neutros grises y acentos azules/violetas con un tema claro coherentemente claro y un tema oscuro coherentemente oscuro en shell, catálogo y flujos del cliente. SHALL conservar contraste WCAG AA, foco visible, preferencia independiente de tema y aplicación antes de la primera presentación visible. Fotografías oscuras conservan su color natural; no justifican franjas inversas obligatorias en header, formularios o secciones del tema claro.
+
+#### Scenario: Navegación entre páginas en ambos temas
+- **WHEN** una persona navega por inicio, catálogo y detalle usando tema claro u oscuro
+- **THEN** header fijo, footer, tarjetas, filtros, paginador, controles y estados usan superficies coherentes con el tema; la transparencia al desplazar conserva contraste y los enlaces activos siguen identificables sin depender solo del color
+
+#### Scenario: Continuidad editorial y de galería
+- **WHEN** se presenta la landing o se navega por el detalle después del rediseño
+- **THEN** se conservan destacados, recientes deduplicados y categorías con sus límites previos, sin filtros/paginación en inicio; ProductGallery conserva portada, orden, controles y ausencia de autoplay independientemente de la alternancia del hero
+
+### Requirement: Aislamiento del rediseño público
+La fase 26 SHALL modificar exclusivamente la presentación del storefront, sin alterar apariencia o comportamiento del backoffice, PDFs, contratos REST ni reglas de negocio. Los estilos de primitivas compartidas SHALL restringir las variantes públicas al sistema visual del storefront, incluidos modales/portales.
+
+#### Scenario: Regresión administrativa
+- **WHEN** se verifican ADMIN y BILLING en ambos temas tras los cambios públicos
+- **THEN** se conserva el diseño administrativo y sus referencias visuales, sin cambios de paleta, tipografía, navegación, galería administrativa ni formularios derivados del rediseño
+
+#### Scenario: Contenido accesible sin animaciones
+- **WHEN** se usa móvil, teclado, movimiento reducido o falla un asset del hero
+- **THEN** contenido y acciones permanecen disponibles, los controles no generan scroll horizontal y ninguna revelación animada ni carga de imagen bloquea acceso o navegación
 
 ### Requirement: Filtros colapsables del catálogo público
 La página del catálogo completo SHALL presentar sus filtros en un sidebar izquierdo colapsable y SHALL ofrecer un control equivalente adaptado a pantallas pequeñas, conservando búsqueda, filtros, orden y página en la URL. Esta regla no aplica a la landing editorial, que no tendrá filtros ni paginación.

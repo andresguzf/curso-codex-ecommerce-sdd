@@ -1,0 +1,76 @@
+/* Customer-only surfaces. Shared UI remains unchanged in the backoffice. */
+html[data-design-system="storefront"][data-theme] :is([data-slot="customer-page"], [data-slot="storefront-auth"]) {
+  background: var(--ds-canvas);
+  color: var(--ds-text);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] :is(h1, h2, h3) {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] :is(article, section, fieldset)[class~="border-slate-200"] {
+  border-color: var(--ds-border-subtle);
+  box-shadow: none;
+  border-radius: 1rem;
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] :is(li, header)[class~="border-slate-200"] {
+  border-color: var(--ds-border-subtle);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="purchase-summary"] {
+  color: var(--ds-text);
+  box-shadow: none;
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="purchase-summary"] [class~="text-slate-300"] {
+  color: var(--ds-text-muted);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="purchase-summary"] [class~="border-white/10"] {
+  border-color: var(--ds-border-subtle);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="purchase-summary"] [class~="bg-white"] {
+  border-color: var(--ds-border);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] label:has(input[type="radio"]) {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] label:has(input[type="radio"]:checked) {
+  background: var(--ds-accent-soft);
+  border-color: var(--ds-accent);
+}
+
+html[data-design-system="storefront"][data-theme] :is([data-slot="customer-page"], [data-slot="storefront-auth"]) input {
+  accent-color: var(--ds-accent);
+  box-shadow: none;
+}
+
+html[data-design-system="storefront"][data-theme] :is([data-slot="customer-page"], [data-slot="storefront-auth"]) :is(button, a, input, select):focus-visible,
+html[data-design-system="storefront"][data-theme] [data-slot="confirmation-dialog"] button:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 3px;
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="confirmation-dialog"],
+html[data-design-system="storefront"][data-theme] [data-slot="flash-message"] {
+  border-color: var(--ds-border-subtle);
+  border-radius: 1rem;
+  box-shadow: var(--ds-elevation);
+}
+
+html[data-design-system="storefront"][data-theme] [data-slot="confirmation-dialog"] button,
+html[data-design-system="storefront"][data-theme] [data-slot="flash-message"] button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Do not animate pending/error/success, or defer their display. */
+html[data-design-system="storefront"][data-theme] [data-slot="customer-page"] [role="alert"] {
+  overflow-wrap: anywhere;
+}

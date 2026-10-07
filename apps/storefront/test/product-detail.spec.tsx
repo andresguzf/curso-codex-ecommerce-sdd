@@ -91,6 +91,7 @@ describe("storefront product detail", () => {
     renderDetail();
 
     expect(screen.getByText("Cargando detalle del producto…")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Detalle del producto" })).toBeInTheDocument();
   });
 
   it("renders image, description, price and available stock", async () => {
@@ -184,6 +185,7 @@ describe("storefront product detail", () => {
     renderDetail();
 
     expect(await screen.findByText("Comprueba que la API esté disponible y vuelve a intentarlo.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Detalle del producto" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Intentar nuevamente" })).toBeInTheDocument();
   });
 });

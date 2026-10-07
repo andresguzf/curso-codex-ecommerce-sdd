@@ -2,13 +2,16 @@
 
 Aplicación e-commerce para comercializar un catálogo de productos tecnológicos. El proyecto se diseñó como un monorepo con dos aplicaciones frontend en Next.js, un backend REST independiente y PostgreSQL como base de datos transaccional.
 
-> Estado actual: 164/164 tareas OpenSpec completas. Fases 1–24 finalizadas, incluida la copia de PostgreSQL local a Supabase y activación del API mediante conexión directa. Cloudinary sigue activo para nuevas cargas de catálogo. Completar las pruebas no certifica preparación para producción.
+> Estado actual: 171/173 tareas OpenSpec completas. Fases 1–24 y 26 finalizadas; 25.1–25.2 implementadas y 25.3–25.4 de despliegue pendientes. Supabase y Cloudinary conservan su configuración existente. Completar las pruebas no certifica preparación para producción.
 
-La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación e implementación completas, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
+La propuesta OpenSpec activa es [`build-technology-ecommerce-platform`](openspec/changes/build-technology-ecommerce-platform/), con planificación completa e implementación en curso, todavía sin archivar. La evidencia de la galería administrativa está en [VALIDATION-22.7](e2e/VALIDATION-22.7.md); la fase 21 conserva su [informe](e2e/VALIDATION-21.8.md). La revisión 18.5 permanece como [informe histórico](e2e/VALIDATION-18.5.md), no como evidencia de capacidades posteriores.
 
 ### Implementación actual y alcance verificado
 
-Actualizado en la tarea 24.4 (5 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+Actualizado en la tarea 26.5 (7 de octubre de 2026). `tasks.md` conserva el estado autoritativo de cada tarea.
+
+- Fase 26: rediseño exclusivo de toda la tienda pública, claro blanco/lavanda y oscuro carbón/violeta, fuentes locales, hero panorámico de hardware con movimiento controlable, catálogo/detalle y área cliente coherentes. Backoffice, contratos REST, sesión y reglas comerciales se conservan. La [validación final](docs/VALIDATION-26.5.md) registra 140 pruebas unitarias, 141 de frontend, ocho de temas, siete de tokens y 19 focalizadas de hero/cliente, con fixtures aisladas; no verifica el despliegue remoto.
+- Fase 25: preparación de Vercel en 25.1–25.2, logo empresarial SVG fijo y PDFs tabulares implementados. 25.3–25.4 siguen pendientes; la publicación parcial no certifica los tres proyectos ni los cron. Consultar [la guía de Vercel](docs/vercel-course-deployment.md) y las tareas antes de operar; esta revisión no autoriza despliegues ni cambios de entorno.
 
 - Fase 24: PostgreSQL gestionado en Supabase está activo en el API local, sin cambiar Next.js, REST, Drizzle ni autenticación propia. Se copiaron los datos existentes, no un seed: 23 productos, 5 usuarios, 3 órdenes y 4 facturas, con relaciones, imágenes referenciadas e historial. Data API se mantiene habilitada pero la app no la consume; nuestras tablas tienen RLS sin políticas y permisos restringidos. El curso usa TLS cifrado con opt-in privado sin verificación del servidor, una excepción que no certifica seguridad productiva. Véanse [operación y recuperación](docs/supabase-course-migration.md), [copia](docs/VALIDATION-24.3.md) y [activación](docs/VALIDATION-24.4.md).
 
@@ -84,7 +87,7 @@ El diseño busca preservar consistencia entre compra, orden, inventario y factur
 | [`proposal.md`](openspec/changes/build-technology-ecommerce-platform/proposal.md) | Completo | Motivación, alcance, capacidades e impacto |
 | [`design.md`](openspec/changes/build-technology-ecommerce-platform/design.md) | Completo | Arquitectura, decisiones, riesgos y despliegue |
 | [`specs/`](openspec/changes/build-technology-ecommerce-platform/specs/) | Completo | Requisitos observables y escenarios verificables |
-| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | Implementación completa | 164 tareas de implementación con verificación |
+| [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md) | 171/173 completadas; 25.3–25.4 pendientes | 173 tareas de implementación con verificación |
 
 Validación ejecutada:
 
@@ -319,7 +322,7 @@ El storefront incluirá:
 
 - Shell reutilizable con header, navbar superior, logo SVG, área principal y footer.
 - Navbar con inicio, cuenta, login/logout según sesión y carrito con badge de unidades.
-- Landing page con hero, imagen tecnológica semitransparente y buscador.
+- Landing page con hero panorámico de hardware sin personas, movimiento controlable y buscador separado de la fotografía.
 - Primera sección con hasta 3 productos activos destacados recientemente.
 - Segunda sección con hasta 9 productos activos recientes, excluyendo los destacados ya mostrados.
 - Entre 2 y 3 secciones de categorías importantes, ordenadas, con hasta 3 productos activos recientes cada una.
@@ -715,7 +718,7 @@ Las dos aplicaciones comparten primitivas visuales desde `packages/ui`, pero con
 ```text
 StorefrontShell
   Header / Navbar: logo SVG, tienda, inicio, cuenta, login/logout, carrito
-  Hero: fondo tecnológico semitransparente y búsqueda
+  Hero: fotografía panorámica de hardware, controles de movimiento y búsqueda
   Main: recientes sin filtros en /; catálogo con filtros izquierdos en /products
   Footer
 
@@ -732,9 +735,13 @@ Los mensajes flash usan una región `aria-live` y se originan desde handlers o c
 
 ### Identidades visuales y temas
 
-Implementado en 19.1–19.8: ambas aplicaciones ofrecen temas claro y oscuro con identidades propias. El backoffice ya no fuerza un tema por rol: tanto `ADMIN` como `BILLING` pueden elegirlo. El navbar público conserva su franja azul oscura, fija y translúcida al desplazar, también en tema claro.
+La infraestructura de 19.1–19.8 ofrece temas claro y oscuro independientes. La fase 26 renueva exclusivamente el storefront: navbar sticky acorde al tema, translúcido al desplazar, sin imponer franjas oscuras en claro. El backoffice conserva su diseño y permite elegir tema tanto a `ADMIN` como a `BILLING`.
 
 El storefront tiene una apariencia comercial típica de un e-commerce tecnológico: imágenes y tarjetas de producto protagonistas, espacios generosos, precio, stock y llamadas a la compra claramente jerarquizadas. La [landing editorial](docs/landing-editorial.md) muestra destacados, recientes y categorías importantes sin filtros ni paginador.
+
+En claro usa fondo blanco, superficies lavanda muy suaves y acento violeta `#6554ae`; en oscuro, fondo carbón `#0d0d12`, superficies violeta oscuro y acento `#bca7ef`, con azul secundario. Source Sans 3 y Space Grotesk se sirven localmente. Los estilos de landing y cliente están limitados al storefront, incluidos flash y modales, sin alterar las primitivas administrativas.
+
+El hero presenta dos fotos locales sin personas: teclado RGB y gráfica NVIDIA. Su paneo tarda 40 segundos por dirección y alterna imágenes cada 14 segundos con fundido de un segundo. Permite pausa y selección manual; interacción, foco y pestaña oculta pausan el movimiento. Con movimiento reducido permanece estático, sin autoplay. Reserva espacio responsive, prioriza la primera imagen, difiere la segunda y ofrece fallback sin bloquear el buscador. Sin JavaScript conserva una imagen estática y la búsqueda nativa; no promete que toda la aplicación sea operable sin JavaScript. La galería de productos sigue siendo manual.
 
 El backoffice tiene una apariencia minimalista, elegante y empresarial: paleta basada en slate, navy y azul, mayor densidad operativa, tablas compactas, tarjetas KPI, navegación sobria y colores semánticos para estados.
 
@@ -751,7 +758,7 @@ El selector accesible aparece fijo en la esquina inferior derecha. Las claves de
 
 Todos los temas deben cubrir navbar, hero, tarjetas, dashboard, gráficos, tablas, formularios, sidebars, drawers, modales, mensajes y estados interactivos con contraste WCAG AA, foco visible y significado no dependiente únicamente del color.
 
-Los componentes existentes están cubiertos por tokens y una capa de compatibilidad semántica; las franjas oscuras usan regiones inversas y los formularios anidados restablecen su superficie. No hay gráficos de analítica implementados ni se presentan datos ficticios como indicadores. El [catálogo visual](docs/design-system.html), la [guía de tokens](docs/design-tokens.md) y la [infraestructura de temas](docs/theme-runtime.md) documentan sus límites y mantenimiento.
+Los componentes existentes están cubiertos por tokens y una capa de compatibilidad semántica. Desde la fase 26 las regiones inversas del storefront siguen su tema, sin forzar superficies oscuras en claro; las regiones del backoffice conservan sus reglas independientes. No hay gráficos de analítica implementados ni se presentan datos ficticios como indicadores. El [catálogo visual](docs/design-system.html), la [guía de tokens](docs/design-tokens.md) y la [infraestructura de temas](docs/theme-runtime.md) documentan sus límites y mantenimiento.
 
 Para verificar: `pnpm test:e2e:themes`, `pnpm test:e2e:design-tokens` y `pnpm test:e2e:frontends --workers=2`. Las referencias actuales son de Chromium/macOS; otras plataformas necesitan referencias revisadas propias. No se actualizan capturas automáticamente para aceptar una diferencia visual.
 
@@ -770,7 +777,7 @@ El API devuelve variantes estrictas por `role`, `updatedAt` y `metrics`; ADMIN r
 
 ## API REST y contrato OpenAPI
 
-Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 48 paths, con composición de landing e imágenes de producto además de salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial, medios y dashboard. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia.
+Todas las rutas se ubican bajo `/api/v1`. El contrato implementado está en [`apps/api/openapi/openapi.json`](apps/api/openapi/openapi.json), se publica en `/api/v1/openapi.json` y ofrece Swagger interactivo en `/api/v1/docs`. Incluye 47 paths, con composición de landing e imágenes de producto además de salud, autenticación, usuarios, catálogo, wishlist, inventario, carrito, checkout, órdenes, facturas, PDFs, perfil empresarial, medios y dashboard. `pnpm openapi:generate` regenera el documento y el cliente TypeScript; `pnpm openapi:check` verifica su coherencia.
 
 ### Salud y autenticación
 
@@ -849,7 +856,7 @@ El formulario `/checkout` permite introducir dirección y seleccionar envío y p
 
 - `GET /store-profile`
 - `PATCH /store-profile`
-- `POST /store-profile/logo`: carga validada de logo por `ADMIN` mediante el adaptador de almacenamiento.
+- Logo empresarial SVG fijo generado y versionado por el API desde 25.1; no existe un endpoint de carga. Los documentos conservan las referencias históricas de sus snapshots.
 - `GET /media/images/:storageKey`: sirve los assets autorizados por el contrato de medios.
 
 Los autocompletes de facturación reutilizan `GET /users` y `GET /products` con `purpose=autocomplete`, búsqueda mínima de tres caracteres, `page=1` y `pageSize` máximo 20; no descargan colecciones completas. La proyección de clientes se limita a `CUSTOMER` activos y la de productos usa `view=public`. El backend vuelve a validar las referencias al crear la factura.
@@ -948,7 +955,7 @@ El API emitirá logs estructurados, correlation IDs y métricas para autenticaci
 
 ## Hoja de ruta de implementación
 
-La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veintitrés etapas:
+La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/build-technology-ecommerce-platform/tasks.md). El trabajo se divide en veintiséis etapas:
 
 1. Fundaciones del monorepo y aplicaciones base.
 2. Persistencia, migraciones, contratos OpenAPI y límites de dependencias.
@@ -974,10 +981,12 @@ La lista normativa y verificable se encuentra en [`tasks.md`](openspec/changes/b
 22. Gestor administrativo de galería y límite de cuatro imágenes.
 23. Nuevas cargas de catálogo en Cloudinary y recuperación durable.
 24. Migración simplificada a Supabase: conexión, configuración, respaldo/copia y activación.
+25. Preparación y despliegue docente en Vercel: 25.1–25.2 implementadas; 25.3–25.4 pendientes.
+26. Rediseño minimalista del storefront, hero panorámico y regresión completa, sin cambios del backoffice.
 
-Cada una de las 164 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
+Cada una de las 173 tareas incluye una forma concreta de verificación mediante pruebas, comandos, comportamiento observable o artefactos entregados. La documentación no sustituye specs, design ni OpenAPI como fuentes de comportamiento, arquitectura y contrato respectivamente.
 
-Fases 1–24 completadas: 164 tareas. No quedan tareas pendientes y el cambio sigue sin archivar. La activación de Supabase se documenta en [VALIDATION-24.4](docs/VALIDATION-24.4.md); las fases anteriores conservan su evidencia histórica. PostgreSQL local y sus volúmenes se conservan, pero Supabase es la autoridad activa: no iniciar un segundo API/worker sobre la copia antigua ni volver a ella sin reconciliar cambios. Ejecutar seed, repetir copias, cambiar proveedores, hacer commit/push o archivar requiere autorización específica.
+171/173 tareas completadas: fases 1–24 y 26 cerradas, 25.1–25.2 implementadas, 25.3–25.4 pendientes. El cambio sigue sin archivar. La activación de Supabase se documenta en [VALIDATION-24.4](docs/VALIDATION-24.4.md); las fases anteriores conservan su evidencia histórica. PostgreSQL local y sus volúmenes se conservan, pero Supabase es la autoridad activa: no iniciar un segundo API/worker sobre la copia antigua ni volver a ella sin reconciliar cambios. Ejecutar seed, repetir copias, cambiar proveedores, hacer commit/push o archivar requiere autorización específica.
 
 ## Fuera del alcance inicial
 
@@ -1021,7 +1030,7 @@ Estas funcionalidades pueden añadirse mediante cambios OpenSpec posteriores sin
 
 ## Revisar y finalizar el cambio
 
-El alcance aprobado está implementado. El flujo permite inspeccionar su estado, pero no autoriza nuevas tareas ni archivar el cambio automáticamente:
+El rediseño público está implementado; queda completar 25.3–25.4 de despliegue. El flujo permite inspeccionar su estado, pero no autoriza operaciones externas ni archivar el cambio automáticamente:
 
 ```text
 $openspec-apply-change build-technology-ecommerce-platform

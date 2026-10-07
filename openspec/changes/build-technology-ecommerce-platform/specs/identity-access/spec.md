@@ -120,3 +120,14 @@ Los entornos de desarrollo y pruebas SHALL poder crear idempotentemente un usuar
 #### Scenario: Seed de usuarios en producción
 - **WHEN** se intenta ejecutar el seed demostrativo de usuarios en producción
 - **THEN** el sistema rechaza la operación antes de crear o modificar cuentas y no registra las credenciales en logs
+
+### Requirement: Presentación pública de acceso y cuenta en fase 26
+Login, registro y cuenta del storefront SHALL adoptar la identidad minimalista y los temas coherentes del storefront, incluyendo formularios, validaciones, mensajes flash y estados de sesión, sin modificar autenticación, roles, almacenamiento de tokens ni apariencia del backoffice.
+
+#### Scenario: Acceso y cambio de tema
+- **WHEN** una persona usa login, registro o cuenta y alterna el tema del storefront
+- **THEN** campos, controles, errores y estados conservan contraste y foco sin reiniciar datos del formulario ni provocar logout o cambios de rol
+
+#### Scenario: Sesión recuperándose
+- **WHEN** se recupera una sesión antes de presentar contenido protegido
+- **THEN** se conserva el comportamiento autorizado y se muestra un estado de carga accesible coherente con el tema, sin añadir esperas de animación ni nuevos bloqueos de navegación

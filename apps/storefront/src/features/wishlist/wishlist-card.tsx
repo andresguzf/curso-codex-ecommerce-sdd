@@ -15,7 +15,7 @@ export function WishlistCard({ isAdding, item, onAddToCart }: Readonly<{
   const inactive = item.productStatus === "INACTIVE" || item.productDeletedAt !== null;
   const available = !inactive && item.product.isAvailable && item.product.stockAvailable > 0;
 
-  return <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_-35px_rgba(15,23,42,0.35)]">
+  return <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
     <div className="relative aspect-[4/3] bg-slate-100">
       <ProductImage alt={item.product.name} src={item.product.image?.url} fill className="object-cover" sizes="(min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100vw" />
     </div>

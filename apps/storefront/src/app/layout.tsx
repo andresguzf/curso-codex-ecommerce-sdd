@@ -17,7 +17,7 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html data-design-system="storefront" lang="es" suppressHydrationWarning>
+    <html data-design-system="storefront" data-theme="light" lang="es" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript("storefront") }} /></head>
       <body>
         <StorefrontProviders>

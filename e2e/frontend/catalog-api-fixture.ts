@@ -63,7 +63,7 @@ function productPage(page: number, pageSize: number, imageUrl = "/images/product
   };
 }
 
-export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingEditorial?: "full" | "partial" | "empty"; editorialCategories?: boolean; landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string; imageUploadTimeout?: boolean } = {}) {
+export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUSTOMER" | "BILLING" | "ANONYMOUS", options: { landingEditorial?: "full" | "partial" | "empty"; editorialCategories?: boolean; landingProductCount?: number; galleryImageCount?: number; galleryImageUrl?: string; imageUploadTimeout?: boolean; stockAvailable?: number } = {}) {
   const productRequests: URL[] = [];
   const landingRequests: URL[] = [];
   const completedLandingRequests: URL[] = [];
@@ -289,7 +289,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
 
     if (url.pathname === "/api/v1/products/10184fd0-3dcb-47cf-af70-a8be4c765421" && request.method() === "GET") {
       await route.fulfill({
-        body: JSON.stringify({ ...productPage(1, 12).items[0], availability: "IN_STOCK", coverImage: galleryImages.find((image) => image.isPrimary) ?? null, images: galleryImages }),
+        body: JSON.stringify({ ...productPage(1, 12).items[0], stockAvailable: options.stockAvailable ?? 14, availability: options.stockAvailable === 0 ? "OUT_OF_STOCK" : "IN_STOCK", coverImage: galleryImages.find((image) => image.isPrimary) ?? null, images: galleryImages }),
         contentType: "application/json",
         headers,
       });
@@ -316,7 +316,7 @@ export async function installCatalogApiFixture(page: Page, role: "ADMIN" | "CUST
       const requestedPage = Number(url.searchParams.get("page") ?? 1);
       const pageSize = Number(url.searchParams.get("pageSize") ?? 20);
       await route.fulfill({
-        body: JSON.stringify({ ...productPage(requestedPage, pageSize), items: productPage(requestedPage, pageSize, options.galleryImageUrl).items.map((product) => ({ ...product, ...(url.searchParams.get("view") === "administrative" ? { isFeatured, featuredAt } : {}) })) }),
+        body: JSON.stringify({ ...productPage(requestedPage, pageSize), items: productPage(requestedPage, pageSize, options.galleryImageUrl).items.map((product) => ({ ...product, stockAvailable: options.stockAvailable ?? 14, ...(url.searchParams.get("view") === "administrative" ? { isFeatured, featuredAt } : {}) })) }),
         contentType: "application/json",
         headers,
       });

@@ -2,16 +2,19 @@
 
 Este repositorio contiene la planificación y la implementación en curso de una plataforma e-commerce para productos tecnológicos.
 
-Estado revisado en la tarea 24.4, el 5 de octubre de 2026:
+Estado revisado en la tarea 26.5, el 7 de octubre de 2026:
 
 - La planificación OpenSpec está completa.
 - El cambio activo es `build-technology-ecommerce-platform`.
-- Existen propuesta, diseño, siete especificaciones y 164 tareas verificables.
+- Existen propuesta, diseño, siete especificaciones y 173 tareas verificables; 171 completadas y dos pendientes (25.3–25.4).
 - Storefront, backoffice y API son funcionales: autenticación, catálogo, inventario, carrito anónimo/autenticado, checkout, órdenes, facturación, PDF, usuarios, taxonomía, wishlist, perfil empresarial con logo/snapshots y autocompletes están implementados.
-- Fases 1–23 completadas: 160/160 tareas, incluidos controles editoriales, seed, landing, gestor de imágenes y adaptador Cloudinary con recuperación durable. No quedan tareas de implementación pendientes. Tras autorización posterior a 23.8, Cloudinary está seleccionado en `.env` local con modo dynamic y migraciones aplicadas; no se ejecutó seed ni migración de imágenes. Evidencia: `e2e/VALIDATION-22.7.md`, `docs/VALIDATION-23.7.md` y `docs/VALIDATION-23.8.md`. El cambio sigue sin archivar. Esta autorización no habilita operaciones futuras de seed, nuevos smoke reales, archivo o ampliaciones de alcance.
+- Fases 1–23 completadas: 160 tareas, incluidos controles editoriales, seed, landing, gestor de imágenes y adaptador Cloudinary con recuperación durable. Tras autorización posterior a 23.8, Cloudinary está seleccionado en `.env` local con modo dynamic y migraciones aplicadas; no se ejecutó seed ni migración de imágenes. Evidencia: `e2e/VALIDATION-22.7.md`, `docs/VALIDATION-23.7.md` y `docs/VALIDATION-23.8.md`. El cambio sigue sin archivar. Esta autorización no habilita operaciones futuras de seed, nuevos smoke reales, archivo o ampliaciones de alcance.
 - La revisión 18.5 y los informes de fases 18–20 son evidencia histórica. La consolidación final está en `e2e/VALIDATION-21.8.md`; los controles y la composición editorial se documentan en `docs/backoffice-featured-products.md`, `docs/backoffice-landing-categories.md` y `docs/landing-editorial.md`. Las pruebas automatizadas no equivalen a certificación de producción ni a auditoría manual completa de accesibilidad.
 - Fase 24 completada: 164/164 tareas. Supabase PostgreSQL 17.11 es la autoridad activa del API local mediante conexión directa; PostgreSQL Docker 18.6 y su volumen siguen conservados como origen histórico. Copia de datos existentes sin seed, esquema Drizzle, RLS/permisos restringidos y smoke REST de los tres roles más UI pública verificados. Evidencia en `docs/VALIDATION-24.3.md` y `docs/VALIDATION-24.4.md`; operación en `docs/supabase-course-migration.md`. No volver al origen después de nuevas escrituras sin reconciliar datos ni iniciar workers en ambas bases. No hay autorización para copias futuras, seed, commit/push o archivo.
 - Antes de trabajar, inspecciona el repositorio y el estado OpenSpec; no asumas que este estado sigue intacto ni reemplaces código que haya sido implementado posteriormente.
+
+- Fase 25: 25.1–25.2 completadas; 25.3 tiene evidencia parcial de publicación y 25.4 sigue pendiente. Están implementados runtime ESM/serverless, SVG empresarial fijo, PDFs tabulares, rewrites REST same-origin y configuración de tres proyectos. No afirmar certificación del despliegue, corte de ejecutores o cron remoto activo. Consultar `docs/vercel-course-deployment.md` y `docs/VALIDATION-25.3.md` antes de operar; no modificar secretos ni activar cron sin autorización.
+- Fase 26 completada: rediseño exclusivamente público, blanco/lavanda y carbón/violeta, fuentes locales, hero panorámico con teclado RGB y gráfica NVIDIA sin personas, catálogo/detalle y flujos del cliente. Backoffice, REST, sesión, inventario, snapshots y PDFs preservados. Evidencia consolidada: `docs/VALIDATION-26.5.md`. No desplegar, ejecutar seed, hacer commit/push ni archivar automáticamente al finalizar el rediseño.
 
 ## Sources of truth
 
@@ -99,7 +102,7 @@ El esquema Drizzle, las migraciones y el seed ejecutable están en `apps/api/src
 
 - Storefront: `/`, `/products`, `/products/[productId]`, `/login`, `/register`, `/cart`, `/checkout`, `/checkout/orders/[orderId]`, `/account`, `/account/wishlist`, `/account/orders`, `/account/orders/[orderId]`, `/account/invoices` y `/account/invoices/[invoiceId]`.
 - Backoffice: `/`, `/login`, `/users`, `/products`, `/products/[productId]/inventory`, `/inventory`, `/categories`, `/tags`, `/orders`, `/orders/[orderId]`, `/invoices`, `/invoices/[invoiceId]` y `/store-profile`. Crear/editar productos usa formularios dentro de `/products`.
-- `BILLING` tiene navegación hacia órdenes, facturas y consulta del perfil empresarial; el CRUD del perfil y logo sigue siendo exclusivo de `ADMIN`. La portada `/` del backoffice implementa el dashboard de 19.5–19.6 para `ADMIN` y `BILLING`, sin enlaces ni métricas de módulos prohibidos.
+- `BILLING` tiene navegación hacia órdenes, facturas y consulta del perfil empresarial; editar el perfil sigue siendo exclusivo de `ADMIN`. El logo empresarial es un SVG fijo desde 25.1, sin carga manual. La portada `/` del backoffice implementa el dashboard de 19.5–19.6 para `ADMIN` y `BILLING`, sin enlaces ni métricas de módulos prohibidos.
 
 ## Dependency boundaries
 
@@ -121,12 +124,12 @@ frontend    -x-> entidades internas del backend
 
 ## UI shells and implemented visual systems
 
-Los shells separados y cuatro temas están implementados. El storefront conserva su navbar azul oscuro fijo y translúcido al desplazar y su identidad comercial; el backoffice mantiene una identidad slate/navy/azul empresarial. `ADMIN` y `BILLING` pueden elegir claro u oscuro. La galería manual y la landing editorial están implementadas: destacados, recientes deduplicados y categorías importantes ordenadas, sin filtros ni paginador en inicio.
+Los shells separados y cuatro temas están implementados. Desde fase 26, el storefront usa blanco/lavanda en claro y carbón/violeta en oscuro, sin franjas oscuras forzadas en claro; el navbar sticky sigue el tema y es translúcido al desplazar. El backoffice conserva su identidad slate/navy/azul empresarial sin rediseño. `ADMIN` y `BILLING` pueden elegir claro u oscuro. La galería manual y la landing editorial mantienen destacados, recientes deduplicados y categorías importantes ordenadas, sin filtros ni paginador en inicio.
 
 ```text
 StorefrontShell
   Header/Navbar: logo SVG, tienda, inicio, cuenta, login/logout, badge del carrito
-  Hero: fondo tecnológico semitransparente y búsqueda
+  Hero: título/búsqueda separados de fotografía panorámica de hardware con controles
   Main: recientes sin filtros en /; catálogo con sidebar izquierdo de filtros en /products
   Footer
 
@@ -156,10 +159,18 @@ BackofficeShell
 - Los tokens viven en `apps/storefront/src/styles/design-tokens.css` y `apps/backoffice/src/styles/design-tokens.css`; `packages/ui/src/theme-coverage.css` adapta utilidades heredadas, no impone una apariencia única.
 - `packages/ui/src/theme-bootstrap.ts` aplica `data-design-system` y `data-theme` en el head antes del body; `theme-provider.tsx` crea un store Zustand por instancia y sincroniza sistema/almacenamiento sin usar datos de sesión.
 - Claves locales: `technology-ecommerce:storefront:theme` y `technology-ecommerce:backoffice:theme`, solo `light` o `dark`. Nunca almacenes tokens de autenticación o datos privados junto a esta preferencia. La elección explícita prevalece sobre el sistema y es independiente de roles/logout; sin storage funciona en memoria, sin garantizar persistencia entre recargas.
-- El selector está fijo abajo a la derecha, tiene nombre accesible, `aria-pressed` y soporte de teclado. Las regiones `data-tone-region="inverse"` conservan franjas oscuras; formularios anidados usan `data-tone-region="surface"`.
+- El selector está fijo abajo a la derecha, tiene nombre accesible, `aria-pressed` y soporte de teclado. En storefront los aliases inverse siguen el tema activo: no reintroducir una franja oscura fija en claro. Las fotografías conservan su color natural; el backoffice mantiene sus regiones inversas/superficies independientes.
 - Ejecuta `pnpm test:e2e:themes`, `pnpm test:e2e:design-tokens` y `pnpm test:e2e:frontends --workers=2` ante cambios visuales. La fase 19.8 verificó 57 pruebas de frontend, siete de tokens y 16 referencias de las cuatro combinaciones a 375/1440 px; esto no equivale a una auditoría manual completa de accesibilidad.
 - Las referencias PNG actuales son Chromium/macOS. En otra plataforma crea referencias propias revisadas; no actualices snapshots automáticamente para ocultar regresiones. Consulta `docs/theme-regression-testing.md` y el catálogo `docs/design-system.html`.
 - No hay gráficos de analítica implementados. Los nuevos componentes deben conservar los cuatro temas y no presentar métricas ficticias. Galería y composición editorial completa están implementadas; conserva su cobertura ante cambios posteriores.
+
+### Storefront — dirección y límites de fase 26
+
+- Fuentes locales: Source Sans 3 Variable para texto, Space Grotesk Variable para títulos y monospace del sistema para datos. Paleta clara `#ffffff`/`#faf9fe`, texto `#252737`, acento `#6554ae`; oscura `#0d0d12`/`#1c1726`, texto `#f3f1f7`, acento `#bca7ef`. Los tokens semánticos son la autoridad; no copiar una apariencia a `packages/ui` que afecte al backoffice.
+- `storefront-landing.css` y `storefront-customer.css` están scoped al storefront y cubren también portales. Formularios, checkout, cuenta, wishlist y documentos deben conservar borradores al alternar tema y mostrar estados sin esperas de animación añadidas.
+- Hero: dos assets locales `hero-rgb-keyboard-v2.png` y `hero-nvidia-gpu-v2.png`, fotografía ilustrativa sin garantía de SKU. Marco 21:9 desktop/16:9 móvil; primera imagen eager/high y segunda diferida/lazy. Pan de 40 s por sentido, alternancia de 14 s y fundido de 1 s; pausa explícita, foco/puntero, búsqueda y visibilidad detienen movimiento. Selección manual pausa; movimiento reducido elimina pan/autoplay/fundido. No confundir con ProductGallery, que sigue sin autoplay.
+- Mantener fallback y búsqueda operativos cuando falle una imagen, dimensiones reservadas y entrega local de fuentes. No cargar fotos del hero en Cloudinary ni cambiar imágenes de productos automáticamente.
+- Regresión 26.5: 140 pruebas unitarias, 141 frontend, siete de tokens y ocho de temas; 16 referencias existentes de las cuatro combinaciones. Revisar capturas a 375/1440 px; no regenerar referencias administrativas para aceptar cambios públicos. Las nuevas suites `storefront-hero.spec.ts` y `storefront-customer.spec.ts` usan fixtures aisladas, nunca la base activa.
 
 # Technology conventions
 
@@ -237,7 +248,7 @@ Temas, dashboard, imágenes múltiples, seed, galería, API editorial, controles
 - Consulta `docs/catalog-cloudinary-storage.md` y `docs/catalog-image-recovery.md` antes de operar. `IMAGE_STORAGE_CATALOG_PROVIDER=local|cloudinary` afecta solo nuevas cargas, con `local` por defecto; no edites `.env` ni actives el proveedor sin autorización específica.
 - Las variables `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER_MODE=dynamic|fixed` son privadas del API. No uses `NEXT_PUBLIC_*`, secretos versionados, cargas directas del navegador ni fallback silencioso. La cuenta de pruebas se verificó como dynamic en 23.7, pero el modo debe configurarse explícitamente y confirmarse si cambia la cuenta.
 - Destino fijo `codex-storefront`: dynamic usa `asset_folder`, fixed usa `folder`; cada operación tiene UUID propio, sin sobrescritura. El mismo POST REST recibe bytes JPEG/PNG/WebP, valida contenido/tamaño y autoriza ADMIN antes de subir. No cambia el formulario, inventario ni contratos comerciales.
-- La migración aditiva `0015_worried_triathlon.sql` crea `catalog_image_operations`. Identidad durable antes de subir; referencia, portada/orden, auditoría y confirmación atómicos. Worker cada 30 segundos, hasta 20 trabajos por pasada, dos minutos de gracia y ocho intentos con backoff; mutex advisory sin mantener transacciones/bloqueos de filas durante red. No reintenta uploads automáticamente.
+- La migración aditiva `0015_worried_triathlon.sql` crea `catalog_image_operations`. Identidad durable antes de subir; referencia, portada/orden, auditoría y confirmación atómicos. Runtime local: worker cada 30 segundos; Vercel: sin timer permanente, trabajo acotado mediante endpoint protegido y cadencia diaria acordada para Hobby, pendiente de cierre operativo en 25.3–25.4. Hasta 20 trabajos por pasada, dos minutos de gracia y ocho intentos con backoff; mutex advisory sin mantener transacciones/bloqueos de filas durante red. No reintenta uploads automáticamente.
 - La reconciliación puede eliminar assets: requiere autorización operativa. Reencola solo una operación revisada por UUID; nunca borres carpetas ni assets ajenos/referenciados. `BLOCKED` exige revisar la causa, no forzar estados SQL. Los errores remotos usan 502/503/504 seguros y correlation ID.
 - Volver a local no reescribe ni descarga referencias Cloudinary; conserva credenciales/modo para su gestión y recuperación. Picsum/archivos actuales quedan intactos. Logos empresariales siguen locales y PDFs conservan snapshots. Calidad/compresión, migración masiva y sustitución de Picsum para producción quedan fuera de esta fase.
 - Next.js admite entrega HTTPS versionada de `res.cloudinary.com` únicamente bajo `codex-storefront`; no amplíes hosts ni IP privadas en producción. `pnpm test:e2e:cloudinary` usa REST/PostgreSQL reales y SDK controlado; no equivale a certificación del optimizador productivo. Cada nuevo smoke real requiere autorización propia en cuenta no productiva y limpieza exclusiva de su asset temporal; la autorización de 23.7 no habilita ejecuciones futuras.
@@ -324,7 +335,7 @@ Invoice: DRAFT --> PENDING_PAYMENT --> PAID
 
 # REST API and OpenAPI status
 
-El contrato implementado en `apps/api/openapi/openapi.json` contiene 48 paths; se sirve en `/api/v1/openapi.json` y expone Swagger UI interactivo en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Incluye las rutas existentes y `/catalog/landing` y las mutaciones de imágenes de producto ya implementadas. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
+El contrato implementado en `apps/api/openapi/openapi.json` contiene 47 paths; se sirve en `/api/v1/openapi.json` y expone Swagger UI interactivo en `/api/v1/docs`. `packages/api-client` se genera desde ese archivo y `packages/api-schemas` valida respuestas HTTP con Zod. Incluye las rutas existentes y `/catalog/landing` y las mutaciones de imágenes de producto ya implementadas; la ruta de carga manual de logo fue retirada en 25.1. Mantén `/api/v1`, nombres REST coherentes, validación, autorización, paginación y errores uniformes, y ejecuta `pnpm openapi:generate` seguido de `pnpm openapi:check` al cambiar el contrato.
 
 ## Health
 
@@ -467,7 +478,7 @@ Implementado en 9.4: los detalles de órdenes y facturas de storefront y backoff
 
 - `GET /api/v1/store-profile`: consulta autorizada para `ADMIN` y `BILLING`.
 - `PATCH /api/v1/store-profile`: modificación exclusiva de `ADMIN` con auditoría.
-- `POST /api/v1/store-profile/logo`: carga validada por `ADMIN`; persiste el asset mediante el adaptador y su referencia `StoreLogoAsset`.
+- Logo empresarial: SVG fijo versionado desde 25.1, sin endpoint de carga manual. Conservar logos/snapshots anteriores; no sustituir documentos históricos.
 - `GET /api/v1/media/images/:storageKey`: entrega de imágenes conforme al contrato de medios.
 
 El perfil contiene al menos nombre comercial, razón social, identificador fiscal, dirección física y referencia de logo. Su snapshot está implementado desde 15.4 para órdenes, facturas y PDF. La identidad visual pública del storefront debe obtenerse mediante una proyección pública o configuración que se defina explícitamente en OpenAPI; no expongas por defecto todos los datos fiscales. Los autocompletes usan `purpose=autocomplete`, `search` mínimo de tres caracteres, `page=1` y `pageSize` máximo 20; usuarios se limita a clientes activos y productos usa `view=public`. El backend vuelve a validar todos los identificadores seleccionados.
@@ -582,7 +593,7 @@ Todo cambio debe verificarse en proporción a su alcance:
 Al implementar el cambio activo:
 
 - Sigue `tasks.md` en orden de dependencias.
-- El plan contiene 164 tareas distribuidas en 24 grupos; las tareas 12 a 21 incorporan layouts, catálogo ampliado, temas, dashboard, seed, imágenes y composición editorial. La fase 22 añade galería administrativa y límite de cuatro; la 23, Cloudinary; la 24, migración y activación de Supabase. Verifica siempre el estado real y no infieras activación por existir credenciales.
+- El plan contiene 173 tareas distribuidas en 26 grupos: fases 1–24 y 26 completas, 25.1–25.2 completas y 25.3–25.4 pendientes. La fase 26 no acredita cierre de Vercel. Verifica siempre el estado real y no infieras activación por existir credenciales.
 - Marca una tarea como completada solo después de verificarla.
 - No marques bloques completos por inferencia.
 - Ejecuta `openspec validate build-technology-ecommerce-platform --strict` antes de considerar completa la implementación.

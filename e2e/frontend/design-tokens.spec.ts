@@ -54,6 +54,19 @@ for (const app of ["storefront", "backoffice"] as const) {
         expect(contrast(tokens.border!, tokens[surface]!)).toBeGreaterThanOrEqual(3);
       }
       expect(tokens.density).toBe(app === "storefront" ? "comfortable" : "compact");
+      if (app === "storefront") {
+        expect(tokens.canvas).toBe(theme === "light" ? "#ffffff" : "#0d0d12");
+        expect(tokens.surface).toBe(theme === "light" ? "#ffffff" : "#1c1726");
+        expect(tokens["inverse-surface"]).toBe(tokens.canvas);
+        expect(tokens["inverse-text"]).toBe(tokens.text);
+        expect(tokens["font-body"]).toContain("Source Sans 3 Variable");
+        expect(tokens["font-display"]).toContain("Space Grotesk Variable");
+      } else {
+        // Administrative foundations are not part of the storefront redesign.
+        expect(tokens.surface).toBe(theme === "light" ? "#ffffff" : "#182235");
+        expect(tokens["font-body"]).not.toContain("Source Sans 3");
+        expect(tokens["font-display"]).not.toContain("Space Grotesk");
+      }
     });
   }
 }

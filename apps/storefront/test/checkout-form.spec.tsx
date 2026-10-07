@@ -24,7 +24,7 @@ function renderForm() {
   return client;
 }
 async function fill() {
-  await screen.findByRole("heading", { name: "Completa tu compra" });
+  await screen.findByLabelText("Dirección");
   for (const [label, value] of [["Dirección", "Av. Central 123"], ["Ciudad", "Santiago"], ["Región o estado", "Metropolitana"], ["Código postal", "8320000"]]) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }

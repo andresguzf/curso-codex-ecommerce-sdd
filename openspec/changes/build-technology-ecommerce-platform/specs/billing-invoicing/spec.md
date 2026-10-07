@@ -142,3 +142,10 @@ El sistema SHALL paginar facturas desde el backend con `items`, `page`, `pageSiz
 #### Scenario: Buscar y filtrar facturas
 - **WHEN** un usuario autorizado combina búsqueda, filtros y ordenamiento
 - **THEN** el sistema devuelve la primera página coincidente y la interfaz conserva los criterios en la URL
+
+### Requirement: Presentación de facturas del cliente en fase 26
+Listado y detalle de facturas del cliente en el storefront SHALL adoptar su identidad visual y ambos temas, conservando permisos, snapshots, importes y descarga existente. El rediseño MUST NOT modificar creación manual, conversión desde órdenes, estados, backoffice ni renderer PDF.
+
+#### Scenario: Factura propia en ambos temas
+- **WHEN** un cliente consulta una factura propia en tema claro u oscuro
+- **THEN** emisor, líneas, totales USD, estado y acción de descarga mantienen legibilidad, jerarquía y foco, sin sustituir datos históricos ni alterar la representación PDF

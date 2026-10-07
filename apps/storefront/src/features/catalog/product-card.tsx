@@ -18,26 +18,24 @@ export function ProductCard({
   const isOutOfStock = product.stockAvailable === 0;
 
   return (
-    <article data-slot="product-card" className="group flex min-w-0 flex-col overflow-hidden rounded-[var(--ds-radius-panel)] border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[var(--ds-elevation)] transition duration-300 hover:-translate-y-1 hover:border-[var(--ds-accent)] motion-reduce:transform-none">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[var(--ds-surface-subtle)]">
+    <article data-slot="product-card" className="group flex min-w-0 flex-col overflow-hidden rounded-[var(--ds-radius-panel)] border border-[var(--ds-border-subtle)] bg-[var(--ds-surface)] transition-colors duration-200 hover:border-[var(--ds-accent)]">
+      <div data-slot="product-card-photo" className="relative aspect-[4/3] overflow-hidden bg-[var(--ds-surface-subtle)]">
         <Link className="absolute inset-0 focus-visible:outline-4 focus-visible:outline-offset-[-4px] focus-visible:outline-[var(--ds-focus)]" aria-label={`Ver detalle de ${product.name}`} href={`/products/${product.id}`}>
           <ProductImage
             alt={product.name}
             className="object-cover transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none"
             fill
-            sizes="(min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100vw"
+            sizes="(min-width: 1280px) 370px, (min-width: 1024px) 25vw, (min-width: 640px) 46vw, 100vw"
             src={product.coverImage?.url ?? product.image.url}
           />
         </Link>
-        <span data-tone-region="inverse" className="absolute left-4 top-4 rounded-full bg-[#081426]/90 px-3 py-1.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
-          {product.sku}
-        </span>
         <div className="absolute right-4 top-4"><WishlistButton productId={product.id} productName={product.name} /></div>
       </div>
       <div className="flex flex-1 flex-col p-5">
+        <p className="m-0 font-mono text-[0.68rem] font-medium tracking-[0.08em] text-[var(--ds-text-muted)]">{product.sku}</p>
         <ProductClassifications category={product.category} compact tags={product.tags} />
         <div className="mt-3 grid gap-3">
-          <h2 className="m-0 text-xl font-black leading-tight tracking-tight text-[var(--ds-text)]">
+          <h2 className="m-0 text-xl font-semibold leading-tight tracking-tight text-[var(--ds-text)]">
             <Link className="rounded-sm hover:text-[var(--ds-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" href={`/products/${product.id}`}>
               {product.name}
             </Link>
@@ -47,8 +45,8 @@ export function ProductCard({
           </span>
         </div>
         <p className="mb-0 mt-3 line-clamp-2 text-sm leading-6 text-[var(--ds-text-muted)]">{product.description}</p>
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-4 pt-6">
-          <p className="m-0 text-2xl font-black tracking-tight text-[var(--ds-text)]">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
+          <p className="m-0 text-2xl font-semibold tabular-nums tracking-tight text-[var(--ds-text)]">
             {formatProductPrice(product.price)}
           </p>
           <button

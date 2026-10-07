@@ -1,4 +1,4 @@
-# Tokens visuales — tarea 19.1
+# Tokens visuales — base 19.1 y actualización 26.5
 
 El [catálogo visual](design-system.html) puede abrirse directamente en el navegador.
 Carga los mismos archivos CSS que importan las aplicaciones; no duplica sus colores.
@@ -6,15 +6,17 @@ Las muestras son estáticas, sin API, compras, sesiones ni escrituras.
 
 ## Dirección y límites
 
-- Tienda: azul profundo, acento cian para foco, tarjetas amplias y tipografía
-  Trebuchet MS para títulos, Verdana para lectura y monospace para importes.
-  La firma es una banda de acento superior que organiza la tarjeta de producto.
+- Tienda: blanco/lavanda en claro y carbón/violeta en oscuro, azul secundario,
+  tarjetas amplias y bordes sutiles. Space Grotesk para títulos, Source Sans 3
+  para lectura (fuentes locales) y monospace para datos. La fase 26 reemplaza
+  la antigua banda azul y las fuentes del sistema, sin cambiar el backoffice.
 - Administración: slate/navy, azul operativo, radios pequeños y mayor densidad;
   Arial para lectura y títulos, monospace para identificadores e importes.
   La firma es un borde lateral discreto en el panel de trabajo.
-- Se conserva la dirección azul del proyecto, evitando una inversión mecánica de
-  colores o una misma apariencia con distinto logo. Cada tema tiene valores propios.
-- No se añaden fuentes remotas ni dependencias. Los fallbacks del sistema conservan
+- Se conservan identidades independientes, no una misma apariencia con distinto
+  logo. Cada tema tiene valores propios; las regiones inversas de tienda siguen
+  el tema y no fuerzan franjas oscuras en claro.
+- No se necesitan fuentes remotas. Los fallbacks del sistema conservan
   legibilidad sin red. Las muestras no necesitan imágenes ni animaciones.
 
 ## Contrato de composición
@@ -31,7 +33,7 @@ semánticos para componer primitivas, no valores ni una apariencia cerrada.
 Desde 19.2 se activan en el `html` mediante bootstrap, switch, Zustand y
 persistencia independiente; ver [infraestructura de temas](theme-runtime.md).
 Los estilos legados `--admin-*` tienen aliases semánticos. La adopción completa
-en componentes reales sigue correspondiendo a 19.3/19.4/19.7.
+en componentes reales se completó en 19.3/19.4/19.7 y se renovó para tienda en 26.
 
 Tailwind puede consumirlos con clases como `bg-[var(--ds-surface)]`,
 `text-[var(--ds-text)]` y `rounded-[var(--ds-radius-panel)]`, sin valores de marca
@@ -54,8 +56,8 @@ Todos los nombres de la tabla llevan el prefijo `--ds-`.
 
 | Combinación | Canvas | Superficie | Acento | Texto | Densidad |
 |---|---|---|---|---|---|
-| Tienda clara | `#edf5ff` | `#ffffff` | `#134cc5` | `#071c3c` | Amplia |
-| Tienda oscura | `#081b30` | `#122d46` | `#93c5fd` | `#eef7ff` | Amplia |
+| Tienda clara | `#ffffff` | `#ffffff` | `#6554ae` | `#252737` | Amplia |
+| Tienda oscura | `#0d0d12` | `#1c1726` | `#bca7ef` | `#f3f1f7` | Amplia |
 | Administración clara | `#eef2f6` | `#ffffff` | `#1d4ed8` | `#172235` | Compacta |
 | Administración oscura | `#0e1421` | `#182235` | `#8cb4fa` | `#e8edf5` | Compacta |
 
@@ -74,10 +76,11 @@ pruebas también se comprueban por separado; lint, tipos y builds de las dos app
 verifican la integración de los imports CSS.
 
 Esta verificación corresponde al catálogo y sus parejas de tokens, no acredita
-todavía todas las pantallas ni la persistencia de temas. La cobertura de vistas
-reales y estados completos de los cuatro temas continúa en 19.8.
+por sí sola todas las pantallas ni la persistencia de temas. La cobertura de
+vistas reales se documenta en [regresión](theme-regression-testing.md) y la
+[validación final de fase 26](VALIDATION-26.5.md).
 
-### Resultado local
+### Resultado histórico de 19.1
 
 30 de septiembre de 2026: siete pruebas del catálogo exitosas, auditoría axe y
 contrastes correctos en las cuatro combinaciones. Revisión visual de las capturas

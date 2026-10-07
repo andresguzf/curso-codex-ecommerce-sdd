@@ -143,8 +143,8 @@ export function CatalogFilters({
         id={panelId}
         inert={collapsed}
       >
-        <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[var(--ds-elevation)]">
-          <header className="flex items-center justify-between gap-3 border-b border-[var(--ds-border)] border-t-2 border-t-[var(--ds-accent)] px-4 py-4">
+        <div data-slot="catalog-filter-panel" className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface)]">
+          <header className="flex items-center justify-between gap-3 border-b border-[var(--ds-border-subtle)] px-4 py-4">
             <div className="min-w-0">
               <p className="m-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">Refina la selección</p>
               <h2 className="mb-0 mt-1 text-base font-black tracking-tight text-[var(--ds-text)]" id={titleId}>Filtros</h2>
@@ -254,7 +254,7 @@ function CatalogFilterForm({
   const canApply = Boolean(categories && tags) && !categoriesPending && !tagsPending;
 
   return (
-    <form aria-label="Filtros del catálogo" className="grid gap-5" onSubmit={handleSubmit}>
+    <form aria-label="Filtros del catálogo" className="grid gap-5" data-slot="catalog-filter-form" onSubmit={handleSubmit}>
       <label className="grid gap-2 text-sm font-bold text-[var(--ds-text)]">
         Categoría
         {categories ? (
@@ -383,8 +383,8 @@ function FilterGlyph() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" focusable="false" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" viewBox="0 0 24 24">
       <path d="M4 7h16M4 17h16" />
-      <circle cx="9" cy="7" fill="white" r="2" />
-      <circle cx="15" cy="17" fill="white" r="2" />
+      <circle cx="9" cy="7" fill="var(--ds-surface)" r="2" />
+      <circle cx="15" cy="17" fill="var(--ds-surface)" r="2" />
     </svg>
   );
 }

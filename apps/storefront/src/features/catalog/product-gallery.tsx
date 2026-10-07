@@ -40,14 +40,14 @@ export function ProductGallery({ images, productName }: GalleryProps) {
     <section
       aria-label={`Imágenes de ${productName}`}
       aria-roledescription={multiple ? "carrusel" : undefined}
-      className="min-w-0 bg-[var(--ds-surface-subtle)] p-4 sm:p-6"
+      className="min-w-0 rounded-3xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface-subtle)] p-3 sm:p-5"
       data-slot="product-gallery"
       onKeyDown={handleKey}
     >
       <div
         aria-describedby={multiple ? instructionsId : undefined}
         aria-label="Imagen del producto"
-        className={`relative aspect-square w-full touch-pan-y overflow-hidden rounded-2xl bg-[var(--ds-surface)] ${focusStyle}`}
+        className={`relative aspect-square w-full touch-pan-y overflow-hidden rounded-2xl bg-[var(--ds-surface-subtle)] ${focusStyle}`}
         data-slot="gallery-stage"
         id={imageId}
         onTouchStart={(event) => {
@@ -68,7 +68,7 @@ export function ProductGallery({ images, productName }: GalleryProps) {
       >
         <ProductImage
           alt={selected?.altText ?? productName}
-          className="object-contain p-3 sm:p-6"
+          className="object-contain p-2 sm:p-4"
           draggable={false}
           fill
           key={selected?.id ?? "fallback"}
@@ -85,7 +85,7 @@ export function ProductGallery({ images, productName }: GalleryProps) {
             <p aria-atomic="true" aria-live="polite" className="m-0 text-center font-mono text-sm font-bold text-[var(--ds-text)]" role="status">Imagen {selectedIndex + 1} de {images.length}</p>
             <button aria-controls={imageId} aria-label="Imagen siguiente" className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-xl text-[var(--ds-text)] hover:bg-[var(--ds-accent-soft)] ${focusStyle}`} onClick={() => move(1)} type="button"><span aria-hidden="true">→</span></button>
           </div>
-          <div aria-label="Seleccionar imagen" className="flex gap-3 overflow-x-auto p-1 pb-3" role="group">
+          <div aria-label="Seleccionar imagen" className="flex gap-3 overflow-x-auto p-1 pb-3" data-slot="gallery-thumbnails" role="group">
             {images.map((image, index) => (
               <button
                 aria-controls={imageId}

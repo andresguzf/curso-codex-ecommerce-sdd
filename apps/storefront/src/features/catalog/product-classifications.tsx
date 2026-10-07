@@ -34,7 +34,7 @@ export function ProductClassifications({
   }
 
   return (
-    <section aria-label="Clasificación del producto" className="mt-7 grid gap-4 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface-subtle)] p-5 text-sm sm:grid-cols-[7rem_minmax(0,1fr)]">
+    <section aria-label="Clasificación del producto" className="mt-6 grid gap-3 rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface-subtle)] p-4 text-sm sm:grid-cols-[6rem_minmax(0,1fr)]">
       <p className="m-0 font-bold text-[var(--ds-text-muted)]">Categoría</p>
       {visibleCategory ? <Link className="w-fit font-semibold text-[var(--ds-accent)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)]" href={classificationLink("categoryId", visibleCategory.id)}>{visibleCategory.name}</Link> : <p className="m-0 text-[var(--ds-text-muted)]">Sin categoría asignada</p>}
       <p className="m-0 font-bold text-[var(--ds-text-muted)]">Etiquetas</p>

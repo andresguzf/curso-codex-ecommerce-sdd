@@ -12,5 +12,5 @@ export function StorefrontHeader({ children }: Readonly<{ children: ReactNode }>
     return () => window.removeEventListener("scroll", update);
   }, []);
 
-  return <header data-slot="storefront-header" data-scrolled={scrolled} data-tone-region="inverse" className="sticky top-0 z-40 border-b border-blue-300/20 text-white shadow-lg shadow-blue-950/45 backdrop-blur-xl">{children}</header>;
+  return <header data-slot="storefront-header" data-scrolled={scrolled} className="sticky top-0 z-40 border-b border-[var(--ds-border-subtle)] text-[var(--ds-text)] backdrop-blur-xl">{children}</header>;
 }

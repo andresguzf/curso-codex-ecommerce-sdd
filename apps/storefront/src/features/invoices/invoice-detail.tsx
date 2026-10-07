@@ -17,8 +17,8 @@ export function InvoiceDetailPage({ invoiceId }: Readonly<{ invoiceId: string }>
 export function InvoiceDetail({ invoiceId }: Readonly<{ invoiceId: string }>) {
   const accessToken = useSessionStore((state) => state.session?.accessToken);
   const query = useMyInvoice(invoiceId);
-  if (query.isPending) return <LoadingState message="Cargando tu factura…" />;
-  if (query.isError) return <InvoiceDetailError error={query.error} retry={() => { void query.refetch(); }} invoiceId={invoiceId} />;
+  if (query.isPending) return <><h1 className="mb-6 text-3xl font-semibold">Detalle de factura</h1><LoadingState message="Cargando tu factura…" /></>;
+  if (query.isError) return <><h1 className="mb-6 text-3xl font-semibold">Detalle de factura</h1><InvoiceDetailError error={query.error} retry={() => { void query.refetch(); }} invoiceId={invoiceId} /></>;
   const invoice = query.data;
   return <>
     <div className="flex flex-wrap items-center justify-between gap-4"><Link href="/account/invoices" className="font-bold text-blue-700 underline">← Mis facturas</Link>{accessToken ? <PdfDownloadButton onDownload={() => downloadMyInvoicePdf(accessToken, invoiceId)} /> : null}</div>

@@ -25,7 +25,7 @@ export function WishlistPage() {
     if (status === "anonymous") router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }, [returnTo, router, status]);
 
-  return <main className="min-h-screen bg-[#f8fafc] px-4 py-10 text-slate-950 sm:px-8 sm:py-14">
+  return <main data-slot="customer-page" className="min-h-screen bg-[#f8fafc] px-4 py-10 text-slate-950 sm:px-8 sm:py-14">
     <div className="mx-auto max-w-6xl">
       {status !== "authenticated" || !session ? <LoadingState message="Validando acceso a tus deseos…" />
         : session.user.role !== "CUSTOMER" ? <section><h1 className="text-3xl font-black">Área de clientes</h1><p className="my-4">Para guardar productos utiliza una cuenta de cliente.</p><Link href="/" className="font-bold text-blue-700 underline">Volver a la tienda</Link></section>

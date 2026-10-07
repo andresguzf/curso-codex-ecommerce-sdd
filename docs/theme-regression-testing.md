@@ -1,6 +1,25 @@
 # Verificación de los cuatro temas — tarea 19.8
 
-## Cobertura
+## Estado vigente — fase 26, 7 de octubre de 2026
+
+El rediseño afecta únicamente la tienda: claro blanco/lavanda, oscuro
+carbón/violeta y tipografía local. Su navbar conserva sticky, transparencia al
+scroll y enlaces activos, pero sigue el tema sin franja navy forzada en claro.
+Los colores navy/cian descritos abajo son historia de 19.8, no la dirección
+actual del storefront. El backoffice conserva paleta, fuentes y referencias.
+
+La validación 26.5 ejecuta 141 pruebas de frontend, ocho de regresión visual con
+16 referencias, siete de tokens y 19 focalizadas de hero/cliente. Revisa ambos
+temas a 375/1440 px, carga/vacío/error, formularios, flash/modales, teclado y
+foco, movimiento reducido, pausas y fallback del hero. Usa fixtures REST
+aisladas, sin escrituras en Supabase ni cargas de Cloudinary.
+
+Las ocho referencias de tienda fueron revisadas en 26.2–26.3; en 26.5 se
+comparan sin regenerarlas. Las ocho administrativas no se modifican. Véanse
+[tokens](design-tokens.md) y [evidencia y límites](VALIDATION-26.5.md). Esto no
+certifica rendimiento de Vercel, CDN ni una auditoría manual completa WCAG.
+
+## Cobertura histórica de 19.8
 
 Revisión del 1 de octubre de 2026: el selector compartido de tienda y backoffice usa un botón circular de 44 px con luna para activar oscuro y sol para activar claro. Conserva nombre accesible, `aria-pressed`, tooltip, foco y persistencia independiente. Se revisan y actualizan las referencias por este cambio intencional del control, no para ocultar diferencias en el contenido.
 

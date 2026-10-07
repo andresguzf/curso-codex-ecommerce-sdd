@@ -81,3 +81,10 @@ El sistema SHALL copiar en cada orden confirmada los datos vigentes de la empres
 #### Scenario: Cambio posterior de empresa
 - **WHEN** un administrador modifica los datos de la empresa después de confirmar una orden
 - **THEN** la orden existente mantiene la razón social, identificador fiscal, dirección y demás datos del emisor capturados al confirmarse
+
+### Requirement: Presentación de compras del cliente en fase 26
+El historial, detalle y confirmación de órdenes del storefront SHALL usar el sistema visual público en ambos temas, conservando propiedad, snapshots, importes y acciones existentes. MUST NOT modificar administración de órdenes, transiciones ni plantilla PDF por este rediseño.
+
+#### Scenario: Consulta responsive de compras
+- **WHEN** un cliente consulta una orden propia o el historial en móvil o escritorio
+- **THEN** líneas, estados, totales y enlaces a documentos son legibles en ambos temas sin perder información, y descargar PDF conserva su diseño empresarial independiente

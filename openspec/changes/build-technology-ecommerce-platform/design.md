@@ -573,7 +573,97 @@ Fuentes verificadas al planificar: [NestJS Vercel](https://vercel.com/docs/frame
 [límites Functions](https://vercel.com/docs/functions/limitations) y
 [cron por plan](https://vercel.com/docs/cron-jobs/usage-and-pricing).
 
+### 27. Rediseño exclusivo del storefront — fase 26
+
+Revisión aprobada el 2026-10-07. Modernizar toda la aplicación pública, incluida
+cuenta/checkout, sin alterar el backoffice ni la arquitectura REST. La referencia
+es Tailwind Animations y las capturas aportadas: superficies coherentes, espacio
+en blanco, bordes discretos y acentos tecnológicos. No copiar marca/assets ni
+introducir obligatoriamente la biblioteca de animaciones. Esta decisión sustituye
+solo la presentación anterior del hero y las franjas inversas del storefront;
+preserva requisitos funcionales, snapshots y diseño PDF.
+
+**Tokens y tipografía.** Paleta base clara: canvas `#FFFFFF`, superficie suave
+`#FAF9FE`, texto `#252737`, secundario `#656777`, azul `#336FE3` y violeta
+`#6554AE`, con lavanda casi blanca `#F3F0FC` para superficies de acento.
+Paleta oscura confirmada tras la vista previa: canvas carbón `#0D0D12`,
+superficie violeta oscuro `#1C1726`, texto `#F3F1F7`, secundario `#B5ACBF`,
+azul `#85AEFF` y lavanda `#BCA7EF`. El carbón domina y el violeta aporta
+profundidad; bordes decorativos `#342B43`, distintos del borde de control
+que requiere contraste suficiente. En claro no hay grandes superficies de
+acento oscuro: reservar esos tonos para texto legible y acciones pequeñas.
+Derivar bordes, hover y colores semánticos verificando contraste WCAG AA por
+combinación real; la paleta no acredita contraste por sí misma. Reservar violeta
+para acentos puntuales, no gradientes decorativos en cada sección. Dirección
+tipográfica: Space Grotesk para títulos con moderación, Source Sans 3 para lectura
+y controles, monospace de sistema para SKU/datos auxiliares. Integrar fuentes
+con licencia y entrega local, sin dependencia de CDN durante build/render.
+
+**Layout.** Contenedor de contenido cercano a 1200 px, ritmo consistente,
+tarjetas de producto de una a tres columnas según ancho, detalle con galería y
+compra en dos columnas que se apilan en móvil. Header, footer, formularios,
+paneles y estados comparten el tema activo; el tema claro no conserva franjas
+navy obligatorias. Fotografías oscuras y pequeños estados semánticos no son
+franjas de UI y pueden mantener su color natural. Navbar fijo, más translúcido
+al desplazar, adapta color al tema y mantiene legibilidad, foco, enlaces activos,
+sesión y badge del carrito.
+
+**Firma visual: hero panorámico de hardware.** Dar a la fotografía un marco
+amplio, cercano al ancho útil de pantalla, no un panel lateral pequeño. Usar
+proporción panorámica aproximada 21:9 en escritorio, adaptable en móvil sin
+deformar el hardware ni generar scroll horizontal. Título, búsqueda y CTA viven
+en una superficie legible independiente o con protección de contraste estable;
+no dependen de los píxeles de la imagen ni fuerzan una franja oscura en tema claro.
+Preparar dos fotografías hiperrealistas: teclado mecánico RGB y tarjeta gráfica
+NVIDIA, sin personas, en escenografía oscura elegante, iluminando el hardware.
+Una tercera fotografía opcional puede mostrar un setup de escritorio con monitor
+y hardware, también sin personas. No usar estadísticas, descuentos ni claims
+técnicos inventados; no presentar el hero como una fotografía de un SKU concreto.
+Los assets son estáticos, versionados del storefront, no cargas de producto ni
+una migración de Cloudinary/Picsum. Generarlos o seleccionarlos e integrarlos
+durante 26.2, no durante planificación.
+
+**Movimiento del hero.** Desplazamiento lateral muy lento de derecha a izquierda
+con recorrido de retorno suave, usando transform y un sobreencuadre acotado;
+orientación inicial: ciclo de unos 30–45 segundos, sin zoom agresivo. Alternar
+fotografías aproximadamente cada 12–15 segundos con fundido cercano a un segundo,
+sin video y sin desplazar texto/controles. El tiempo y el encuadre se ajustan tras
+revisión visual. Mostrar controles accesibles para pausar/reanudar todo el
+movimiento y seleccionar imagen; pausar al interactuar con teclado/puntero y
+mientras la página no esté visible. Con `prefers-reduced-motion: reduce`, iniciar
+estático, sin desplazamiento, autoplay ni fundidos; selección manual inmediata.
+Si JavaScript, animación o una imagen fallan, título/buscador y un respaldo
+estático siguen disponibles. Evitar anuncios aria-live continuos y cargar con
+prioridad solo la primera imagen; diferir las siguientes sin salto de layout.
+Esta alternancia ambiental no se aplica a ProductGallery, que sigue sin autoplay.
+Fuera del hero usar únicamente microinteracciones discretas, sin revelar contenido
+solo mediante scroll ni añadir retrasos de acceso/navegación.
+
+**Aislamiento.** Tokens/estilos/fuentes se restringen a
+`[data-design-system="storefront"]`, incluidos portales y modales; no cambiar
+resets globales o primitivas compartidas de modo que afecten al backoffice.
+Conservar bootstrap, claves independientes de tema, preferencia del sistema y
+persistencia explícita sin parpadeo. Mantener datos remotos en TanStack Query,
+sin duplicarlos para rediseñar; no cambiar sesión, permisos ni contratos.
+Conservar landing 3 destacados / 9 recientes deduplicados / hasta 3 categorías
+con 3 productos, sin filtros/paginador en inicio; catálogo completo conserva
+criterios en URL y paginación backend. Aplicar la dirección visual también a
+login/registro, carrito, checkout, wishlist y consultas de órdenes/facturas del
+cliente, sin rediseñar documentos exportados ni pantallas ADMIN/BILLING.
+
+**Verificación y entrega.** Cinco tareas incrementales (26.1–26.5), una por turno.
+Verificar móvil 375 px y escritorio 1440 px, ambos temas, contraste, foco/teclado,
+movimiento reducido, pausa del hero, fallos de imágenes, navegación y estados de
+carga/error/vacío. Ejecutar suites de temas, tokens y frontends con fixtures
+aisladas; revisar nuevos snapshots solamente del storefront y comprobar que las
+referencias del backoffice permanecen intactas. No reemplazar snapshots
+automáticamente para ocultar fallos. Sin seeds, cambios de datos/infraestructura,
+smoke remoto ni commit/push implícitos. La fase 25 pendiente conserva su estado.
+
 ## Risks / Trade-offs
+
+- Fase 26: estilos compartidos o portales sin ámbito pueden modificar el backoffice; verificar ambas aplicaciones y no actualizar sus referencias visuales como parte del rediseño.
+- Fase 26: fotografías panorámicas grandes y movimiento permanente pueden afectar carga, contraste y accesibilidad; limitar assets/transformaciones, priorizar solo la portada del hero y proporcionar pausa y modo estático.
 
 - [Pool transaccional pierde estado de sesión] → Usar conexión directa/sesión y probar exclusión advisory entre procesos antes del corte.
 - [Data API elude autorización NestJS] → Mantenerla habilitada, pero proteger tablas de aplicación con RLS y permisos restringidos actuales/futuros sin consumirla desde los frontends.

@@ -42,6 +42,9 @@ describe("commercial product card", () => {
     expect(screen.getByRole("img", { name: product.name })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: `Ver detalle de ${product.name}` })).toHaveClass("absolute", "inset-0");
     expect(screen.getByRole("heading", { name: product.name })).toBeInTheDocument();
+    expect(screen.getByRole("article")).toHaveClass("border-[var(--ds-border-subtle)]");
+    expect(screen.getByText(product.sku).closest('[data-slot="product-card-photo"]')).toBeNull();
+    expect(screen.getByRole("article").querySelector('[data-tone-region="inverse"]')).toBeNull();
     expect(screen.getByText("$1,299.90")).toBeInTheDocument();
     expect(screen.getByText("14 disponibles")).toHaveClass("text-[var(--ds-success)]");
     const purchase = screen.getByRole("button", { name: `Agregar ${product.name} al carrito` });

@@ -18,8 +18,8 @@ export function OrderDetailPage({ orderId }: Readonly<{ orderId: string }>) {
 export function OrderDetail({ orderId }: Readonly<{ orderId: string }>) {
   const accessToken = useSessionStore((state) => state.session?.accessToken);
   const query = useMyOrder(orderId);
-  if (query.isPending) return <LoadingState message="Cargando tu pedido…" />;
-  if (query.isError) return <OrdersError error={query.error} retry={() => { void query.refetch(); }} returnTo={`/account/orders/${orderId}`} />;
+  if (query.isPending) return <><h1 className="mb-6 text-3xl font-semibold">Detalle de tu pedido</h1><LoadingState message="Cargando tu pedido…" /></>;
+  if (query.isError) return <><h1 className="mb-6 text-3xl font-semibold">Detalle de tu pedido</h1><OrdersError error={query.error} retry={() => { void query.refetch(); }} returnTo={`/account/orders/${orderId}`} /></>;
   const order = query.data;
   return <>
     <div className="flex flex-wrap items-center justify-between gap-4"><Link href="/account/orders" className="font-bold text-blue-700 underline">← Mis compras</Link>{accessToken ? <PdfDownloadButton onDownload={() => downloadMyOrderPdf(accessToken, orderId)} /> : null}</div>

@@ -16,7 +16,7 @@ export function CheckoutReceipt({ orderId }: Readonly<{ orderId: string }>) {
     queryFn: () => getCheckoutReceipt(session.accessToken, orderId),
     staleTime: Infinity,
   });
-  if (query.isPending) return <LoadingState message="Cargando confirmación…" />;
+  if (query.isPending) return <><h1 className="mb-6 text-3xl font-semibold">Confirmación de compra</h1><LoadingState message="Cargando confirmación…" /></>;
   const result = query.data;
   if (!result) return <section><h1 className="text-3xl font-black">No se pudo cargar la confirmación</h1><p role="alert">Verifica que corresponda a tu cuenta o vuelve a intentarlo.</p><button type="button" className="mr-5 font-bold text-blue-700 underline" onClick={() => { void query.refetch(); }}>Reintentar</button><Link href="/" className="font-bold text-blue-700 underline">Volver a la tienda</Link></section>;
 

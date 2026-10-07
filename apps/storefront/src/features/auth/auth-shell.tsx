@@ -7,28 +7,17 @@ export function StorefrontAuthShell({
   title,
 }: Readonly<{ children: ReactNode; eyebrow: string; title: string }>) {
   return (
-    <main data-tone-region="inverse" className="relative isolate min-h-screen overflow-hidden bg-[#07111f] px-5 py-8 text-white sm:px-8 lg:grid lg:grid-cols-[1.08fr_0.92fr] lg:p-0">
-      <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_15%_15%,rgba(34,211,238,.24),transparent_30%),radial-gradient(circle_at_85%_82%,rgba(99,102,241,.25),transparent_34%)]" />
-      <section className="relative flex min-h-[38vh] flex-col justify-between py-4 lg:min-h-screen lg:px-[8vw] lg:py-12">
-        <Link href="/" className="w-fit text-sm font-bold tracking-[0.18em] text-cyan-300 uppercase focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300">
-          Nexo / Tech
-        </Link>
-        <div className="max-w-xl py-12">
-          <p className="font-mono text-xs tracking-[0.22em] text-cyan-300 uppercase">Tecnología para avanzar</p>
-          <h2 className="mt-5 text-4xl leading-[0.95] font-black tracking-[-0.055em] sm:text-6xl lg:text-7xl">
-            Tu próxima herramienta empieza aquí.
-          </h2>
-          <div className="mt-8 h-px w-full bg-gradient-to-r from-cyan-300 via-indigo-400 to-transparent" />
-          <p className="mt-7 max-w-md text-base leading-7 text-slate-300">
-            Accede a tu carrito, compras y selección de equipos desde una sesión protegida.
-          </p>
-        </div>
-        <p className="hidden font-mono text-[11px] tracking-[0.16em] text-slate-500 uppercase lg:block">Catálogo tecnológico · Santiago</p>
+    <main data-slot="storefront-auth" className="mx-auto grid min-h-[70vh] max-w-6xl items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:py-20">
+      <section className="max-w-lg">
+        <Link href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--ds-accent)]">Technology Store / Inicio</Link>
+        <p className="mt-8 font-mono text-xs tracking-[0.16em] text-[var(--ds-text-muted)] uppercase">Tecnología para avanzar</p>
+        <h2 className="mt-4 text-3xl leading-tight font-semibold tracking-tight sm:text-5xl">Tu próxima herramienta empieza aquí.</h2>
+        <p className="mt-6 max-w-md text-lg leading-7 text-[var(--ds-text-muted)]">Guarda tus favoritos y encuentra tus compras en un solo lugar. Puedes explorar y agregar productos al carrito sin iniciar sesión.</p>
       </section>
-      <section data-tone-region="surface" className="relative flex items-center justify-center rounded-[2rem] bg-[#f4f7f9] px-5 py-10 text-slate-950 shadow-2xl lg:min-h-screen lg:rounded-none lg:px-[8vw]">
+      <section className="rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface)] p-6 sm:p-9">
         <div className="w-full max-w-md">
           <p className="font-mono text-xs font-semibold tracking-[0.2em] text-indigo-600 uppercase">{eyebrow}</p>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.045em]">{title}</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
           {children}
         </div>
       </section>

@@ -1,10 +1,10 @@
-/* 19.1: opt-in semantic tokens; no change to legacy application themes. */
+/* 26.1: storefront-only foundation; backoffice owns its independent tokens. */
 [data-design-system="storefront"] {
-  --ds-font-body: Verdana, Arial, sans-serif;
-  --ds-font-display: 'Trebuchet MS', Verdana, sans-serif;
-  --ds-font-data: 'Courier New', monospace;
+  --ds-font-body: 'Source Sans 3 Variable', Arial, sans-serif;
+  --ds-font-display: 'Space Grotesk Variable', Arial, sans-serif;
+  --ds-font-data: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   --ds-radius-control: 0.75rem;
-  --ds-radius-panel: 1.5rem;
+  --ds-radius-panel: 1.25rem;
   --ds-space-unit: 0.25rem;
   --ds-space-control: 0.875rem;
   --ds-space-panel: 1.75rem;
@@ -12,34 +12,39 @@
   --ds-control-height: 3rem;
   --ds-row-height: 3.75rem;
   --ds-text-body: 1rem;
-  --ds-text-title: 2rem;
-  --ds-line-body: 1.65;
+  --ds-text-title: clamp(1.75rem, 3vw, 2.75rem);
+  --ds-line-body: 1.6;
+  --ds-line-title: 1.12;
+  --ds-tracking-title: -0.035em;
   --ds-density: comfortable;
-  --ds-inverse-surface: #041326;
-  --ds-navbar-surface: #020e1d;
-  --ds-inverse-subtle: #163956;
-  --ds-inverse-text: #eef7ff;
-  --ds-inverse-muted: #b2cbdf;
-  --ds-inverse-border: #7d9bb5;
-  --ds-inverse-accent: #93e0f4;
-  --ds-inverse-accent-hover: #c6effa;
-  --ds-inverse-accent-text: #041326;
-  --ds-overlay: #020914;
+  /* Compatibility aliases: legacy inverse regions now follow the active theme. */
+  --ds-inverse-surface: var(--ds-canvas);
+  --ds-navbar-surface: var(--ds-canvas);
+  --ds-inverse-subtle: var(--ds-surface-subtle);
+  --ds-inverse-text: var(--ds-text);
+  --ds-inverse-muted: var(--ds-text-muted);
+  --ds-inverse-border: var(--ds-border);
+  --ds-inverse-accent: var(--ds-accent);
+  --ds-inverse-accent-hover: var(--ds-accent-hover);
+  --ds-inverse-accent-text: var(--ds-accent-text);
+  --ds-overlay: #0d0d12;
 }
 
 [data-design-system="storefront"][data-theme="light"] {
   color-scheme: light;
-  --ds-canvas: #edf5ff;
+  --ds-canvas: #ffffff;
   --ds-surface: #ffffff;
-  --ds-surface-subtle: #e2effd;
-  --ds-text: #071c3c;
-  --ds-text-muted: #405a74;
-  --ds-border: #687f98;
-  --ds-accent: #134cc5;
-  --ds-accent-hover: #103da0;
+  --ds-surface-subtle: #faf9fe;
+  --ds-text: #252737;
+  --ds-text-muted: #656777;
+  --ds-border: #888497;
+  --ds-border-subtle: #e6e4ee;
+  --ds-accent: #6554ae;
+  --ds-accent-hover: #554593;
   --ds-accent-text: #ffffff;
-  --ds-accent-soft: #dceaff;
-  --ds-focus: #087c96;
+  --ds-accent-soft: #f3f0fc;
+  --ds-secondary-accent: #336fe3;
+  --ds-focus: #6554ae;
   --ds-success: #17663f;
   --ds-success-soft: #e3f6ec;
   --ds-warning: #805700;
@@ -48,24 +53,26 @@
   --ds-danger-soft: #ffe8ee;
   --ds-info: #165c86;
   --ds-info-soft: #e0f3ff;
-  --ds-disabled: #d9e5ef;
-  --ds-disabled-text: #52657a;
-  --ds-elevation: 0 18px 46px #143b651a;
+  --ds-disabled: #eeedf3;
+  --ds-disabled-text: #656777;
+  --ds-elevation: 0 12px 32px #2527370d;
 }
 
 [data-design-system="storefront"][data-theme="dark"] {
   color-scheme: dark;
-  --ds-canvas: #081b30;
-  --ds-surface: #122d46;
-  --ds-surface-subtle: #193953;
-  --ds-text: #eef7ff;
-  --ds-text-muted: #b2cbdf;
-  --ds-border: #7d9bb5;
-  --ds-accent: #93c5fd;
-  --ds-accent-hover: #b9dcff;
-  --ds-accent-text: #081b30;
-  --ds-accent-soft: #203e64;
-  --ds-focus: #75ddeb;
+  --ds-canvas: #0d0d12;
+  --ds-surface: #1c1726;
+  --ds-surface-subtle: #231e30;
+  --ds-text: #f3f1f7;
+  --ds-text-muted: #b5acbf;
+  --ds-border: #8b809c;
+  --ds-border-subtle: #342b43;
+  --ds-accent: #bca7ef;
+  --ds-accent-hover: #d1c1f7;
+  --ds-accent-text: #0d0d12;
+  --ds-accent-soft: #2b223e;
+  --ds-secondary-accent: #85aeff;
+  --ds-focus: #bca7ef;
   --ds-success: #8ce0b0;
   --ds-success-soft: #143e35;
   --ds-warning: #f6d27b;
@@ -74,7 +81,7 @@
   --ds-danger-soft: #49263c;
   --ds-info: #99d9f5;
   --ds-info-soft: #163f57;
-  --ds-disabled: #284158;
-  --ds-disabled-text: #a7bfd0;
-  --ds-elevation: 0 20px 54px #00000066;
+  --ds-disabled: #30293b;
+  --ds-disabled-text: #b5acbf;
+  --ds-elevation: 0 16px 40px #00000040;
 }

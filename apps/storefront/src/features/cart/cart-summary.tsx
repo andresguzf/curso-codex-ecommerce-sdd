@@ -9,14 +9,10 @@ export function CartSummary({ cart }: Readonly<{ cart: ActiveCart }>) {
 
   return (
     <aside
-      data-tone-region="inverse"
+      data-slot="purchase-summary"
       aria-labelledby="cart-summary-title"
-      className="relative overflow-hidden rounded-3xl bg-[#081426] p-7 text-white shadow-[0_30px_70px_-36px_rgba(8,20,38,0.9)] lg:sticky lg:top-8"
+      className="self-start rounded-2xl border border-[var(--ds-border-subtle)] bg-[var(--ds-surface-subtle)] p-7 lg:sticky lg:top-28"
     >
-      <div
-        aria-hidden="true"
-        className="absolute -right-16 -top-16 size-48 rounded-full border-[28px] border-blue-500/15"
-      />
       <div className="relative">
         <p className="m-0 font-mono text-[0.68rem] font-bold uppercase tracking-[0.2em] text-blue-300">
           Resumen en vivo

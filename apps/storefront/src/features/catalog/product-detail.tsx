@@ -21,6 +21,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
   if (productQuery.isPending) {
     return (
       <main className="mx-auto min-h-screen max-w-7xl px-6 py-12 lg:px-10 lg:py-20">
+        <h1 className="mb-6 mt-0 text-2xl font-semibold text-[var(--ds-text)]">Detalle del producto</h1>
         <LoadingState message="Cargando detalle del producto…" />
       </main>
     );
@@ -44,6 +45,7 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
   if (productQuery.isError) {
     return (
       <main className="mx-auto min-h-screen max-w-7xl px-6 py-12 lg:px-10 lg:py-20">
+        <h1 className="mb-6 mt-0 text-2xl font-semibold text-[var(--ds-text)]">Detalle del producto</h1>
         <ErrorState
           action={(
             <button className="min-h-11 rounded-lg bg-[var(--ds-accent)] px-4 py-2 text-sm font-bold text-[var(--ds-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" onClick={() => void productQuery.refetch()} type="button">
@@ -65,18 +67,18 @@ export function ProductDetail({ productId }: Readonly<{ productId: string }>) {
         <Link className="inline-flex rounded-sm text-sm font-bold text-[var(--ds-accent)] hover:text-[var(--ds-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus)] focus-visible:ring-offset-2" href="/">
           ← Volver al catálogo
         </Link>
-        <article data-slot="product-detail" className="mt-7 grid overflow-hidden rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-[var(--ds-elevation)] lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
+        <article data-slot="product-detail" className="mt-7 grid items-start gap-6 rounded-3xl bg-[var(--ds-surface)] lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:gap-12">
           <ProductGallery images={product.images} key={`${product.id}:${product.images.map((image) => image.id).join(":")}`} productName={product.name} />
-          <div className="flex flex-col p-7 sm:p-10 lg:p-12">
+          <div className="flex min-w-0 flex-col px-1 py-4 sm:px-4 lg:px-0 lg:py-6">
             <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-[var(--ds-accent)]">{product.sku}</p>
-            <h1 className="mb-0 mt-4 text-balance text-4xl font-black leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-5xl">
+            <h1 className="mb-0 mt-4 break-words text-balance text-3xl font-semibold leading-tight tracking-[-0.035em] text-[var(--ds-text)] sm:text-4xl">
               {product.name}
             </h1>
             <p className="mb-0 mt-6 text-base leading-8 text-[var(--ds-text-muted)]">{product.description}</p>
             <ProductClassifications category={product.category} tags={product.tags} />
 
-            <div className="mt-9 border-y border-[var(--ds-border)] py-7">
-              <p className="m-0 text-4xl font-black tracking-tight text-[var(--ds-text)]">
+            <div className="mt-7 border-y border-[var(--ds-border-subtle)] py-6">
+              <p className="m-0 text-4xl font-semibold tabular-nums tracking-tight text-[var(--ds-text)]">
                 {formatProductPrice(product.price)}
               </p>
               <p className={isOutOfStock ? "mb-0 mt-3 font-bold text-[var(--ds-danger)]" : "mb-0 mt-3 font-bold text-[var(--ds-success)]"}>

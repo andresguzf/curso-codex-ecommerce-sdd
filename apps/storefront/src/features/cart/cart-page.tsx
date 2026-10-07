@@ -53,7 +53,7 @@ export function CartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc]">
+    <main data-slot="customer-page" className="min-h-screen bg-[#f8fafc]">
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-16">
         <Link
           className="inline-flex rounded-sm text-sm font-bold text-blue-700 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"

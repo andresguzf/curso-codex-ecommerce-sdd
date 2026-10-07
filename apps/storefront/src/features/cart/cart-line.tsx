@@ -77,7 +77,7 @@ export function CartLine({
           >
             <button
               aria-label={`Disminuir cantidad de ${item.product.name}`}
-              className="grid size-10 place-items-center rounded-lg text-xl font-bold text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="grid size-11 place-items-center rounded-lg text-xl font-bold text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:text-slate-300"
               disabled={isUpdating || item.quantity <= 1}
               onClick={() => onChangeQuantity(item.quantity - 1)}
               type="button"
@@ -92,7 +92,7 @@ export function CartLine({
             </output>
             <button
               aria-label={`Aumentar cantidad de ${item.product.name}`}
-              className="grid size-10 place-items-center rounded-lg text-xl font-bold text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="grid size-11 place-items-center rounded-lg text-xl font-bold text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 disabled:cursor-not-allowed disabled:text-slate-300"
               disabled={isUpdating || !canIncrease}
               onClick={() => onChangeQuantity(item.quantity + 1)}
               type="button"
